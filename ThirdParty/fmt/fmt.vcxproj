@@ -1,0 +1,127 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+	<ItemGroup Label="ProjectConfigurations">
+		<ProjectConfiguration Include="Debug|x64">
+			<Configuration>Debug</Configuration>
+			<Platform>x64</Platform>
+		</ProjectConfiguration>
+		<ProjectConfiguration Include="Release|x64">
+			<Configuration>Release</Configuration>
+			<Platform>x64</Platform>
+		</ProjectConfiguration>
+	</ItemGroup>
+
+	<PropertyGroup Label="Globals">
+		<ProjectGuid>{BD44D4D5-BA4B-4E62-A34A-2FA78E911B5D}</ProjectGuid>
+		<Keyword>Win32Proj</Keyword>
+		<Platform>x64</Platform>
+		<ProjectName>fmt</ProjectName>
+		<VCProjectUpgraderObjectName>NoUpgrade</VCProjectUpgraderObjectName>
+		<WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+	</PropertyGroup>
+	<Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+
+	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+		<ConfigurationType>StaticLibrary</ConfigurationType>
+		<CharacterSet>MultiByte</CharacterSet>
+		<PlatformToolset>v143</PlatformToolset>
+	</PropertyGroup>
+	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+		<ConfigurationType>StaticLibrary</ConfigurationType>
+		<CharacterSet>MultiByte</CharacterSet>
+		<PlatformToolset>v143</PlatformToolset>
+	</PropertyGroup>
+
+	<Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+	<ImportGroup Label="ExtensionSettings">
+		<Import Project="$(VCTargetsPath)\BuildCustomizations\masm.props" />
+	</ImportGroup>
+	<ImportGroup Label="PropertySheets">
+		<Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+	</ImportGroup>
+	<PropertyGroup Label="UserMacros" />
+
+	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+		<LinkIncremental>true</LinkIncremental>
+		<OutDir>$(SolutionDir)lib\$(Platform)$(Configuration)\</OutDir>
+		<IntDir>$(SolutionDir)obj\$(Platform)$(Configuration)\$(ProjectName)\</IntDir>
+		<PublicIncludeDirectories></PublicIncludeDirectories>
+	</PropertyGroup>
+	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+		<LinkIncremental>false</LinkIncremental>
+		<OutDir>$(SolutionDir)lib\$(Platform)$(Configuration)\</OutDir>
+		<IntDir>$(SolutionDir)obj\$(Platform)$(Configuration)\$(ProjectName)\</IntDir>
+		<PublicIncludeDirectories></PublicIncludeDirectories>
+	</PropertyGroup>
+
+	<ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+		<ClCompile>
+			<AdditionalIncludeDirectories>%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+			<PreprocessorDefinitions>_WIN32;_DEBUG;LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+			<AssemblerListingLocation>Debug/</AssemblerListingLocation>
+			<BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
+			<LanguageStandard>stdcpp17</LanguageStandard>
+			<DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+			<FloatingPointModel>Fast</FloatingPointModel>
+			<InlineFunctionExpansion>Disabled</InlineFunctionExpansion>
+			<MultiProcessorCompilation>true</MultiProcessorCompilation>
+			<Optimization>Disabled</Optimization>
+			<PrecompiledHeader>NotUsing</PrecompiledHeader>
+			<RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+			<WarningLevel>Level3</WarningLevel>
+			<RuntimeTypeInfo>false</RuntimeTypeInfo>
+			<EnableModules>false</EnableModules>
+		</ClCompile>
+		<Lib>
+			<TargetMachine>MachineX64</TargetMachine>
+		</Lib>
+	</ItemDefinitionGroup>
+	<ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+		<ClCompile>
+			<AdditionalIncludeDirectories>%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+			<PreprocessorDefinitions>_WIN32;NDEBUG;LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+			<AssemblerListingLocation>Release/</AssemblerListingLocation>
+			<BufferSecurityCheck>false</BufferSecurityCheck>
+			<LanguageStandard>stdcpp17</LanguageStandard>
+			<DebugInformationFormat>None</DebugInformationFormat>
+			<FloatingPointModel>Fast</FloatingPointModel>
+			<InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
+			<MultiProcessorCompilation>true</MultiProcessorCompilation>
+			<Optimization>MaxSpeed</Optimization>
+			<PrecompiledHeader>NotUsing</PrecompiledHeader>
+			<RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+			<WarningLevel>Level3</WarningLevel>
+			<RuntimeTypeInfo>false</RuntimeTypeInfo>
+			<EnableModules>false</EnableModules>
+		</ClCompile>
+		<Lib>
+			<TargetMachine>MachineX64</TargetMachine>
+		</Lib>
+	</ItemDefinitionGroup>
+
+	<ItemGroup>
+		<ClInclude Include="args.h" />
+		<ClInclude Include="chrono.h" />
+		<ClInclude Include="color.h" />
+		<ClInclude Include="compile.h" />
+		<ClInclude Include="core.h" />
+		<ClInclude Include="format.h" />
+		<ClInclude Include="format-inl.h" />
+		<ClInclude Include="os.h" />
+		<ClInclude Include="ostream.h" />
+		<ClInclude Include="printf.h" />
+		<ClInclude Include="ranges.h" />
+		<ClInclude Include="std.h" />
+		<ClInclude Include="xchar.h" />
+	</ItemGroup>
+	<ItemGroup>
+		<!--<ClCompile Include="fmt.cc" />-->
+		<ClCompile Include="format.cc" />
+		<ClCompile Include="os.cc" />
+	</ItemGroup>
+
+	<Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+	<ImportGroup Label="ExtensionTargets">
+		<Import Project="$(VCTargetsPath)\BuildCustomizations\masm.targets" />
+	</ImportGroup>
+</Project>

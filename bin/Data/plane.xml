@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<material cullMode="none" vsDefines="ALPHAMASK" fsDefines="ALPHAMASK">
+	<passes>
+		<shadow shader="Shaders/Shadow.glsl" colorWrite="false" />
+		<alpha shader="Shaders/Diffuse.glsl" />
+	</passes>
+	<textures>
+		<texture slot="0" name="leaves.png" />
+	</textures>
+	<uniforms>
+		<uniform name="matDiffColor" value="1 1 1 1" />
+		<uniform name="matSpecColor" value="0 0 0 1" />
+	</uniforms>
+</material>

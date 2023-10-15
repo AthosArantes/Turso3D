@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<material>
+	<passes>
+		<shadow shader="Shaders/Shadow.glsl" colorWrite="false" />
+		<opaque shader="Shaders/DiffuseNormal.glsl" />
+	</passes>
+	<textures>
+		<texture slot="0" name="stone_diffuse.dds" />
+		<texture slot="1" name="bricks_normal.png" />
+	</textures>
+	<uniforms>
+		<uniform name="matDiffColor" value="1 1 1 1" />
+		<uniform name="matSpecColor" value="1 1 1 4" />
+	</uniforms>
+</material>
