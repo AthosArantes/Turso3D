@@ -103,6 +103,8 @@ namespace Turso3D
 	private:
 		// OpenGL object identifier.
 		unsigned texture;
+		// OpenGL texture target.
+		unsigned target;
 		// Texture type.
 		TextureType type;
 		// Texture dimensions in pixels.
