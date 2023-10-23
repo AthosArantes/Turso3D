@@ -12,7 +12,7 @@ namespace Turso3D
 		rotation = Quaternion::IDENTITY;
 		scale = Vector3::ONE;
 
-		SetFlag(NF_SPATIAL | NF_WORLD_TRANSFORM_DIRTY, true);
+		SetFlag(FLAG_SPATIAL | FLAG_WORLDTRANSFORMDIRTY, true);
 	}
 
 	SpatialNode::~SpatialNode()
@@ -153,7 +153,7 @@ namespace Turso3D
 				break;
 
 			case TS_WORLD:
-				if (!TestFlag(NF_SPATIAL_PARENT)) {
+				if (!TestFlag(FLAG_SPATIALPARENT)) {
 					position += delta;
 				} else {
 					position += SpatialParent()->WorldTransform().Inverse() * Vector4(delta, 0.0f);
@@ -176,7 +176,7 @@ namespace Turso3D
 				break;
 
 			case TS_WORLD:
-				if (!TestFlag(NF_SPATIAL_PARENT)) {
+				if (!TestFlag(FLAG_SPATIALPARENT)) {
 					rotation = (delta * rotation);
 				} else {
 					Quaternion worldRotation = WorldRotation();
@@ -286,8 +286,7 @@ namespace Turso3D
 
 	void SpatialNode::OnParentSet(Node* newParent, Node*)
 	{
-		SpatialNode* spatialParent = RTTI::DynamicCast<SpatialNode*>(newParent);
-		SetFlag(NF_SPATIAL_PARENT, spatialParent != nullptr);
+		SetFlag(FLAG_SPATIALPARENT, newParent != nullptr && newParent->TestFlag(FLAG_SPATIAL));
 		OnTransformChanged();
 	}
 
@@ -301,10 +300,10 @@ namespace Turso3D
 			// b) whenever a node is cleared from being dirty, all its parents must have been cleared as well.
 			// Therefore if we are recursing here to mark this node dirty, and it already was, then all children of this node must also be already dirty,
 			// and we don't need to reflag them again.
-			if (curr->TestFlag(NF_WORLD_TRANSFORM_DIRTY)) {
+			if (curr->TestFlag(FLAG_WORLDTRANSFORMDIRTY)) {
 				return;
 			}
-			curr->SetFlag(NF_WORLD_TRANSFORM_DIRTY, true);
+			curr->SetFlag(FLAG_WORLDTRANSFORMDIRTY, true);
 
 			// Tail call optimization: Don't recurse to mark the first child dirty, but instead process it in the context of the current function. 
 			// If there are more than one child, then recurse to the excess children.
@@ -313,12 +312,12 @@ namespace Turso3D
 				Node* next = it->get();
 				for (++it; it != curr->children.end(); ++it) {
 					Node* child = it->get();
-					if (child->TestFlag(NF_SPATIAL)) {
+					if (child->TestFlag(FLAG_SPATIAL)) {
 						static_cast<SpatialNode*>(child)->OnTransformChanged();
 					}
 				}
 
-				if (next->TestFlag(NF_SPATIAL)) {
+				if (next->TestFlag(FLAG_SPATIAL)) {
 					curr = static_cast<SpatialNode*>(next);
 				} else {
 					return;

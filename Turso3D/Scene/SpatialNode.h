@@ -78,7 +78,7 @@ namespace Turso3D
 		void ApplyScale(float delta);
 
 		// Return the parent spatial node, or null if it is not spatial.
-		SpatialNode* SpatialParent() const { return TestFlag(NF_SPATIAL_PARENT) ? static_cast<SpatialNode*>(Parent()) : nullptr; }
+		SpatialNode* SpatialParent() const { return TestFlag(FLAG_SPATIALPARENT) ? static_cast<SpatialNode*>(Parent()) : nullptr; }
 		// Return position in parent space.
 		const Vector3& Position() const { return position; }
 		// Return rotation in parent space.
@@ -110,13 +110,13 @@ namespace Turso3D
 		// Return world transform matrix. Update if necessary.
 		const Matrix3x4& WorldTransform() const
 		{
-			if (TestFlag(NF_WORLD_TRANSFORM_DIRTY)) {
-				if (TestFlag(NF_SPATIAL_PARENT)) {
+			if (TestFlag(FLAG_WORLDTRANSFORMDIRTY)) {
+				if (TestFlag(FLAG_SPATIALPARENT)) {
 					worldTransform = static_cast<SpatialNode*>(Parent())->WorldTransform() * Matrix3x4(position, rotation, scale);
 				} else {
 					worldTransform.SetTransform(position, rotation, scale);
 				}
-				SetFlag(NF_WORLD_TRANSFORM_DIRTY, false);
+				SetFlag(FLAG_WORLDTRANSFORMDIRTY, false);
 			}
 			return worldTransform;
 		}

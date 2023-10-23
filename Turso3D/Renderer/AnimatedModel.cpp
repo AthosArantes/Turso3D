@@ -318,7 +318,7 @@ namespace Turso3D
 			// If bone has only other bones as children, just set its world transform dirty without going through the hierarchy.
 			// The whole hierarchy will be eventually updated
 			if (bones[i]->NumChildren() == bones[i]->NumChildBones()) {
-				bones[i]->SetFlag(NF_WORLD_TRANSFORM_DIRTY, true);
+				bones[i]->SetFlag(Node::FLAG_WORLDTRANSFORMDIRTY, true);
 			} else {
 				bones[i]->OnTransformChanged();
 			}
@@ -516,7 +516,7 @@ namespace Turso3D
 		} else {
 			modelDrawable->SetBoneTransformsDirty();
 			modelDrawable->SetFlag(DF_WORLD_TRANSFORM_DIRTY, true);
-			SetFlag(NF_WORLD_TRANSFORM_DIRTY, true);
+			SetFlag(FLAG_WORLDTRANSFORMDIRTY, true);
 		}
 
 		modelDrawable->SetFlag(DF_BOUNDING_BOX_DIRTY, true);

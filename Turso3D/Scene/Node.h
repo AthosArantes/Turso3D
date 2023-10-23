@@ -10,13 +10,7 @@ namespace Turso3D
 {
 	class Scene;
 
-	constexpr unsigned char NF_ENABLED = 0x1;
-	constexpr unsigned char NF_TEMPORARY = 0x2;
-	constexpr unsigned char NF_SPATIAL = 0x4;
-	constexpr unsigned char NF_SPATIAL_PARENT = 0x8;
-	constexpr unsigned char NF_WORLD_TRANSFORM_DIRTY = 0x10;
-
-	constexpr unsigned char LAYER_DEFAULT = 0x0;
+	constexpr uint8_t LAYER_DEFAULT = 0;
 	constexpr unsigned LAYERMASK_ALL = 0xffffffff;
 
 	// Base class for scene nodes.
@@ -24,6 +18,18 @@ namespace Turso3D
 	{
 		friend class Scene;
 
+	public:
+		enum Flag
+		{
+			FLAG_ENABLED = 0x1,
+			FLAG_TEMPORARY = 0x2,
+			FLAG_SPATIAL = 0x4,
+			FLAG_SPATIALPARENT = 0x8,
+			FLAG_WORLDTRANSFORMDIRTY = 0x10,
+			FLAG_BONE = 0x20,
+			FLAG_HELPER = 0x40
+		};
+	
 	public:
 		// Destruct. Destroy any child nodes.
 		virtual ~Node();
@@ -42,9 +48,9 @@ namespace Turso3D
 		// Set node's layer.
 		// Usage is subclass specific, for example rendering nodes selectively.
 		// Default is 0.
-		void SetLayer(unsigned char newLayer);
+		void SetLayer(uint8_t newLayer);
 		// Return layer.
-		unsigned char Layer() const { return layer; }
+		uint8_t Layer() const { return layer; }
 		// Return bitmask corresponding to layer.
 		unsigned LayerMask() const { return 1 << layer; }
 
@@ -54,19 +60,21 @@ namespace Turso3D
 		// Set enabled status recursively in the child hierarchy.
 		void SetEnabledRecursive(bool enable);
 		// Return enabled status.
-		bool IsEnabled() const { return TestFlag(NF_ENABLED); }
-
-		// Set temporary mode.
-		// Temporary scene nodes are not saved.
-		void SetTemporary(bool enable);
-		// Return whether is temporary.
-		bool IsTemporary() const { return TestFlag(NF_TEMPORARY); }
+		bool IsEnabled() const { return TestFlag(FLAG_ENABLED); }
 
 		// Return parent node.
 		Node* Parent() const { return parent; }
 
 		// Add node as a child.
 		void AddChild(std::unique_ptr<Node> child);
+
+		template <typename T, typename ...Args>
+		T* CreateChild(Args&&... args)
+		{
+			T* child = new T(std::forward<Args>(args)...);
+			AddChild(std::unique_ptr<Node> {static_cast<Node*>(child)});
+			return child;
+		}
 
 		// Remove child node.
 		std::unique_ptr<Node> RemoveChild(Node* child);
@@ -85,24 +93,10 @@ namespace Turso3D
 		// Note: Causes deletion of self.
 		void RemoveSelf();
 
-		template <typename T, typename ...Args>
-		T* CreateChild(Args&&... args)
-		{
-			T* child = new T(std::forward<Args>(args)...);
-			AddChild(std::unique_ptr<Node> {static_cast<Node*>(child)});
-			return child;
-		}
-
 		// Return number of immediate child nodes.
 		size_t NumChildren() const { return children.size(); }
 		// Return number of immediate child nodes that are not temporary.
 		size_t NumPersistentChildren() const;
-
-		// Return all immediate child nodes.
-		const std::vector<std::unique_ptr<Node>>& Children() const
-		{
-			return children;
-		}
 
 		template <typename T>
 		T* FindChild(bool recursive = false) const
@@ -136,9 +130,12 @@ namespace Turso3D
 			return nullptr;
 		}
 
+		// Return all immediate child nodes.
+		const std::vector<std::unique_ptr<Node>>& Children() const { return children; }
+
 		// Set bit flag.
 		// Called internally.
-		void SetFlag(unsigned char bit, bool set) const
+		void SetFlag(unsigned bit, bool set) const
 		{
 			if (set) {
 				flags |= bit;
@@ -148,9 +145,9 @@ namespace Turso3D
 		}
 		// Test bit flag.
 		// Called internally.
-		bool TestFlag(unsigned char bit) const { return (flags & bit) != 0; }
+		bool TestFlag(unsigned bit) const { return (flags & bit) != 0; }
 		// Return bit flags.
-		unsigned char Flags() const { return flags; }
+		unsigned Flags() const { return flags; }
 
 	protected:
 		// Assign node to a new scene.
@@ -164,7 +161,7 @@ namespace Turso3D
 		// Handle the enabled status changing.
 		virtual void OnEnabledChanged(bool newEnabled);
 		// Handle the layer changing.
-		virtual void OnLayerChanged(unsigned char newLayer);
+		virtual void OnLayerChanged(uint8_t newLayer);
 
 	private:
 		// Parent scene.
@@ -179,9 +176,9 @@ namespace Turso3D
 
 		// Node flags.
 		// Used to hold several boolean values to reduce memory use.
-		mutable unsigned char flags = NF_ENABLED;
+		mutable unsigned flags = FLAG_ENABLED;
 		// Layer number.
-		unsigned char layer = 0;
+		uint8_t layer = 0;
 
 	protected:
 		// Child nodes.

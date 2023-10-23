@@ -21,7 +21,7 @@ namespace Turso3D
 		nameHash = StringHash {newName};
 	}
 
-	void Node::SetLayer(unsigned char newLayer)
+	void Node::SetLayer(uint8_t newLayer)
 	{
 		if (layer < 32) {
 			layer = newLayer;
@@ -33,8 +33,8 @@ namespace Turso3D
 
 	void Node::SetEnabled(bool enable)
 	{
-		if (enable != TestFlag(NF_ENABLED)) {
-			SetFlag(NF_ENABLED, enable);
+		if (enable != TestFlag(FLAG_ENABLED)) {
+			SetFlag(FLAG_ENABLED, enable);
 			OnEnabledChanged(enable);
 		}
 	}
@@ -46,11 +46,6 @@ namespace Turso3D
 			Node* child = it->get();
 			child->SetEnabledRecursive(enable);
 		}
-	}
-
-	void Node::SetTemporary(bool enable)
-	{
-		SetFlag(NF_TEMPORARY, enable);
 	}
 
 	void Node::AddChild(std::unique_ptr<Node> child)
@@ -111,7 +106,7 @@ namespace Turso3D
 		for (auto it = children.begin(); it != children.end(); ++it) {
 			Node* child = it->get();
 			child->parent = nullptr;
-			child->SetFlag(NF_SPATIAL_PARENT, false);
+			child->SetFlag(FLAG_SPATIALPARENT, false);
 			it->reset();
 		}
 		children.clear();
@@ -129,7 +124,7 @@ namespace Turso3D
 		size_t ret = 0;
 		for (auto it = children.begin(); it != children.end(); ++it) {
 			Node* child = it->get();
-			if (!child->IsTemporary()) {
+			if (!child->TestFlag(FLAG_TEMPORARY)) {
 				++ret;
 			}
 		}
@@ -160,7 +155,7 @@ namespace Turso3D
 	{
 	}
 
-	void Node::OnLayerChanged(unsigned char)
+	void Node::OnLayerChanged(uint8_t)
 	{
 	}
 }
