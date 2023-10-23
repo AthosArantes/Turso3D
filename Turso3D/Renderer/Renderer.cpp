@@ -260,7 +260,7 @@ namespace Turso3D
 		scene = scene_;
 		camera = camera_;
 		octree = scene->GetOctree();
-		lightEnvironment = scene->GetRoot()->FindChild<LightEnvironment>();
+		lightEnvironment = scene->GetEnvironmentLighting();
 		if (!octree) {
 			return;
 		}
@@ -465,7 +465,7 @@ namespace Turso3D
 		lightDataBuffer->Bind(UB_LIGHTDATA);
 
 		if (clear) {
-			graphics->Clear(true, true, IntRect::ZERO, lightEnvironment ? lightEnvironment->FogColor() : DEFAULT_FOG_COLOR);
+			graphics->Clear(true, true, IntRect::ZERO, lightEnvironment->FogColor());
 		}
 
 		RenderBatches(camera, opaqueBatches);
@@ -767,11 +767,11 @@ namespace Turso3D
 
 			// Set global lighting settings if is the main view
 			if (camera_ == camera) {
-				perViewData.ambientColor = lightEnvironment ? lightEnvironment->AmbientColor() : DEFAULT_AMBIENT_COLOR;
-				perViewData.fogColor = lightEnvironment ? lightEnvironment->FogColor() : DEFAULT_FOG_COLOR;
+				perViewData.ambientColor = lightEnvironment->AmbientColor();
+				perViewData.fogColor = lightEnvironment->FogColor();
 
-				float fogStart = lightEnvironment ? lightEnvironment->FogStart() : DEFAULT_FOG_START;
-				float fogEnd = lightEnvironment ? lightEnvironment->FogEnd() : DEFAULT_FOG_END;
+				float fogStart = lightEnvironment->FogStart();
+				float fogEnd = lightEnvironment->FogEnd();
 				float fogRange = std::max(fogEnd - fogStart, M_EPSILON);
 				perViewData.fogParameters = Vector4(fogEnd / farClip, farClip / fogRange, 0.0f, 0.0f);
 			}
