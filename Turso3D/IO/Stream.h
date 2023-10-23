@@ -56,78 +56,100 @@ namespace Turso3D
 		// Write operators
 
 		template <typename T>
-		void Write(const T& data)
+		size_t Write(const T& data)
 		{
 			size_t w = Write(&data, sizeof(T));
-			assert(w == sizeof(T) && "Amount of bytes written diffeers from size of T");
+			assert(w == sizeof(T) && "Amount of bytes written differs from size of T");
+			return w;
+		}
+
+		template <typename T>
+		size_t Write(const std::vector<T>& data)
+		{
+			size_t w = Write(data.size());
+			for (const T& x : data)
+			{
+				w += Write<T>(x);
+			}
+			return w;
 		}
 
 		template <>
-		void Write<bool>(const bool& data)
+		size_t Write<bool>(const bool& data)
 		{
-			Write(data ? (uint8_t)1u : (uint8_t)0u);
+			return Write(data ? (uint8_t)1u : (uint8_t)0u);
 		}
 
 		// Write a null terminated string.
 		template <>
-		void Write<std::string>(const std::string& data)
+		size_t Write<std::string>(const std::string& data)
 		{
 			size_t w = Write(data.c_str(), data.size() + 1);
 			assert(w == (data.size() + 1) && "String length mismatch");
-		}
-
-		template <typename T>
-		void Write(const std::vector<T>& data)
-		{
-			Write(data.size());
-			for (const T& x : data)
-			{
-				Write(x);
-			}
+			return w;
 		}
 
 		// ==========================================================================================
 		// Read operators
 
 		template <typename T>
+		size_t Read(T& output)
+		{
+			size_t r = Read(&output, sizeof(T));
+			assert(r == sizeof(T) && "Amount of bytes read differs from size of T");
+			return r;
+		}
+
+		template <typename T>
+		size_t Read(std::vector<T>& output)
+		{
+			size_t count;
+			size_t r = Read<size_t>(count);
+
+			if (output.capacity() - output.size() < count) {
+				output.reserve(output.size() + count);
+			}
+
+			for (size_t i = 0; i < count; ++i)
+			{
+				T& data = output.emplace_back();
+				r += Read<T>(data);
+			}
+
+			return r;
+		}
+
+		template <typename T>
 		auto Read() -> std::enable_if_t<std::is_default_constructible_v<T>, std::remove_cv_t<T>>
 		{
 			std::remove_cv_t<T> value;
-			size_t r = Read(&value, sizeof(T));
-			assert(r == sizeof(T) && "Amount of bytes read differs from size of T");
+			Read<T>(value);
 			return value;
 		}
 
 		template <>
-		bool Read<bool>()
+		size_t Read<bool>(bool& output)
 		{
-			return (Read<uint8_t>() != 0) ? true : false;
+			uint8_t value;
+			size_t r = Read<uint8_t>(value);
+			output = (value != 0) ? true : false;
+			return r;
 		}
 
 		// Read a null terminated string.
 		template <>
-		std::string Read<std::string>()
+		size_t Read<std::string>(std::string& output)
 		{
-			std::string value;
+			size_t r = 0;
 			while (!IsEof()) {
-				char c = Read<char>();
+				char c;
+				r += Read<char>(c);
 				if (!c) {
 					break;
 				}
-				value += c;
+				output += c;
 			}
-			return value;
-		}
-
-		template <typename T>
-		void Read(std::vector<T>& data)
-		{
-			size_t count = Read<size_t>();
-			data.resize(count);
-			for (size_t i = 0; i < count; ++i)
-			{
-				data[i] = Read<T>();
-			}
+			return r;
 		}
 
 	protected:
