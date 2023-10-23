@@ -4,6 +4,8 @@ namespace Turso3D
 {
 	std::map<RTTI::typeid_t, Object*> Object::subsystems;
 
+	Object::~Object() = default;
+
 	void Object::RegisterSubsystem(Object* subsystem)
 	{
 		if (!subsystem) {

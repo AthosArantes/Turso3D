@@ -9,6 +9,8 @@ namespace Turso3D
 	class Object
 	{
 	public:
+		virtual ~Object();
+
 		RTTI_IMPL();
 
 		// Register an object as a subsystem that can be accessed globally.
