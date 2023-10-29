@@ -214,8 +214,10 @@ namespace Turso3D
 
 				auto& data = loadedMaterial->queuedTextures.emplace_back();
 				data.slot = texture.attribute("slot").as_uint();
+				bool srgb = texture.attribute("srgb").as_bool();
 
 				data.texture = std::make_shared<Texture>();
+				data.texture->SetLoadSRGB(srgb);
 				if (!data.texture->BeginLoad(*image)) {
 					data.texture.reset();
 				}

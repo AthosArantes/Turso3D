@@ -5,7 +5,7 @@
 		<opaque shader="Shaders/DiffuseNormal.glsl" />
 	</passes>
 	<textures>
-		<texture slot="0" name="stone_diffuse.dds" />
+		<texture slot="0" name="stone_diffuse.dds" srgb="true" />
 		<texture slot="1" name="bricks_normal.png" />
 	</textures>
 	<uniforms>

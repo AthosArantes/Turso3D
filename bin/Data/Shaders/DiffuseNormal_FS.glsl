@@ -53,13 +53,7 @@ void main()
 	vec3 specularLight;
 	CalculateLighting(vWorldPos, normal, vScreenPos, matDiffColor, matSpecColor, diffuseLight, specularLight);
 
-#if 1
-	float gamma = 2.2;
-	vec3 diffuseColor = pow(texture(diffuseTex0, vTexCoord).rgb, vec3(gamma));
-	vec3 finalColor = diffuseColor * diffuseLight + specularLight;
-#else
 	vec3 finalColor = texture(diffuseTex0, vTexCoord).rgb * diffuseLight + specularLight;
-#endif
 
 	fragColor[0] = vec4(mix(fogColor, finalColor, GetFogFactor(vWorldPos.w)), matDiffColor.a);
 	fragColor[1] = vec4(vViewNormal, 1.0);

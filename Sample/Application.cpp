@@ -21,6 +21,7 @@
 #include <Turso3D/Renderer/StaticModel.h>
 #include <Turso3D/Resource/ResourceCache.h>
 #include <Turso3D/Scene/Scene.h>
+#include <GLEW/glew.h>
 #include <GLFW/glfw3.h>
 #include <filesystem>
 #include <chrono>
@@ -87,6 +88,8 @@ bool Application::Initialize()
 	}
 	graphics->SetVSync(true);
 
+	glEnable(GL_FRAMEBUFFER_SRGB);
+
 	// Create subsystems that depend on the application window / OpenGL
 	renderer = std::make_unique<Renderer>();
 	renderer->SetupShadowMaps(DIRECTIONAL_LIGHT_SIZE, 4096, FMT_D16);
@@ -119,7 +122,7 @@ bool Application::Initialize()
 
 	ImageLevel noiseDataLevel(IntVector2(4, 4), FMT_RGBA8, &noiseData[0]);
 	ssaoNoiseTexture = std::make_unique<Texture>();
-	ssaoNoiseTexture->Define(TEX_2D, IntVector2(4, 4), FMT_RGBA8, 1, 1, &noiseDataLevel);
+	ssaoNoiseTexture->Define(TEX_2D, IntVector2(4, 4), FMT_RGBA8, false, 1, 1, &noiseDataLevel);
 	ssaoNoiseTexture->DefineSampler(FILTER_POINT);
 
 	// Create the scene and camera.
@@ -460,7 +463,7 @@ void Application::OnFramebufferSize(int width, int height)
 		colorBuffer->Define(TEX_2D, sz, FMT_RGBA16F);
 		colorBuffer->DefineSampler(FILTER_BILINEAR, ADDRESS_CLAMP, ADDRESS_CLAMP, ADDRESS_CLAMP);
 
-		tonemapBuffer->Define(TEX_2D, sz, FMT_RGBA8);
+		tonemapBuffer->Define(TEX_2D, sz, FMT_RGBA8, true);
 		tonemapBuffer->DefineSampler(FILTER_BILINEAR, ADDRESS_CLAMP, ADDRESS_CLAMP, ADDRESS_CLAMP);
 
 		depthStencilBuffer->Define(TEX_2D, sz, FMT_D32);
@@ -638,7 +641,7 @@ void Application::Render(double dt)
 		graphics->SetUniform(program, "noiseInvSize", Vector2(ssaoTexture->Width() / 4.0f, ssaoTexture->Height() / 4.0f));
 		graphics->SetUniform(program, "screenInvSize", Vector2(1.0f / (float)width, 1.0f / (float)height));
 		graphics->SetUniform(program, "frustumSize", Vector4(farVec, (float)height / (float)width));
-		graphics->SetUniform(program, "aoParameters", Vector4(0.30f, 1.0f, 0.025f, 0.15f));
+		graphics->SetUniform(program, "aoParameters", Vector4(0.30f, 1.0f, 0.010f, 0.15f));
 		graphics->SetUniform(program, "depthReconstruct", Vector2(farClip / (farClip - nearClip), -nearClip / (farClip - nearClip)));
 		graphics->SetTexture(0, depthStencilBuffer.get());
 		graphics->SetTexture(1, normalBuffer.get());

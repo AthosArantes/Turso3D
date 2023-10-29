@@ -7,8 +7,6 @@ in vec2 vTexCoord;
 uniform sampler2D diffuseTex0;
 uniform float exposure;
 
-const float GAMMA = 2.2f;
-
 float ColorToLuminance(vec3 color)
 {
 	return dot(color, vec3(0.2126f, 0.7152f, 0.0722f));
@@ -17,7 +15,6 @@ float ColorToLuminance(vec3 color)
 vec3 LinearToneMapping(vec3 color)
 {
 	color = clamp(color, 0.0, 1.0);
-	color = pow(color, vec3(1.0 / GAMMA));
 	return color;
 }
 
@@ -28,7 +25,6 @@ vec3 ReinhardToneMapping(vec3 color)
 	if (luma > 1e-6)
 		color *= toneMappedLuma / luma;
 
-	color = pow(color, vec3(1.0 / GAMMA));
 	return color;
 }
 
@@ -41,7 +37,6 @@ vec3 ACESFilmicToneMapping(vec3 color)
 	float d = 0.59f;
 	float e = 0.14f;
 	color = clamp((color * (a * color + b)) / (color * (c * color + d) + e), 0.0, 1.0);
-	color = pow(color, vec3(1.0 / GAMMA));
 	return color;
 }
 
@@ -59,25 +54,12 @@ vec3 HableToneMapping(vec3 color)
 	color = ((color * (A * color + C * B) + D * E) / (color * (A * color + B) + D * F)) - E / F;
 	float white = ((W * (A * W + C * B) + D * E) / (W * (A * W + B) + D * F)) - E / F;
 	color /= white;
-	color = pow(color, vec3(1.0 / GAMMA));
 	return color;
 }
 
 void main()
 {
 	vec3 hdr = texture(diffuseTex0, vTexCoord).rgb;
-
-#if 0
-	// reinhard
-	// vec3 result = hdr / (hdr + vec3(1.0));
-	// exposure
-	vec3 ldr = vec3(1.0) - exp(-hdr * exposure);
-
-	// also gamma correct while we're at it
-	ldr = pow(result, vec3(1.0 / GAMMA));
-#endif
-
 	vec3 ldr = HableToneMapping(hdr);
-
 	fragColor = vec4(ldr, 1.0);
 }

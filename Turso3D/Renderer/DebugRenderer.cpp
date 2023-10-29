@@ -236,14 +236,15 @@ namespace Turso3D
 	{
 		unsigned uintColor = color.ToUInt();
 
-		for (float j = 0.0f; j < 180.0f; j += 45.0f) {
-			for (float i = 0.0f; i < 360.0f; i += 45.0f) {
+		constexpr float a = 360.0f / 16;
+		for (float j = 0.0f; j < 180.0f; j += a) {
+			for (float i = 0.0f; i < 360.0f; i += a) {
 				unsigned startVertex = (unsigned)vertices.size();
 
 				vertices.push_back(DebugVertex(sphere.Point(i, j), uintColor));
-				vertices.push_back(DebugVertex(sphere.Point(i + 45.0f, j), uintColor));
-				vertices.push_back(DebugVertex(sphere.Point(i, j + 45.0f), uintColor));
-				vertices.push_back(DebugVertex(sphere.Point(i + 45.0f, j + 45.0f), uintColor));
+				vertices.push_back(DebugVertex(sphere.Point(i + a, j), uintColor));
+				vertices.push_back(DebugVertex(sphere.Point(i, j + a), uintColor));
+				vertices.push_back(DebugVertex(sphere.Point(i + a, j + a), uintColor));
 
 				std::vector<unsigned>& dest = depthTest ? indices : noDepthIndices;
 
@@ -269,9 +270,10 @@ namespace Turso3D
 		Vector3 offsetXVec(radius, 0, 0);
 		Vector3 offsetZVec(0, 0, radius);
 
-		for (float i = 0.0f; i < 360.0f; i += 45.0f) {
+		constexpr float a = 360.0f / 16;
+		for (float i = 0.0f; i < 360.0f; i += a) {
 			Vector3 p1 = sphere.Point(i, 90.0f);
-			Vector3 p2 = sphere.Point(i + 45.0f, 90.0f);
+			Vector3 p2 = sphere.Point(i + a, 90.0f);
 			AddLine(p1, p2, color, depthTest);
 			AddLine(p1 + heightVec, p2 + heightVec, color, depthTest);
 		}

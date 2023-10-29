@@ -174,13 +174,12 @@ namespace Turso3D
 		}
 
 		clusterTexture = std::make_unique<Texture>();
-		clusterTexture->Define(TEX_3D, IntVector3(NUM_CLUSTER_X, NUM_CLUSTER_Y, NUM_CLUSTER_Z), FMT_RGBA32U, 1);
+		clusterTexture->Define(TEX_3D, IntVector3(NUM_CLUSTER_X, NUM_CLUSTER_Y, NUM_CLUSTER_Z), FMT_RGBA32U);
 		clusterTexture->DefineSampler(FILTER_POINT, ADDRESS_CLAMP, ADDRESS_CLAMP, ADDRESS_CLAMP);
 
 		clusterCullData = std::make_unique<ClusterCullData[]>(NUM_CLUSTER_X * NUM_CLUSTER_Y * NUM_CLUSTER_Z);
 		clusterData = std::make_unique<uint8_t[]>(MAX_LIGHTS_CLUSTER * NUM_CLUSTER_X * NUM_CLUSTER_Y * NUM_CLUSTER_Z);
 		lightData = std::make_unique<LightData[]>(MAX_LIGHTS + 1);
-		//memset(lightData, 0, (MAX_LIGHTS + 1) * sizeof(LightData));
 
 		perViewDataBuffer = std::make_unique<UniformBuffer>();
 		perViewDataBuffer->Define(USAGE_DYNAMIC, sizeof(PerViewUniforms));
@@ -988,10 +987,10 @@ namespace Turso3D
 			faces2.push_back(ImageLevel(IntVector2(1, 1), FMT_RGBA32F, &faceSelectionData2[4 * i]));
 		}
 
-		faceSelectionTexture1->Define(TEX_CUBE, IntVector3(1, 1, MAX_CUBE_FACES), FMT_RGBA32F, 1, 1, &faces1[0]);
+		faceSelectionTexture1->Define(TEX_CUBE, IntVector3(1, 1, MAX_CUBE_FACES), FMT_RGBA32F, false, 1, 1, &faces1[0]);
 		faceSelectionTexture1->DefineSampler(FILTER_POINT, ADDRESS_CLAMP, ADDRESS_CLAMP, ADDRESS_CLAMP);
 
-		faceSelectionTexture2->Define(TEX_CUBE, IntVector3(1, 1, MAX_CUBE_FACES), FMT_RGBA32F, 1, 1, &faces2[0]);
+		faceSelectionTexture2->Define(TEX_CUBE, IntVector3(1, 1, MAX_CUBE_FACES), FMT_RGBA32F, false, 1, 1, &faces2[0]);
 		faceSelectionTexture2->DefineSampler(FILTER_POINT, ADDRESS_CLAMP, ADDRESS_CLAMP, ADDRESS_CLAMP);
 	}
 

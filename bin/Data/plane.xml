@@ -5,7 +5,7 @@
 		<alpha shader="Shaders/Diffuse.glsl" />
 	</passes>
 	<textures>
-		<texture slot="0" name="leaves.png" />
+		<texture slot="0" name="leaves.png" srgb="true" />
 	</textures>
 	<uniforms>
 		<uniform name="matDiffColor" value="1 1 1 1" />

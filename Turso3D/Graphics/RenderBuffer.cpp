@@ -56,13 +56,15 @@ namespace Turso3D
 		format = format_;
 		multisample = multisample_;
 
+		unsigned internalFormat = Texture::glInternalFormats[format];
+
 		// Clear previous error first to be able to check whether the data was successfully set
 		glGetError();
 		glBindRenderbuffer(GL_RENDERBUFFER, buffer);
 		if (multisample > 1) {
-			glRenderbufferStorageMultisample(GL_RENDERBUFFER, multisample, Texture::glInternalFormats[format], size.x, size.y);
+			glRenderbufferStorageMultisample(GL_RENDERBUFFER, multisample, internalFormat, size.x, size.y);
 		} else {
-			glRenderbufferStorage(GL_RENDERBUFFER, Texture::glInternalFormats[format], size.x, size.y);
+			glRenderbufferStorage(GL_RENDERBUFFER, internalFormat, size.x, size.y);
 		}
 		glBindRenderbuffer(GL_RENDERBUFFER, 0);
 
