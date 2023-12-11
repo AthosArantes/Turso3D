@@ -140,6 +140,7 @@ namespace Turso3D
 
 		// Set shader defines for all passes.
 		void SetShaderDefines(const std::string& vsDefines, const std::string& fsDefines);
+
 		// Define uniform buffer layout. All material uniforms are Vector4's for simplicity.
 		void DefineUniforms(size_t numUniforms, const char** uniformNames);
 		// Define uniform buffer layout.
@@ -190,6 +191,7 @@ namespace Turso3D
 		// Return global fragment shader defines.
 		static const std::string& GlobalFSDefines() { return globalFSDefines; }
 
+		// TODO: Move default material to ResourceCache
 		static void FreeDefaultMaterial();
 
 	private:
@@ -207,11 +209,13 @@ namespace Turso3D
 		std::vector<Vector4> uniformValues;
 		// Uniforms dirty flag.
 		mutable bool uniformsDirty;
+
 		// Vertex shader defines for all passes.
 		std::string vsDefines;
 		// Fragment shader defines for all passes.
 		std::string fsDefines;
 
+		// TODO: rename
 		struct LoadedMaterialData
 		{
 			struct QueuedPass
@@ -254,21 +258,20 @@ namespace Turso3D
 	{
 		if (shaderPrograms[programBits]) {
 			return shaderPrograms[programBits].get();
-
-		} else {
-			if (!shader) {
-				return nullptr;
-			}
-
-			unsigned char geomBits = programBits & SP_GEOMETRYBITS;
-			std::shared_ptr<ShaderProgram> newShaderProgram = shader->CreateProgram(
-				Material::GlobalVSDefines() + parent->VSDefines() + vsDefines + GeometryDefines[geomBits],
-				Material::GlobalFSDefines() + parent->FSDefines() + fsDefines
-			);
-			shaderPrograms[programBits] = newShaderProgram;
-
-			return newShaderProgram.get();
 		}
+
+		if (!shader) {
+			return nullptr;
+		}
+
+		unsigned char geomBits = programBits & SP_GEOMETRYBITS;
+		std::shared_ptr<ShaderProgram> newShaderProgram = shader->CreateProgram(
+			Material::GlobalVSDefines() + parent->VSDefines() + vsDefines + GeometryDefines[geomBits],
+			Material::GlobalFSDefines() + parent->FSDefines() + fsDefines
+		);
+		shaderPrograms[programBits] = newShaderProgram;
+
+		return newShaderProgram.get();
 	}
 }
 

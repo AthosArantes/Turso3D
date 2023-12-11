@@ -62,18 +62,24 @@ namespace Turso3D
 			return data.size();
 		}
 
-		void SetGeometry(size_t index, const std::shared_ptr<Geometry>& geometry)
+		// Set geometry at index.
+		// Geometry pointers are raw pointers for safe LOD level changes on OnPrepareRender() in worker threads;
+		// a strong ref to the geometry should be held elsewhere.
+		void SetGeometry(size_t index, Geometry* geometry)
 		{
 			assert(index < data.size() && "Index out of bounds");
 			data[index].geometry = geometry;
 		}
+
+		// Set material at index.
+		// Materials hold strong refs and should not be changed from worker threads in OnPrepareRender().
 		void SetMaterial(size_t index, const std::shared_ptr<Material>& material)
 		{
 			assert(index < data.size() && "Index out of bounds");
 			data[index].material = material;
 		}
 
-		const std::shared_ptr<Geometry>& GetGeometry(size_t index) const
+		Geometry* GetGeometry(size_t index) const
 		{
 			assert(index < data.size() && "Index out of bounds");
 			return data[index].geometry;
@@ -88,7 +94,7 @@ namespace Turso3D
 		struct GeomMat
 		{
 			std::shared_ptr<Material> material;
-			std::shared_ptr<Geometry> geometry;
+			Geometry* geometry;
 		};
 		std::vector<GeomMat> data;
 	};
@@ -112,7 +118,7 @@ namespace Turso3D
 		virtual void OnRender(ShaderProgram* program, size_t geomIndex);
 
 		// Return geometry type.
-		GeometryType GetGeometryType() const { return (GeometryType)(Flags() & DF_GEOMETRY_TYPE_BITS); }
+		GeometryType GetGeometryType() const { return (GeometryType)(Flags() & Drawable::FLAG_GEOMETRY_TYPE_BITS); }
 		// Return the draw call source data for direct access.
 		const SourceBatches& Batches() const { return batches; }
 
@@ -138,11 +144,12 @@ namespace Turso3D
 		void SetMaterial(size_t index, const std::shared_ptr<Material>& material);
 
 		// Return geometry type.
-		GeometryType GetGeometryType() const { return (GeometryType)(drawable->Flags() & DF_GEOMETRY_TYPE_BITS); }
+		GeometryType GetGeometryType() const { return (GeometryType)(drawable->Flags() & Drawable::FLAG_GEOMETRY_TYPE_BITS); }
 		// Return number of geometries / batches.
 		size_t NumGeometries() const { return static_cast<GeometryDrawable*>(drawable)->batches.NumGeometries(); }
 		// Return geometry by index.
-		const std::shared_ptr<Geometry>& GetGeometry(size_t index) const { return static_cast<GeometryDrawable*>(drawable)->batches.GetGeometry(index); }
+		Geometry* GetGeometry(size_t index) const { return static_cast<GeometryDrawable*>(drawable)->batches.GetGeometry(index); }
+		
 		// Return material by geometry index.
 		const std::shared_ptr<Material>& GetMaterial(size_t index) const { return static_cast<GeometryDrawable*>(drawable)->batches.GetMaterial(index); }
 		// Return the draw call source data for direct access.

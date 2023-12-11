@@ -40,7 +40,7 @@ namespace Turso3D
 		}
 	}
 
-	bool ShaderProgram::Create(const std::string& vsCode, const std::string& fsCode, const std::vector<std::string>& vsDefines, const std::vector<std::string>& fsDefines)
+	bool ShaderProgram::Create(const std::string& code, const std::vector<std::string>& vsDefines, const std::vector<std::string>& fsDefines)
 	{
 		assert(Object::Subsystem<Graphics>()->IsInitialized());
 
@@ -48,8 +48,8 @@ namespace Turso3D
 			return true;
 		}
 
-		unsigned vs = CompileShader(SHADER_VS, vsCode, vsDefines);
-		unsigned fs = CompileShader(SHADER_FS, fsCode, fsDefines);
+		unsigned vs = CompileShader(SHADER_VS, code, vsDefines);
+		unsigned fs = CompileShader(SHADER_FS, code, fsDefines);
 
 		if (!vs || !fs) {
 			return false;
@@ -233,11 +233,11 @@ namespace Turso3D
 		switch (type) {
 			case SHADER_VS:
 				glType = GL_VERTEX_SHADER;
-				shaderCode += "#define COMPILEVS\n";
+				shaderCode += "#define COMPILE_VS\n";
 				break;
 			case SHADER_FS:
 				glType = GL_FRAGMENT_SHADER;
-				shaderCode += "#define COMPILEFS\n";
+				shaderCode += "#define COMPILE_FS\n";
 				break;
 		}
 

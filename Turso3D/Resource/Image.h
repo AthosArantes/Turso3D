@@ -15,6 +15,7 @@ namespace Turso3D
 		FMT_R8,
 		FMT_RG8,
 		FMT_RGBA8,
+		FMT_R11_G11_B10,
 		FMT_A8,
 		FMT_R16,
 		FMT_RG16,

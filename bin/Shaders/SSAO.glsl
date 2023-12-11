@@ -1,3 +1,26 @@
+#version 330 core
+
+// ================================================================================================
+// VERTEX SHADER
+// ================================================================================================
+#ifdef COMPILE_VS
+
+in vec3 position;
+out vec2 vUv;
+
+void main()
+{
+	gl_Position = vec4(position, 1.0);
+	vUv = vec2(position.xy) * 0.5 + 0.5;
+}
+
+#endif
+
+// ================================================================================================
+// FRAGMENT SHADER
+// ================================================================================================
+#ifdef COMPILE_FS
+
 uniform vec2 noiseInvSize;
 uniform vec2 screenInvSize;
 uniform vec4 frustumSize;
@@ -70,3 +93,5 @@ void main()
 
 	fragColor = vec4(clamp(ao * aoParameters.z, 0.0, 1.0), 1.0, 1.0, 1.0);
 }
+
+#endif

@@ -3,6 +3,7 @@
 #include <Turso3D/Core/Object.h>
 #include <Turso3D/IO/Stream.h>
 #include <Turso3D/Utils/StringHash.h>
+#include <limits.h>
 #include <unordered_map>
 #include <memory>
 #include <vector>
@@ -23,9 +24,8 @@ namespace Turso3D
 				return (size_t)value.first ^ ((size_t)value.first + 0x9e3779b9 + (size_t)value.second);
 			}
 		};
+		// Maps a pair of resource type id and string hash of it's name to a Resource.
 		using ResourceMap = std::unordered_map<std::pair<RTTI::typeid_t, StringHash>, std::shared_ptr<Resource>, ResourceMapHasher>;
-
-		using ShaderMap = std::unordered_map<StringHash, std::shared_ptr<Shader>>;
 
 	public:
 		// Construct and register subsystem and object types.
@@ -38,7 +38,7 @@ namespace Turso3D
 
 		// Add a resource directory.
 		// Return true on success.
-		bool AddResourceDir(const std::string& pathName, bool addFirst = false);
+		bool AddResourceDir(const std::string& pathName, unsigned priority = UINT_MAX);
 		// Remove a resource directory.
 		void RemoveResourceDir(const std::string& pathName);
 
@@ -74,21 +74,12 @@ namespace Turso3D
 			return {};
 		}
 
-		// Create and load shader from a resource name.
-		// Automatically add "_VS" or "_FS" suffix for the specified name.
-		// e.g.: For "Shadow.glsl" it will load "Shadow_VS.glsl" and "Shadow_FS.glsl" source files for their shader stage.
-		// This also uses an internal cache, so calling Load multiple times with same shader name will reuse the previously loaded shader.
-		// Only call this from main thread.
-		std::shared_ptr<Shader> LoadShader(const std::string& name);
-
 		// Releases all resources that are only being kept alive by this cache.
-		// Does not affect shaders.
 		void ClearUnused();
 
 	private:
 		std::vector<std::string> resourceDirs;
 		ResourceMap resources;
-		ShaderMap shaders;
 	};
 }
 

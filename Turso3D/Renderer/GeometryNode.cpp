@@ -40,7 +40,7 @@ namespace Turso3D
 	// ==========================================================================================
 	GeometryDrawable::GeometryDrawable()
 	{
-		SetFlag(DF_GEOMETRY, true);
+		SetFlag(Drawable::FLAG_GEOMETRY, true);
 	}
 
 	bool GeometryDrawable::OnPrepareRender(unsigned short frameNumber, Camera* camera)
@@ -72,7 +72,7 @@ namespace Turso3D
 		}
 		GeometryDrawable* geomDrawable = static_cast<GeometryDrawable*>(drawable);
 		if (index < geomDrawable->batches.NumGeometries()) {
-			geomDrawable->batches.SetGeometry(index, geometry);
+			geomDrawable->batches.SetGeometry(index, geometry.get());
 		}
 	}
 

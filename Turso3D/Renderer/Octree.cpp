@@ -29,8 +29,8 @@ namespace Turso3D
 
 	static inline bool CompareDrawables(Drawable* lhs, Drawable* rhs)
 	{
-		unsigned short lhsFlags = lhs->Flags() & (DF_LIGHT | DF_GEOMETRY);
-		unsigned short rhsFlags = rhs->Flags() & (DF_LIGHT | DF_GEOMETRY);
+		unsigned lhsFlags = lhs->Flags() & (Drawable::FLAG_LIGHT | Drawable::FLAG_GEOMETRY);
+		unsigned rhsFlags = rhs->Flags() & (Drawable::FLAG_LIGHT | Drawable::FLAG_GEOMETRY);
 		if (lhsFlags != rhsFlags) {
 			return lhsFlags < rhsFlags;
 		} else {
@@ -192,7 +192,7 @@ namespace Turso3D
 			Drawable* drawable = *it;
 			if (drawable) {
 				drawable->octant = nullptr;
-				drawable->SetFlag(DF_OCTREE_REINSERT_QUEUED, false);
+				drawable->SetFlag(Drawable::FLAG_OCTREE_REINSERT_QUEUED, false);
 			}
 		}
 
@@ -334,7 +334,7 @@ namespace Turso3D
 
 		if (!threadedUpdate) {
 			updateQueue.push_back(drawable);
-			drawable->SetFlag(DF_OCTREE_REINSERT_QUEUED, true);
+			drawable->SetFlag(Drawable::FLAG_OCTREE_REINSERT_QUEUED, true);
 		} else {
 			drawable->lastUpdateFrameNumber = frameNumber;
 
@@ -343,7 +343,7 @@ namespace Turso3D
 			Octant* oldOctant = drawable->GetOctant();
 			if (!oldOctant || oldOctant->fittingBox.IsInside(box) != INSIDE) {
 				reinsertQueues[WorkQueue::ThreadIndex()].push_back(drawable);
-				drawable->SetFlag(DF_OCTREE_REINSERT_QUEUED, true);
+				drawable->SetFlag(Drawable::FLAG_OCTREE_REINSERT_QUEUED, true);
 			}
 		}
 	}
@@ -355,7 +355,7 @@ namespace Turso3D
 		}
 
 		RemoveDrawable(drawable, drawable->GetOctant());
-		if (drawable->TestFlag(DF_OCTREE_REINSERT_QUEUED)) {
+		if (drawable->TestFlag(Drawable::FLAG_OCTREE_REINSERT_QUEUED)) {
 			RemoveDrawableFromQueue(drawable, updateQueue);
 
 			// Remove also from threaded queues if was left over before next update
@@ -363,7 +363,7 @@ namespace Turso3D
 				RemoveDrawableFromQueue(drawable, reinsertQueues[i]);
 			}
 
-			drawable->SetFlag(DF_OCTREE_REINSERT_QUEUED, false);
+			drawable->SetFlag(Drawable::FLAG_OCTREE_REINSERT_QUEUED, false);
 		}
 
 		drawable->octant = nullptr;
@@ -399,7 +399,7 @@ namespace Turso3D
 				}
 			}
 
-			drawable->SetFlag(DF_OCTREE_REINSERT_QUEUED, false);
+			drawable->SetFlag(Drawable::FLAG_OCTREE_REINSERT_QUEUED, false);
 		}
 
 		drawables.clear();
@@ -464,7 +464,7 @@ namespace Turso3D
 		for (auto it = octant->drawables.begin(); it != octant->drawables.end(); ++it) {
 			Drawable* drawable = *it;
 			drawable->octant = nullptr;
-			drawable->SetFlag(DF_OCTREE_REINSERT_QUEUED, false);
+			drawable->SetFlag(Drawable::FLAG_OCTREE_REINSERT_QUEUED, false);
 			if (deletingOctree) {
 				drawable->Owner()->octree = nullptr;
 			}
@@ -583,7 +583,7 @@ namespace Turso3D
 				continue;
 			}
 
-			if (drawable->TestFlag(DF_OCTREE_UPDATE_CALL)) {
+			if (drawable->TestFlag(Drawable::FLAG_OCTREE_UPDATE_CALL)) {
 				drawable->OnOctreeUpdate(frameNumber);
 			}
 
@@ -595,7 +595,7 @@ namespace Turso3D
 			if (!oldOctant || oldOctant->fittingBox.IsInside(box) != INSIDE) {
 				reinsertQueue.push_back(drawable);
 			} else {
-				drawable->SetFlag(DF_OCTREE_REINSERT_QUEUED, false);
+				drawable->SetFlag(Drawable::FLAG_OCTREE_REINSERT_QUEUED, false);
 			}
 		}
 

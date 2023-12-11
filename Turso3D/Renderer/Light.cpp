@@ -65,7 +65,7 @@ namespace Turso3D
 		shadowMap(nullptr),
 		autoFocus(false)
 	{
-		SetFlag(DF_LIGHT, true);
+		SetFlag(Drawable::FLAG_LIGHT, true);
 	}
 
 	void LightDrawable::OnWorldBoundingBoxUpdate() const
@@ -179,7 +179,7 @@ namespace Turso3D
 
 	float LightDrawable::ShadowStrength() const
 	{
-		if (!TestFlag(DF_CAST_SHADOWS)) {
+		if (!TestFlag(Drawable::FLAG_CAST_SHADOWS)) {
 			return 1.0f;
 		}
 
@@ -200,7 +200,7 @@ namespace Turso3D
 
 	size_t LightDrawable::NumShadowViews() const
 	{
-		if (!TestFlag(DF_CAST_SHADOWS)) {
+		if (!TestFlag(Drawable::FLAG_CAST_SHADOWS)) {
 			return 0;
 		} else if (lightType == LIGHT_DIRECTIONAL) {
 			return 2;

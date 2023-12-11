@@ -22,6 +22,7 @@ namespace Turso3D
 		GL_R8,
 		GL_RG8,
 		GL_RGBA8,
+		GL_R11F_G11F_B10F,
 		GL_ALPHA,
 		GL_R16,
 		GL_RG16,
@@ -71,6 +72,7 @@ namespace Turso3D
 		0,
 		0,
 		0,
+		0,
 		GL_COMPRESSED_SRGB_ALPHA_S3TC_DXT1_EXT,
 		GL_COMPRESSED_SRGB_ALPHA_S3TC_DXT3_EXT,
 		GL_COMPRESSED_SRGB_ALPHA_S3TC_DXT5_EXT,
@@ -87,6 +89,7 @@ namespace Turso3D
 		GL_RED,
 		GL_RG,
 		GL_RGBA,
+		GL_RGB,
 		GL_ALPHA,
 		GL_RED,
 		GL_RG,
@@ -120,6 +123,7 @@ namespace Turso3D
 		GL_UNSIGNED_BYTE,
 		GL_UNSIGNED_BYTE,
 		GL_UNSIGNED_BYTE,
+		GL_UNSIGNED_INT_10F_11F_11F_REV,
 		GL_UNSIGNED_BYTE,
 		GL_UNSIGNED_SHORT,
 		GL_UNSIGNED_SHORT,
@@ -230,7 +234,8 @@ namespace Turso3D
 		// TODO: Read a parameter file for the sampling parameters (Values retrieved in BeginLoad)
 		success &= DefineSampler(FILTER_TRILINEAR, ADDRESS_WRAP, ADDRESS_WRAP, ADDRESS_WRAP);
 
-		loadImages.clear();
+		std::vector<std::unique_ptr<Image>> {}.swap(loadImages);
+
 		return success;
 	}
 
@@ -243,7 +248,7 @@ namespace Turso3D
 	{
 		Release();
 
-		if (format_ > FMT_DXT5) {
+		if (format_ >= FMT_ETC1) {
 			LOG_ERROR("ETC1 and PVRTC formats are unsupported");
 			return false;
 		}

@@ -157,8 +157,8 @@ namespace Turso3D
 		}
 
 		GLenum err = glewInit();
-		if (err != GLEW_OK || !GLEW_VERSION_4_3) {
-			LOG_ERROR("Could not initialize OpenGL 4.3");
+		if (err != GLEW_OK || !GLEW_VERSION_3_3) {
+			LOG_ERROR("Could not initialize OpenGL 3.3");
 			return false;
 		}
 
@@ -263,7 +263,7 @@ namespace Turso3D
 	{
 		ResourceCache* cache = Object::Subsystem<ResourceCache>();
 		if (cache) {
-			std::shared_ptr<Shader> shader = cache->LoadShader(shaderName);
+			std::shared_ptr<Shader> shader = cache->LoadResource<Shader>(shaderName);
 			if (shader) {
 				return shader->CreateProgram(vsDefines, fsDefines);
 			}

@@ -89,12 +89,21 @@ namespace Turso3D
 		OctantVisibility Visibility() const { return visibility; }
 		// Return whether is pending an occlusion query result.
 		bool OcclusionQueryPending() const { return occlusionQueryId != 0; }
+
 		// Set bit flag.
-		// Called internally.
-		void SetFlag(unsigned char bit, bool set) const { if (set) flags |= bit; else flags &= ~bit; }
+		void SetFlag(unsigned char bit, bool set) const
+		{
+			if (set) {
+				flags |= bit;
+			} else {
+				flags &= ~bit;
+			}
+		}
 		// Test bit flag.
-		// Called internally.
-		bool TestFlag(unsigned char bit) const { return (flags & bit) != 0; }
+		bool TestFlag(unsigned char bit) const
+		{
+			return (flags & bit) != 0;
+		}
 
 		// Test if a drawable should be inserted in this octant or if a smaller child octant should be created.
 		bool FitBoundingBox(const BoundingBox& box, const Vector3& boxSize) const
@@ -199,7 +208,7 @@ namespace Turso3D
 		// The child index of this octant.
 		unsigned char childIndex;
 		// Dirty flags.
-		mutable unsigned char flags;
+		mutable unsigned flags;
 	};
 
 	// ==========================================================================================

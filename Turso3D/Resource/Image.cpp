@@ -31,6 +31,7 @@ namespace Turso3D
 		1,      // FMT_R8
 		2,      // FMT_RG8
 		4,      // FMT_RGBA8
+		3,		// FMT_R11_G11_B10
 		1,      // FMT_A8
 		0,      // FMT_R16
 		0,      // FMT_RG16
@@ -64,6 +65,7 @@ namespace Turso3D
 		1,      // FMT_R8
 		2,      // FMT_RG8
 		4,      // FMT_RGBA8
+		4,		// FMT_R11_G11_B10
 		1,      // FMT_A8
 		2,      // FMT_R16
 		4,      // FMT_RG16
@@ -100,15 +102,13 @@ namespace Turso3D
 		FMT_RGBA8
 	};
 
-	// \cond PRIVATE
+	// ==========================================================================================
 	struct DDColorKey
 	{
 		unsigned dwColorSpaceLowValue;
 		unsigned dwColorSpaceHighValue;
 	};
-	// \endcond
 
-	// \cond PRIVATE
 	struct DDPixelFormat
 	{
 		unsigned dwSize;
@@ -161,9 +161,7 @@ namespace Turso3D
 			unsigned dwYUVZBitMask;
 		};
 	};
-	// \endcond
 
-	// \cond PRIVATE
 	struct DDSCaps2
 	{
 		unsigned dwCaps;
@@ -175,9 +173,7 @@ namespace Turso3D
 			unsigned dwVolumeDepth;
 		};
 	};
-	// \endcond
 
-	// \cond PRIVATE
 	struct DDSurfaceDesc2
 	{
 		unsigned dwSize;
@@ -219,8 +215,8 @@ namespace Turso3D
 		DDSCaps2 ddsCaps;
 		unsigned dwTextureStage;
 	};
-	// \endcond
 
+	// ==========================================================================================
 	ImageLevel::ImageLevel(const IntVector2& size_, ImageFormat format_, const void* data_) :
 		data((unsigned char*)data_),
 		size(IntVector3(size_.x, size_.y, 1)),
@@ -589,7 +585,7 @@ namespace Turso3D
 		const uint8_t* pixelDataIn = data.get();
 		uint8_t* pixelDataOut = dest.data.get();
 
-		// \todo Actually support 3D images
+		// TODO: Actually support 3D images
 		switch (pixelByteSize) {
 			case 1:
 				for (int y = 0; y < sizeOut.y; ++y) {

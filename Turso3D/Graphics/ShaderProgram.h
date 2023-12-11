@@ -19,7 +19,7 @@ namespace Turso3D
 
 		// Compile & link from shader source code and defines.
 		// Graphics subsystem must have been initialized.
-		bool Create(const std::string& vsCode, const std::string& fsCode, const std::vector<std::string>& vsDefines, const std::vector<std::string>& fsDefines);
+		bool Create(const std::string& code, const std::vector<std::string>& vsDefines, const std::vector<std::string>& fsDefines);
 
 		// Bind for using. No-op if already bound.
 		// Return false if program is not successfully linked.

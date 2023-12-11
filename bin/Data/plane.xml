@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
 <material cullMode="none" vsDefines="ALPHAMASK" fsDefines="ALPHAMASK">
 	<passes>
-		<shadow shader="Shaders/Shadow.glsl" colorWrite="false" />
-		<alpha shader="Shaders/Diffuse.glsl" />
+		<shadow shader="Shadow.glsl" colorWrite="false" />
+		<alpha shader="Diffuse.glsl" />
 	</passes>
 	<textures>
 		<texture slot="0" name="leaves.png" srgb="true" />

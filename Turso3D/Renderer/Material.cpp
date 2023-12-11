@@ -4,8 +4,8 @@
 #include <Turso3D/IO/Log.h>
 #include <Turso3D/IO/MemoryStream.h>
 #include <Turso3D/Resource/ResourceCache.h>
-#include <Turso3D/Utils/StringUtils.h>
 #include <pugixml/pugixml.hpp>
+#include <filesystem>
 
 namespace Turso3D
 {
@@ -117,7 +117,7 @@ namespace Turso3D
 			for (auto& data : loadedMaterial->queuedPasses) {
 				Pass* pass = CreatePass(data.type);
 				pass->SetRenderState(data.blendMode, data.depthTest, data.colorWrite, data.depthWrite);
-				pass->SetShader(cache->LoadShader(data.shader), data.vsDefines, data.fsDefines);
+				pass->SetShader(cache->LoadResource<Shader>(data.shader), data.vsDefines, data.fsDefines);
 			}
 
 			// Load textures
@@ -206,8 +206,24 @@ namespace Turso3D
 		if (xml_node node = root.child("textures"); node) {
 			ResourceCache* cache = Subsystem<ResourceCache>();
 
+			// Material names containing a directory separator will be used as base path for texture loading.
+			bool nameIsPath = Name().find_first_of("/\\") != std::string::npos;
+
 			for (xml_node texture : node.children("texture")) {
-				std::unique_ptr<Stream> image = cache->OpenResource(texture.attribute("name").value());
+				std::unique_ptr<Stream> image;
+
+				std::string texname {texture.attribute("name").value()};
+				if (nameIsPath) {
+					image = cache->OpenResource(std::filesystem::path {Name()}.replace_filename(texname).string());
+					if (!image) {
+						// Try again with texture name being absolute.
+						image = cache->OpenResource(texname);
+					}
+
+				} else {
+					image = cache->OpenResource(texname);
+				}
+
 				if (!image) {
 					continue;
 				}
@@ -452,11 +468,11 @@ namespace Turso3D
 			defaultMaterial->DefineUniforms(defaultUniforms);
 
 			Pass* pass = defaultMaterial->CreatePass(PASS_SHADOW);
-			pass->SetShader(cache->LoadShader("Shaders/Shadow.glsl"), "", "");
+			pass->SetShader(cache->LoadResource<Shader>("Shadow.glsl"), "", "");
 			pass->SetRenderState(BLEND_REPLACE, CMP_LESS_EQUAL, false, true);
 
 			pass = defaultMaterial->CreatePass(PASS_OPAQUE);
-			pass->SetShader(cache->LoadShader("Shaders/NoTexture.glsl"), "", "");
+			pass->SetShader(cache->LoadResource<Shader>("NoTexture.glsl"), "", "");
 			pass->SetRenderState(BLEND_REPLACE, CMP_LESS_EQUAL, true, true);
 		}
 

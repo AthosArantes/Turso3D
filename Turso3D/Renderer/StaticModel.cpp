@@ -42,7 +42,7 @@ namespace Turso3D
 		}
 
 		// Find out the new LOD level if model has LODs
-		if (Flags() & DF_HAS_LOD_LEVELS) {
+		if (Flags() & Drawable::FLAG_HAS_LOD_LEVELS) {
 			float lodDistance = camera->LodDistance(distance, WorldScale().DotProduct(DOT_SCALE), lodBias);
 			size_t numGeometries = batches.NumGeometries();
 
@@ -55,8 +55,8 @@ namespace Turso3D
 							break;
 						}
 					}
-					if (batches.GetGeometry(i) != lodGeometries[j - 1]) {
-						batches.SetGeometry(i, lodGeometries[j - 1]);
+					if (batches.GetGeometry(i) != lodGeometries[j - 1].get()) {
+						batches.SetGeometry(i, lodGeometries[j - 1].get());
 						lastUpdateFrameNumber = frameNumber;
 					}
 				}
@@ -79,7 +79,7 @@ namespace Turso3D
 			size_t numGeometries = batches.NumGeometries();
 
 			for (size_t i = 0; i < numGeometries; ++i) {
-				Geometry* geom = batches.GetGeometry(i).get();
+				Geometry* geom = batches.GetGeometry(i);
 				float localDistance = geom->HitDistance(localRay, &res.normal);
 
 				if (localDistance < M_INFINITY) {
@@ -124,7 +124,7 @@ namespace Turso3D
 		StaticModelDrawable* modelDrawable = static_cast<StaticModelDrawable*>(drawable);
 
 		modelDrawable->model = model;
-		modelDrawable->SetFlag(DF_HAS_LOD_LEVELS, false);
+		modelDrawable->SetFlag(Drawable::FLAG_HAS_LOD_LEVELS, false);
 
 		if (model) {
 			SetNumGeometries(model->NumGeometries());
@@ -132,7 +132,7 @@ namespace Turso3D
 			for (size_t i = 0; i < model->NumGeometries(); ++i) {
 				SetGeometry(i, model->GetGeometry(i, 0));
 				if (model->NumLodLevels(i) > 1) {
-					modelDrawable->SetFlag(DF_HAS_LOD_LEVELS, true);
+					modelDrawable->SetFlag(Drawable::FLAG_HAS_LOD_LEVELS, true);
 				}
 			}
 		} else {

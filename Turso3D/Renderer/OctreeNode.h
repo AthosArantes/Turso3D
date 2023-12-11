@@ -14,22 +14,6 @@ namespace Turso3D
 	class Ray;
 	struct RaycastResult;
 
-	constexpr unsigned short DF_STATIC_GEOMETRY = 0x0;
-	constexpr unsigned short DF_SKINNED_GEOMETRY = 0x1;
-	constexpr unsigned short DF_INSTANCED_GEOMETRY = 0x2;
-	constexpr unsigned short DF_CUSTOM_GEOMETRY = 0x3;
-	constexpr unsigned short DF_GEOMETRY_TYPE_BITS = 0x3;
-	constexpr unsigned short DF_LIGHT = 0x4;
-	constexpr unsigned short DF_GEOMETRY = 0x8;
-	constexpr unsigned short DF_STATIC = 0x10;
-	constexpr unsigned short DF_CAST_SHADOWS = 0x20;
-	constexpr unsigned short DF_UPDATE_INVISIBLE = 0x40;
-	constexpr unsigned short DF_HAS_LOD_LEVELS = 0x80;
-	constexpr unsigned short DF_OCTREE_UPDATE_CALL = 0x100;
-	constexpr unsigned short DF_WORLD_TRANSFORM_DIRTY = 0x200;
-	constexpr unsigned short DF_BOUNDING_BOX_DIRTY = 0x400;
-	constexpr unsigned short DF_OCTREE_REINSERT_QUEUED = 0x800;
-
 	// Common base class for renderable scene objects and occluders.
 	class OctreeNodeBase : public SpatialNode
 	{
@@ -43,7 +27,7 @@ namespace Turso3D
 
 	protected:
 		// Handle the layer changing.
-		void OnLayerChanged(unsigned char newLayer) override;
+		void OnLayerChanged(uint8_t newLayer) override;
 
 		// Current octree.
 		Octree* octree;
@@ -59,6 +43,26 @@ namespace Turso3D
 	{
 		friend class Octree;
 		friend class OctreeNode;
+
+	public:
+		enum Flag
+		{
+			FLAG_STATIC_GEOMETRY = 0x0,
+			FLAG_SKINNED_GEOMETRY = 0x1,
+			FLAG_INSTANCED_GEOMETRY = 0x2,
+			FLAG_CUSTOM_GEOMETRY = 0x3,
+			FLAG_GEOMETRY_TYPE_BITS = 0x3,
+			FLAG_LIGHT = 0x4,
+			FLAG_GEOMETRY = 0x8,
+			FLAG_STATIC = 0x10,
+			FLAG_CAST_SHADOWS = 0x20,
+			FLAG_UPDATE_INVISIBLE = 0x40,
+			FLAG_HAS_LOD_LEVELS = 0x80,
+			FLAG_OCTREE_UPDATE_CALL = 0x100,
+			FLAG_WORLD_TRANSFORM_DIRTY = 0x200,
+			FLAG_BOUNDING_BOX_DIRTY = 0x400,
+			FLAG_OCTREE_REINSERT_QUEUED = 0x800
+		};
 
 	public:
 		// Construct.
@@ -86,12 +90,10 @@ namespace Turso3D
 		// Set the owner node.
 		void SetOwner(OctreeNodeBase* owner);
 		// Set the layer.
-		void SetLayer(unsigned char newLayer);
-
-		// Return flags.
-		unsigned short Flags() const { return flags; }
+		void SetLayer(uint8_t newLayer);
 		// Return bitmask corresponding to layer.
 		unsigned LayerMask() const { return 1 << layer; }
+
 		// Return the owner node.
 		OctreeNodeBase* Owner() const { return owner; }
 		// Return current octree octant this drawable resides in.
@@ -101,7 +103,7 @@ namespace Turso3D
 		// Return max distance for rendering, or 0 for unlimited.
 		float MaxDistance() const { return maxDistance; }
 		// Return whether is static.
-		bool IsStatic() const { return TestFlag(DF_STATIC); }
+		bool IsStatic() const { return TestFlag(FLAG_STATIC); }
 		// Return last frame number when was visible.
 		// The frames are counted by Renderer internally and have no significance outside it.
 		unsigned short LastFrameNumber() const { return lastFrameNumber; }
@@ -124,9 +126,9 @@ namespace Turso3D
 		// Update if necessary.
 		const BoundingBox& WorldBoundingBox() const
 		{
-			if (TestFlag(DF_BOUNDING_BOX_DIRTY)) {
+			if (TestFlag(FLAG_BOUNDING_BOX_DIRTY)) {
 				OnWorldBoundingBoxUpdate();
-				SetFlag(DF_BOUNDING_BOX_DIRTY, false);
+				SetFlag(FLAG_BOUNDING_BOX_DIRTY, false);
 			}
 			return worldBoundingBox;
 		}
@@ -135,8 +137,8 @@ namespace Turso3D
 		// Update if necessary
 		const Matrix3x4& WorldTransform() const
 		{
-			if (TestFlag(DF_WORLD_TRANSFORM_DIRTY)) {
-				SetFlag(DF_WORLD_TRANSFORM_DIRTY, false);
+			if (TestFlag(FLAG_WORLD_TRANSFORM_DIRTY)) {
+				SetFlag(FLAG_WORLD_TRANSFORM_DIRTY, false);
 				// Update the shared world transform as necessary, then return
 				return owner->WorldTransform();
 			} else {
@@ -155,11 +157,21 @@ namespace Turso3D
 		}
 
 		// Set bit flag.
-		// Called internally.
-		void SetFlag(unsigned short bit, bool set) const { if (set) flags |= bit; else flags &= ~bit; }
+		void SetFlag(unsigned bit, bool set) const
+		{
+			if (set) {
+				flags |= bit;
+			} else {
+				flags &= ~bit;
+			}
+		}
 		// Test bit flag.
-		// Called internally.
-		bool TestFlag(unsigned short bit) const { return (flags & bit) != 0; }
+		bool TestFlag(unsigned bit) const
+		{
+			return (flags & bit) != 0;
+		}
+		// Return flags.
+		unsigned Flags() const { return flags; }
 
 	protected:
 		// World space bounding box.
@@ -168,10 +180,11 @@ namespace Turso3D
 		Matrix3x4* worldTransform;
 		// Current octree octant.
 		Octant* octant;
-		// Drawable flags. Used to hold several boolean values to reduce memory use.
-		mutable unsigned short flags;
+		// Drawable flags.
+		// Used to hold several boolean values to reduce memory use.
+		mutable unsigned flags;
 		// Layer number. Copy of the node layer.
-		unsigned char layer;
+		uint8_t layer;
 		// Last frame number when was visible.
 		unsigned short lastFrameNumber;
 		// Last frame number when was reinserted to octree or other change (LOD etc.) happened.
@@ -191,11 +204,14 @@ namespace Turso3D
 	public:
 		RTTI_IMPL();
 
-		// Set whether is static. Used for optimizations. A static node should not move after scene load. Default false.
+		// Set whether is static. Used for optimizations.
+		// A static node should not move after scene load. Default false.
 		void SetStatic(bool enable);
-		// Set whether to cast shadows. Default false on both lights and geometries.
+		// Set whether to cast shadows.
+		// Default false on both lights and geometries.
 		void SetCastShadows(bool enable);
-		// Set whether to update animation when invisible. Default false for better performance.
+		// Set whether to update animation when invisible.
+		// Default false for better performance.
 		void SetUpdateInvisible(bool enable);
 		// Set max distance for rendering. 0 is unlimited.
 		void SetMaxDistance(float distance);
@@ -203,11 +219,11 @@ namespace Turso3D
 		// Return drawable's world space bounding box. Update if necessary. 
 		const BoundingBox& WorldBoundingBox() const { return drawable->WorldBoundingBox(); }
 		// Return whether is static.
-		bool IsStatic() const { return drawable->TestFlag(DF_STATIC); }
+		bool IsStatic() const { return drawable->TestFlag(Drawable::FLAG_STATIC); }
 		// Return whether casts shadows.
-		bool CastShadows() const { return drawable->TestFlag(DF_CAST_SHADOWS); }
+		bool CastShadows() const { return drawable->TestFlag(Drawable::FLAG_CAST_SHADOWS); }
 		// Return whether updates animation when invisible. Not relevant for non-animating geometry.
-		bool UpdateInvisible() const { return drawable->TestFlag(DF_UPDATE_INVISIBLE); }
+		bool UpdateInvisible() const { return drawable->TestFlag(Drawable::FLAG_UPDATE_INVISIBLE); }
 		// Return current octree this node resides in.
 		Octree* GetOctree() const { return octree; }
 		// Return the drawable for internal use.
@@ -216,9 +232,11 @@ namespace Turso3D
 		float Distance() const { return drawable->Distance(); }
 		// Return max distance for rendering, or 0 for unlimited.
 		float MaxDistance() const { return drawable->MaxDistance(); }
-		// Return last frame number when was visible. The frames are counted by Renderer internally and have no significance outside it.
+		// Return last frame number when was visible.
+		// The frames are counted by Renderer internally and have no significance outside it.
 		unsigned short LastFrameNumber() const { return drawable->LastFrameNumber(); }
-		// Return last frame number when was reinserted to octree (moved or animated.) The frames are counted by Renderer internally and have no significance outside it.
+		// Return last frame number when was reinserted to octree (moved or animated).
+		// The frames are counted by Renderer internally and have no significance outside it.
 		unsigned short LastUpdateFrameNumber() const { return drawable->LastUpdateFrameNumber(); }
 		// Check whether is marked in view this frame.
 		bool InView(unsigned short frameNumber) { return drawable->InView(frameNumber); }
@@ -228,9 +246,11 @@ namespace Turso3D
 	protected:
 		// Search for an octree from the scene root and add self to it.
 		void OnSceneSet(Scene* newScene, Scene* oldScene) override;
-		// Handle the transform matrix changing. Queue octree reinsertion for the drawable.
+		// Handle the transform matrix changing.
+		// Queue octree reinsertion for the drawable.
 		void OnTransformChanged() override;
-		// Handle the bounding box changing. Only queue octree reinsertion, does not dirty the node hierarchy.
+		// Handle the bounding box changing.
+		// Only queue octree reinsertion, does not dirty the node hierarchy.
 		void OnBoundingBoxChanged();
 		// Handle the enabled status changing.
 		void OnEnabledChanged(bool newEnabled) override;

@@ -17,7 +17,7 @@ namespace Turso3D
 		distance(0.0f),
 		maxDistance(0.0f)
 	{
-		SetFlag(DF_BOUNDING_BOX_DIRTY, true);
+		SetFlag(FLAG_BOUNDING_BOX_DIRTY, true);
 	}
 
 	Drawable::~Drawable()
@@ -71,7 +71,7 @@ namespace Turso3D
 		worldTransform = const_cast<Matrix3x4*>(&owner_->WorldTransform());
 	}
 
-	void Drawable::SetLayer(unsigned char newLayer)
+	void Drawable::SetLayer(uint8_t newLayer)
 	{
 		layer = newLayer;
 	}
@@ -83,7 +83,7 @@ namespace Turso3D
 	{
 	}
 
-	void OctreeNodeBase::OnLayerChanged(unsigned char newLayer)
+	void OctreeNodeBase::OnLayerChanged(uint8_t newLayer)
 	{
 		if (drawable) {
 			drawable->SetLayer(newLayer);
@@ -94,7 +94,7 @@ namespace Turso3D
 	void OctreeNode::SetStatic(bool enable)
 	{
 		if (enable != IsStatic()) {
-			drawable->SetFlag(DF_STATIC, enable);
+			drawable->SetFlag(Drawable::FLAG_STATIC, enable);
 			// Reinsert into octree so that cached shadow map invalidation is handled
 			OnBoundingBoxChanged();
 		}
@@ -102,8 +102,8 @@ namespace Turso3D
 
 	void OctreeNode::SetCastShadows(bool enable)
 	{
-		if (drawable->TestFlag(DF_CAST_SHADOWS) != enable) {
-			drawable->SetFlag(DF_CAST_SHADOWS, enable);
+		if (drawable->TestFlag(Drawable::FLAG_CAST_SHADOWS) != enable) {
+			drawable->SetFlag(Drawable::FLAG_CAST_SHADOWS, enable);
 			// Reinsert into octree so that cached shadow map invalidation is handled
 			OnBoundingBoxChanged();
 		}
@@ -111,7 +111,7 @@ namespace Turso3D
 
 	void OctreeNode::SetUpdateInvisible(bool enable)
 	{
-		drawable->SetFlag(DF_UPDATE_INVISIBLE, enable);
+		drawable->SetFlag(Drawable::FLAG_UPDATE_INVISIBLE, enable);
 	}
 
 	void OctreeNode::SetMaxDistance(float distance_)
@@ -126,7 +126,7 @@ namespace Turso3D
 
 		if (newScene) {
 			// Octree must be attached to the scene root as a child
-			octree = newScene->GetOctree();//newScene->FindChild<Octree>().get();
+			octree = newScene->GetOctree();
 			// Transform may not be final yet. Schedule insertion for next octree update
 			if (octree && IsEnabled()) {
 				octree->QueueUpdate(drawable);
@@ -138,16 +138,16 @@ namespace Turso3D
 	{
 		SpatialNode::OnTransformChanged();
 
-		drawable->SetFlag(DF_WORLD_TRANSFORM_DIRTY | DF_BOUNDING_BOX_DIRTY, true);
-		if (drawable->GetOctant() && !drawable->TestFlag(DF_OCTREE_REINSERT_QUEUED)) {
+		drawable->SetFlag(Drawable::FLAG_WORLD_TRANSFORM_DIRTY | Drawable::FLAG_BOUNDING_BOX_DIRTY, true);
+		if (drawable->GetOctant() && !drawable->TestFlag(Drawable::FLAG_OCTREE_REINSERT_QUEUED)) {
 			octree->QueueUpdate(drawable);
 		}
 	}
 
 	void OctreeNode::OnBoundingBoxChanged()
 	{
-		drawable->SetFlag(DF_BOUNDING_BOX_DIRTY, true);
-		if (drawable->GetOctant() && !drawable->TestFlag(DF_OCTREE_REINSERT_QUEUED)) {
+		drawable->SetFlag(Drawable::FLAG_BOUNDING_BOX_DIRTY, true);
+		if (drawable->GetOctant() && !drawable->TestFlag(Drawable::FLAG_OCTREE_REINSERT_QUEUED)) {
 			octree->QueueUpdate(drawable);
 		}
 	}

@@ -67,7 +67,6 @@
 			<LanguageStandard>stdcpp17</LanguageStandard>
 			<EnableModules>false</EnableModules>
 			<ConformanceMode>true</ConformanceMode>
-			<AdditionalOptions>/Zc:__cplusplus %(AdditionalOptions)</AdditionalOptions>
 			<RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
 			<RuntimeTypeInfo>false</RuntimeTypeInfo>
 			<TreatAngleIncludeAsExternal>true</TreatAngleIncludeAsExternal>
@@ -97,7 +96,6 @@
 			<FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
 			<IntrinsicFunctions>true</IntrinsicFunctions>
 			<WholeProgramOptimization>true</WholeProgramOptimization>
-			<AdditionalOptions>/Zc:__cplusplus %(AdditionalOptions)</AdditionalOptions>
 			<RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
 			<RuntimeTypeInfo>false</RuntimeTypeInfo>
 			<TreatAngleIncludeAsExternal>true</TreatAngleIncludeAsExternal>
@@ -172,7 +170,6 @@
 		<ClInclude Include="Scene\Scene.h" />
 		<ClInclude Include="Scene\SpatialNode.h" />
 		<ClInclude Include="Utils\StringHash.h" />
-		<ClInclude Include="Utils\StringUtils.h" />
 	</ItemGroup>
 	<ItemGroup>
 		<ClCompile Include="Core\Allocator.cpp" />
@@ -235,7 +232,6 @@
 		<ClCompile Include="Scene\Node.cpp" />
 		<ClCompile Include="Scene\Scene.cpp" />
 		<ClCompile Include="Scene\SpatialNode.cpp" />
-		<ClCompile Include="Utils\StringUtils.cpp" />
 	</ItemGroup>
 
 	<ItemGroup>

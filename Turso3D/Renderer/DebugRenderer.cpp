@@ -18,7 +18,7 @@ namespace Turso3D
 
 		indexBuffer = std::make_unique<IndexBuffer>();
 
-		shaderProgram = Subsystem<Graphics>()->CreateProgram("Shaders/DebugLines.glsl", "", "");
+		shaderProgram = Subsystem<Graphics>()->CreateProgram("DebugLines.glsl", "", "");
 	}
 
 	DebugRenderer::~DebugRenderer()

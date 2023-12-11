@@ -41,6 +41,7 @@ Application::Application()
 	// Create subsystems that don't depend on the application window / OpenGL context
 	workQueue = std::make_unique<WorkQueue>(0);
 	resourceCache = std::make_unique<ResourceCache>();
+	resourceCache->AddResourceDir((std::filesystem::current_path() / "Shaders").string());
 	resourceCache->AddResourceDir((std::filesystem::current_path() / "Data").string());
 
 	// Initialize graphics
@@ -460,7 +461,11 @@ void Application::OnFramebufferSize(int width, int height)
 	IntVector2 sz(width, height);
 
 	if (colorBuffer->Width() != width || colorBuffer->Height() != height) {
-		colorBuffer->Define(TEX_2D, sz, FMT_RGBA16F);
+		bool success = colorBuffer->Define(TEX_2D, sz, FMT_R11_G11_B10);
+		if (!success) {
+			LOG_WARNING("FMT_R11_G11_B10 not supported, falling back to FMT_RGBA16F");
+			colorBuffer->Define(TEX_2D, sz, FMT_RGBA16F);
+		}
 		colorBuffer->DefineSampler(FILTER_BILINEAR, ADDRESS_CLAMP, ADDRESS_CLAMP, ADDRESS_CLAMP);
 
 		tonemapBuffer->Define(TEX_2D, sz, FMT_RGBA8, true);
@@ -483,7 +488,7 @@ void Application::OnFramebufferSize(int width, int height)
 
 	// Similarly recreate SSAO texture if needed
 	if ((ssaoTexture->Width() != colorBuffer->Width() / 2 || ssaoTexture->Height() != colorBuffer->Height() / 2)) {
-		ssaoTexture->Define(TEX_2D, IntVector2(colorBuffer->Width() / 2, colorBuffer->Height() / 2), FMT_R32F, 1, 1);
+		ssaoTexture->Define(TEX_2D, IntVector2(colorBuffer->Width() / 2, colorBuffer->Height() / 2), FMT_R32F, false, 1, 1);
 		ssaoTexture->DefineSampler(FILTER_BILINEAR, ADDRESS_CLAMP, ADDRESS_CLAMP, ADDRESS_CLAMP);
 		ssaoFbo->Define(ssaoTexture.get(), nullptr);
 	}
@@ -597,7 +602,7 @@ void Application::Render(double dt)
 	// Raycast into the scene using the camera forward vector. If has a hit, draw a small debug sphere at the hit location
 	{
 		Ray cameraRay(camera->WorldPosition(), camera->WorldDirection());
-		RaycastResult res = octree->RaycastSingle(cameraRay, DF_GEOMETRY);
+		RaycastResult res = octree->RaycastSingle(cameraRay, Drawable::FLAG_GEOMETRY);
 		if (res.drawable) {
 			debugRenderer->AddSphere(Sphere(res.position, 0.05f), Color::WHITE, true);
 		}
@@ -620,7 +625,7 @@ void Application::Render(double dt)
 	// Apply tonemap
 	{
 		graphics->SetFrameBuffer(tonemapFbo.get());
-		ShaderProgram* program = graphics->SetProgram("Shaders/Tonemap.glsl", "", "");
+		ShaderProgram* program = graphics->SetProgram("Tonemap.glsl", "", "");
 		graphics->SetUniform(program, "exposure", 2.0f);
 		graphics->SetTexture(0, colorBuffer.get());
 		graphics->SetRenderState(BLEND_REPLACE, CULL_NONE, CMP_ALWAYS, true, false);
@@ -635,7 +640,7 @@ void Application::Render(double dt)
 		Vector3 nearVec, farVec;
 		camera->FrustumSize(nearVec, farVec);
 
-		ShaderProgram* program = graphics->SetProgram("Shaders/SSAO.glsl", "", "");
+		ShaderProgram* program = graphics->SetProgram("SSAO.glsl", "", "");
 		graphics->SetFrameBuffer(ssaoFbo.get());
 		graphics->SetViewport(IntRect(0, 0, ssaoTexture->Width(), ssaoTexture->Height()));
 		graphics->SetUniform(program, "noiseInvSize", Vector2(ssaoTexture->Width() / 4.0f, ssaoTexture->Height() / 4.0f));
@@ -651,7 +656,7 @@ void Application::Render(double dt)
 		graphics->SetTexture(1, nullptr);
 		graphics->SetTexture(2, nullptr);
 
-		program = graphics->SetProgram("Shaders/SSAOBlur.glsl", "", "");
+		program = graphics->SetProgram("SSAOBlur.glsl", "", "");
 		graphics->SetFrameBuffer(tonemapFbo.get());
 		graphics->SetViewport(IntRect(0, 0, width, height));
 		graphics->SetUniform(program, "blurInvSize", Vector2(1.0f / ssaoTexture->Width(), 1.0f / ssaoTexture->Height()));
@@ -685,7 +690,7 @@ void Application::Render(double dt)
 		quadMatrix.m03 = -1.0f + quadMatrix.m00;
 		quadMatrix.m13 = -1.0f + quadMatrix.m11;
 
-		ShaderProgram* program = graphics->SetProgram("Shaders/DebugShadow.glsl", "", "");
+		ShaderProgram* program = graphics->SetProgram("DebugShadow.glsl", "", "");
 		graphics->SetUniform(program, "worldViewProjMatrix", quadMatrix);
 		graphics->SetTexture(0, renderer->ShadowMapTexture(0));
 		graphics->SetRenderState(BLEND_REPLACE, CULL_NONE, CMP_ALWAYS, true, false);

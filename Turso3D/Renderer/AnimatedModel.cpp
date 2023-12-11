@@ -72,7 +72,7 @@ namespace Turso3D
 		octree(nullptr),
 		rootBone(nullptr)
 	{
-		SetFlag(DF_SKINNED_GEOMETRY | DF_OCTREE_UPDATE_CALL, true);
+		SetFlag(Drawable::FLAG_SKINNED_GEOMETRY | Drawable::FLAG_OCTREE_UPDATE_CALL, true);
 	}
 
 	void AnimatedModelDrawable::OnWorldBoundingBoxUpdate() const
@@ -104,7 +104,7 @@ namespace Turso3D
 
 	void AnimatedModelDrawable::OnOctreeUpdate(unsigned short frameNumber)
 	{
-		if (TestFlag(DF_UPDATE_INVISIBLE) || WasInView(frameNumber)) {
+		if (TestFlag(Drawable::FLAG_UPDATE_INVISIBLE) || WasInView(frameNumber)) {
 			if (animatedModelFlags & AMF_ANIMATION_DIRTY) {
 				UpdateAnimation();
 			}
@@ -292,8 +292,8 @@ namespace Turso3D
 
 		// If updating only when visible, queue octree reinsertion for next frame. This also ensures shadowmap rendering happens correctly
 		// Else just dirty the skinning
-		if (!TestFlag(DF_UPDATE_INVISIBLE)) {
-			if (octree && octant && !TestFlag(DF_OCTREE_REINSERT_QUEUED)) {
+		if (!TestFlag(Drawable::FLAG_UPDATE_INVISIBLE)) {
+			if (octree && octant && !TestFlag(Drawable::FLAG_OCTREE_REINSERT_QUEUED)) {
 				octree->QueueUpdate(this);
 			}
 		}
@@ -515,12 +515,12 @@ namespace Turso3D
 			SpatialNode::OnTransformChanged();
 		} else {
 			modelDrawable->SetBoneTransformsDirty();
-			modelDrawable->SetFlag(DF_WORLD_TRANSFORM_DIRTY, true);
+			modelDrawable->SetFlag(Drawable::FLAG_WORLD_TRANSFORM_DIRTY, true);
 			SetFlag(FLAG_WORLDTRANSFORMDIRTY, true);
 		}
 
-		modelDrawable->SetFlag(DF_BOUNDING_BOX_DIRTY, true);
-		if (octree && modelDrawable->octant && !modelDrawable->TestFlag(DF_OCTREE_REINSERT_QUEUED)) {
+		modelDrawable->SetFlag(Drawable::FLAG_BOUNDING_BOX_DIRTY, true);
+		if (octree && modelDrawable->octant && !modelDrawable->TestFlag(Drawable::FLAG_OCTREE_REINSERT_QUEUED)) {
 			octree->QueueUpdate(modelDrawable);
 		}
 	}

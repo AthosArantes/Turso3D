@@ -511,7 +511,7 @@ namespace Turso3D
 
 				for (auto dIt = drawables.begin(); dIt != drawables.end(); ++dIt) {
 					Drawable* drawable = *dIt;
-					if (drawable->TestFlag(DF_GEOMETRY) && drawable->LastFrameNumber() == frameNumber) {
+					if (drawable->TestFlag(Drawable::FLAG_GEOMETRY) && drawable->LastFrameNumber() == frameNumber) {
 						drawable->OnRenderDebug(debug);
 					}
 				}
@@ -589,7 +589,7 @@ namespace Turso3D
 		for (auto it = drawables.begin(); it != drawables.end(); ++it) {
 			Drawable* drawable = *it;
 
-			if (drawable->TestFlag(DF_LIGHT)) {
+			if (drawable->TestFlag(Drawable::FLAG_LIGHT)) {
 				const BoundingBox& lightBox = drawable->WorldBoundingBox();
 				if ((drawable->LayerMask() & viewMask) && (!planeMask || frustum.IsInsideMaskedFast(lightBox, planeMask)) && drawable->OnPrepareRender(frameNumber, camera)) {
 					result.lights.push_back(static_cast<LightDrawable*>(drawable));
@@ -1030,7 +1030,7 @@ namespace Turso3D
 		boundingBoxIndexBuffer = std::make_unique<IndexBuffer>();
 		boundingBoxIndexBuffer->Define(USAGE_DEFAULT, NUM_BOX_INDICES, sizeof(unsigned short), boxIndexData);
 
-		boundingBoxShaderProgram = graphics->CreateProgram("Shaders/BoundingBox.glsl", "", "");
+		boundingBoxShaderProgram = graphics->CreateProgram("BoundingBox.glsl", "", "");
 	}
 
 	void Renderer::DefineClusterFrustums()
@@ -1279,7 +1279,7 @@ namespace Turso3D
 			for (auto dIt = drawables.begin(); dIt != drawables.end(); ++dIt) {
 				Drawable* drawable = *dIt;
 
-				if (drawable->TestFlag(DF_GEOMETRY) && (drawable->LayerMask() & viewMask)) {
+				if (drawable->TestFlag(Drawable::FLAG_GEOMETRY) && (drawable->LayerMask() & viewMask)) {
 					const BoundingBox& geometryBox = drawable->WorldBoundingBox();
 
 					// Note: to strike a balance between performance and occlusion accuracy, per-geometry occlusion tests are skipped for now,
@@ -1306,8 +1306,8 @@ namespace Turso3D
 
 							// Assume opaque first
 							newBatch.pass = material->GetPass(PASS_OPAQUE);
-							newBatch.geometry = batches.GetGeometry(j).get();
-							newBatch.programBits = (unsigned char)(drawable->Flags() & DF_GEOMETRY_TYPE_BITS);
+							newBatch.geometry = batches.GetGeometry(j);
+							newBatch.programBits = (unsigned char)(drawable->Flags() & Drawable::FLAG_GEOMETRY_TYPE_BITS);
 							newBatch.geomIndex = (unsigned char)j;
 
 							if (!newBatch.programBits) {
@@ -1371,14 +1371,14 @@ namespace Turso3D
 			}
 
 			std::vector<Drawable*>& shadowCasters = shadowMap.shadowCasters[shadowViews[0].casterListIdx];
-			octree->FindDrawables(shadowCasters, light->WorldSphere(), DF_GEOMETRY | DF_CAST_SHADOWS);
+			octree->FindDrawables(shadowCasters, light->WorldSphere(), Drawable::FLAG_GEOMETRY | Drawable::FLAG_CAST_SHADOWS);
 		} else if (lightType == LIGHT_SPOT) {
 			// Spot light: perform query for the spot frustum
 			light->SetupShadowView(0, camera);
 			ShadowView& view = shadowViews[0];
 
 			std::vector<Drawable*>& shadowCasters = shadowMap.shadowCasters[view.casterListIdx];
-			octree->FindDrawablesMasked(shadowCasters, view.shadowFrustum, DF_GEOMETRY | DF_CAST_SHADOWS);
+			octree->FindDrawablesMasked(shadowCasters, view.shadowFrustum, Drawable::FLAG_GEOMETRY | Drawable::FLAG_CAST_SHADOWS);
 		}
 	}
 
@@ -1470,7 +1470,7 @@ namespace Turso3D
 					if (splitMinZ >= splitMaxZ || splitMinZ > view.splitMaxZ || splitMaxZ < view.splitMinZ) {
 						view.viewport = IntRect::ZERO;
 					} else {
-						octree->FindDrawablesMasked(shadowMap.shadowCasters[view.casterListIdx], view.shadowFrustum, DF_GEOMETRY | DF_CAST_SHADOWS);
+						octree->FindDrawablesMasked(shadowMap.shadowCasters[view.casterListIdx], view.shadowFrustum, Drawable::FLAG_GEOMETRY | Drawable::FLAG_CAST_SHADOWS);
 					}
 				}
 			}
@@ -1577,8 +1577,8 @@ namespace Turso3D
 							continue;
 						}
 
-						newBatch.geometry = batches.GetGeometry(j).get();
-						newBatch.programBits = (unsigned char)(drawable->Flags() & DF_GEOMETRY_TYPE_BITS);
+						newBatch.geometry = batches.GetGeometry(j);
+						newBatch.programBits = (unsigned char)(drawable->Flags() & Drawable::FLAG_GEOMETRY_TYPE_BITS);
 						newBatch.geomIndex = (unsigned char)j;
 
 						if (!newBatch.programBits) {

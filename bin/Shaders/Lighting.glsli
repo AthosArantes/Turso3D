@@ -45,6 +45,70 @@ float SampleShadowMap(sampler2DShadow shadowTex, vec4 shadowPos, vec4 parameters
 #endif
 }
 
+vec4 GetPointShadowPos(uint index, vec3 lightVec)
+{
+	vec4 pointParameters = lights[index].shadowMatrix[0];
+	vec4 pointParameters2 = lights[index].shadowMatrix[1];
+	float zoom = pointParameters2.x;
+	float q = pointParameters2.y;
+	float r = pointParameters2.z;
+
+	vec3 axis = textureLod(faceSelectionTex10, lightVec, 0.0).xyz;
+	vec4 adjust = textureLod(faceSelectionTex11, lightVec, 0.0);
+	float depth = abs(dot(lightVec, axis));
+	vec3 normLightVec = (lightVec / depth) * zoom;
+	vec2 coords = vec2(dot(normLightVec.zxx, axis), dot(normLightVec.yzy, axis)) * adjust.xy + adjust.zw;
+	return vec4(coords * pointParameters.xy + pointParameters.zw, q + r / depth, 1.0);
+}
+
+float SampleDirectionalShadow(vec4 worldPos)
+{
+	vec4 shadowSplits = dirLightShadowSplits;
+	vec4 shadowParameters = dirLightShadowParameters;
+
+	if (shadowParameters.z < 1.0 && worldPos.w < shadowSplits.y)
+	{
+		int matIndex = worldPos.w > shadowSplits.x ? 1 : 0;
+
+		mat4 shadowMatrix = dirLightShadowMatrices[matIndex];
+		float shadowFade = shadowParameters.z + clamp((worldPos.w - shadowSplits.z) * shadowSplits.w, 0.0, 1.0);
+
+		return clamp(shadowFade + SampleShadowMap(dirShadowTex8, vec4(worldPos.xyz, 1.0) * shadowMatrix, shadowParameters), 0.0, 1.0);
+	}
+
+	return 1.0;
+}
+
+float SampleShadow(uint index, vec4 worldPos, vec3 lightVec, vec3 lightDir)
+{
+	vec4 shadowParameters = lights[index].shadowParameters;
+	vec4 lightAttenuation = lights[index].attenuation;
+
+	if (lightAttenuation.y > 0.0)
+	{
+		vec3 lightSpotDirection = lights[index].direction.xyz;
+		float spotEffect = dot(lightDir, lightSpotDirection);
+		float spotAtten = (spotEffect - lightAttenuation.y) * lightAttenuation.z;
+		if (spotAtten <= 0.0) {
+			return -1.0;
+		}
+
+		if (shadowParameters.z < 1.0) {
+			return clamp((shadowParameters.z + SampleShadowMap(shadowTex9, vec4(worldPos.xyz, 1.0) * lights[index].shadowMatrix, shadowParameters)) * spotAtten, 0.0, 1.0);
+		}
+
+	} else if (shadowParameters.z < 1.0) {
+		return clamp(shadowParameters.z + SampleShadowMap(shadowTex9, GetPointShadowPos(index, lightVec), shadowParameters), 0.0, 1.0);
+	}
+
+	return 1.0;
+}
+
+
+
+// ====================================================================================================
+#ifndef EXCLUDE_DEFAULT_CALC_LIGHTING
+
 void CalculateDirLight(vec4 worldPos, vec3 normal, vec4 matDiffColor, vec4 matSpecColor, inout vec3 diffuseLight, inout vec3 specularLight)
 {
 	vec3 lightDir = dirLightDirection;
@@ -75,22 +139,6 @@ void CalculateDirLight(vec4 worldPos, vec3 normal, vec4 matDiffColor, vec4 matSp
 		float NdotH = dot(normal, halfVec);
 		specularLight += NdotL * lightColor.a * matSpecColor.rgb * clamp(pow(NdotH, matSpecColor.a), 0.0, 1.0) * lightColor.rgb;
 	}
-}
-
-vec4 GetPointShadowPos(uint index, vec3 lightVec)
-{
-	vec4 pointParameters = lights[index].shadowMatrix[0];
-	vec4 pointParameters2 = lights[index].shadowMatrix[1];
-	float zoom = pointParameters2.x;
-	float q = pointParameters2.y;
-	float r = pointParameters2.z;
-
-	vec3 axis = textureLod(faceSelectionTex10, lightVec, 0.0).xyz;
-	vec4 adjust = textureLod(faceSelectionTex11, lightVec, 0.0);
-	float depth = abs(dot(lightVec, axis));
-	vec3 normLightVec = (lightVec / depth) * zoom;
-	vec2 coords = vec2(dot(normLightVec.zxx, axis), dot(normLightVec.yzy, axis)) * adjust.xy + adjust.zw;
-	return vec4(coords * pointParameters.xy + pointParameters.zw, q + r / depth, 1.0);
 }
 
 void CalculateLight(uint index, vec4 worldPos, vec3 normal, vec4 matDiffColor, vec4 matSpecColor, inout vec3 diffuseLight, inout vec3 specularLight)
@@ -148,7 +196,6 @@ void CalculateLighting(vec4 worldPos, vec3 normal, vec2 screenPos, vec4 matDiffC
 	CalculateDirLight(worldPos, normal, matDiffColor, matSpecColor, diffuseLight, specularLight);
 
 	uvec4 lightClusterData = texture(clusterTex12, CalculateClusterPos(screenPos, worldPos.w));
-
 	while (lightClusterData.x > 0U)
 	{
 		CalculateLight((lightClusterData.x & 0xffU), worldPos, normal, matDiffColor, matSpecColor, diffuseLight, specularLight);
@@ -170,3 +217,5 @@ void CalculateLighting(vec4 worldPos, vec3 normal, vec2 screenPos, vec4 matDiffC
 		lightClusterData.w >>= 8U;
 	}
 }
+
+#endif

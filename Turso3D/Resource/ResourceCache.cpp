@@ -5,18 +5,8 @@
 #include <Turso3D/IO/Log.h>
 #include <Turso3D/Resource/Image.h>
 #include <Turso3D/Resource/Resource.h>
-#include <Turso3D/Utils/StringUtils.h>
+#include <algorithm>
 #include <filesystem>
-
-namespace {
-	// Must match the ShaderType enum
-	const char* ShaderSuffix[] =
-	{
-		"_VS",
-		"_FS",
-		nullptr
-	};
-}
 
 namespace Turso3D
 {
@@ -30,98 +20,70 @@ namespace Turso3D
 
 	ResourceCache::~ResourceCache()
 	{
-		// Erase all programs from shaders
-		for (auto it = shaders.begin(); it != shaders.end(); ++it) {
-			it->second->programs.clear();
-		}
-
 		resources.clear();
-		shaders.clear();
 		RemoveSubsystem(this);
 	}
 
-	bool ResourceCache::AddResourceDir(const std::string& pathName, bool addFirst)
+	bool ResourceCache::AddResourceDir(const std::string& pathName, unsigned priority)
 	{
-		std::string path = (fs::current_path() / fs::path(pathName).make_preferred()).string();
-		if (path.back() != fs::path::preferred_separator) {
-			path += fs::path::preferred_separator;
+		std::error_code ec;
+		fs::path base_path = fs::canonical(pathName, ec);
+
+		if (ec) {
+			LOG_ERROR("Failed to add resource directory \"{:s}\": {:s}", pathName, ec.message());
+			return false;
+		}
+
+		if (!fs::is_directory(base_path)) {
+			LOG_ERROR("The path \"{:s}\" is not a valid directory.", pathName);
+			return false;
 		}
 
 		// Check that the same path does not already exist
 		for (const std::string& dir : resourceDirs) {
-			if (dir == path) {
+			if (base_path == dir) {
 				return true;
 			}
 		}
 
-		if (addFirst) {
-			resourceDirs.insert(resourceDirs.begin(), path);
+		if (priority != UINT_MAX) {
+			resourceDirs.insert(resourceDirs.begin() + std::min(resourceDirs.size(), (size_t)priority), base_path.string());
 		} else {
-			resourceDirs.push_back(path);
+			resourceDirs.push_back(base_path.string());
 		}
 
-		LOG_INFO("Added resource path \"{:s}\".", path);
+		LOG_INFO("Added resource path \"{:s}\".", base_path.string());
 		return true;
 	}
 
 	void ResourceCache::RemoveResourceDir(const std::string& pathName)
 	{
-		std::string path = (fs::current_path() / fs::path(pathName).make_preferred()).string();
 		for (auto it = resourceDirs.begin(); it != resourceDirs.end(); ++it) {
-			if (*it == path) {
+			if (*it == pathName) {
 				resourceDirs.erase(it);
-				LOG_INFO("Removed resource path \"{:s}\".", path);
+				LOG_INFO("Removed resource path \"{:s}\".", pathName);
 				return;
 			}
 		}
 	}
 
-	std::unique_ptr<Stream> ResourceCache::OpenResource(const std::string& name)
+	std::unique_ptr<Stream> ResourceCache::OpenResource(const std::string& name_)
 	{
-		std::string _name = fs::path(name).make_preferred().string();
-
+		// Try opening from file
 		std::unique_ptr<FileStream> stream = std::make_unique<FileStream>();
 		for (const std::string& dir : resourceDirs) {
-			if (stream->Open(dir + _name)) {
+			fs::path base_path {dir};
+
+			std::error_code ec;
+			fs::path filepath = fs::canonical(base_path / name_, ec);
+			if (ec) {
+				continue;
+			}
+
+			auto mm = std::mismatch(base_path.begin(), base_path.end(), filepath.begin());
+			if (mm.first == base_path.end() && stream->Open(filepath.string())) {
 				return std::unique_ptr<Stream> {stream.release()};
 			}
-		}
-
-		return {};
-	}
-
-	std::shared_ptr<Shader> ResourceCache::LoadShader(const std::string& name)
-	{
-		// Check if the shader has been loaded already
-		StringHash hash {name};
-		auto it = shaders.find(hash);
-		if (it != shaders.end()) {
-			return it->second;
-		}
-
-		fs::path filepath = fs::path {name};
-		std::string filename {filepath.stem().string()};
-
-		ResourceCache* cache = Object::Subsystem<ResourceCache>();
-		assert(cache);
-
-		// Load shader code for each shader type
-		filepath.replace_filename(filename + ShaderSuffix[SHADER_VS]);
-		std::unique_ptr<Stream> vs {cache->OpenResource(filepath.string() + ".glsl")};
-
-		filepath.replace_filename(filename + ShaderSuffix[SHADER_FS]);
-		std::unique_ptr<Stream> fs {cache->OpenResource(filepath.string() + ".glsl")};
-
-		if (vs && fs) {
-			std::shared_ptr<Shader> shader = std::make_shared<Shader>();
-			shader->name = name;
-			shader->SetShaderCode(SHADER_VS, *vs);
-			shader->SetShaderCode(SHADER_FS, *fs);
-
-			auto iit = shaders.insert(std::make_pair(hash, shader));
-			assert(iit.second);
-
-			return shader;
 		}
 
 		return {};

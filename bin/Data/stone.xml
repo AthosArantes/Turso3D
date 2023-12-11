@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
 <material>
 	<passes>
-		<shadow shader="Shaders/Shadow.glsl" colorWrite="false" />
-		<opaque shader="Shaders/DiffuseNormal.glsl" />
+		<shadow shader="Shadow.glsl" colorWrite="false" />
+		<opaque shader="DiffuseNormal.glsl" />
 	</passes>
 	<textures>
 		<texture slot="0" name="stone_diffuse.dds" srgb="true" />
