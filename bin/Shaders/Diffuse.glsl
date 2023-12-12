@@ -41,7 +41,6 @@ void main()
 #ifdef COMPILE_FS
 
 #include <Lighting.glsli>
-#include <BRDF.glsli>
 
 in vec4 vWorldPos;
 in vec3 vNormal;
@@ -62,22 +61,30 @@ uniform sampler2D diffuseTex0;
 // ====================================================================================================
 void main()
 {
+	vec4 sDiffuse = texture(diffuseTex0, vTexCoord);
+
 #ifdef ALPHAMASK
-	float alpha = texture(diffuseTex0, vTexCoord).a;
-	if (alpha < 0.5) {
+	if (sDiffuse.a < 0.5) {
 		discard;
 	}
 #endif
 
-	vec3 albedo = texture(diffuseTex0, vTexCoord).rgb;
+	vec3 albedo = sDiffuse.rgb * matDiffColor.rgb;
+	vec3 normal = normalize(vNormal);
+	vec3 f0 = matSpecColor.rgb;
+	float metallic = matSpecColor.a;
+#ifdef ALPHAMASK
+	float roughness = matDiffColor.a;
+#else
+	float roughness = sDiffuse.a * matDiffColor.a;
+#endif
 
-	vec3 diffuseLight;
-	vec3 specularLight;
-	CalculateLighting(vWorldPos, vNormal, vScreenPos, matDiffColor, matSpecColor, diffuseLight, specularLight);
+	// BRDF Shading
+	vec3 color = albedo * ambientColor.rgb;
+	color += CalculateLighting(vWorldPos, vScreenPos, normal, albedo, f0, metallic, roughness);
 
-	vec3 finalColor = albedo * diffuseLight + specularLight;
-
-	fragColor[0] = vec4(mix(fogColor, finalColor, GetFogFactor(vWorldPos.w)), 1.0);
+	// Add environment fog
+	fragColor[0] = vec4(mix(fogColor, color, GetFogFactor(vWorldPos.w)), 1.0);
 	fragColor[1] = vec4(vViewNormal, 1.0);
 }
 

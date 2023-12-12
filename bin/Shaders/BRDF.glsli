@@ -1,4 +1,64 @@
+#ifndef I_BRDF_H
+#define I_BRDF_H
+
 const float PI = 3.14159;
+
+// ====================================================================================================
+// Normal Distribution Functions
+// ====================================================================================================
+float DistributionGGX(float NdotH, float a)
+{
+	float a2 = a*a;
+	float NdotH2 = NdotH * NdotH;
+
+	float denom = (NdotH2 * (a2 - 1.0) + 1.0);
+	denom = PI * denom * denom;
+
+	return a2 / denom;
+}
+
+// ====================================================================================================
+// Geometric Attenuation Functions
+// ====================================================================================================
+float GeometrySchlickGGX(float NdotV, float k)
+{
+	return NdotV / (NdotV * (1.0 - k) + k);
+}
+
+float GeometrySmith(float NdotV, float NdotL, float k)
+{
+	return GeometrySchlickGGX(NdotV, k) * GeometrySchlickGGX(NdotL, k);
+}
+
+// ====================================================================================================
+// Fresnel Functions
+// ====================================================================================================
+vec3 FresnelSchlick(float cosTheta, vec3 F0)
+{
+	return F0 + (1.0 - F0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);
+}
+
+// ====================================================================================================
+// Combined Functions
+// ====================================================================================================
+vec3 CookTorranceBRDF(float NdotV, float NdotH, float NdotL, float HdotV, vec3 lightColor, vec3 albedo, vec3 f0, float metallic, float roughness, float attenuation)
+{
+	vec3 F0 = mix(f0, albedo, metallic);
+	vec3 F = FresnelSchlick(HdotV, F0);
+
+	float NDF = DistributionGGX(NdotH, roughness);
+	float G = GeometrySmith(NdotV, NdotL, roughness);
+
+	vec3 numerator = NDF * G * F;
+	float denominator = 4.0 * NdotV * NdotL + 0.0001;
+	vec3 specular = (numerator / denominator) * attenuation;
+
+	vec3 kS = F;
+	vec3 kD = vec3(1.0) - kS;
+	kD *= 1.0 - metallic;
+
+	return (kD * albedo / PI + specular) * lightColor * NdotL;
+}
 
 float OrenNayarDiffuse(float LdotV, float NdotL, float NdotV, float roughness, float albedo)
 {
@@ -12,79 +72,4 @@ float OrenNayarDiffuse(float LdotV, float NdotL, float NdotV, float roughness, f
 	return albedo * max(0.0, NdotL) * (A + B * s / t) / PI;
 }
 
-// ====================================================================================================
-// Normal Distribution Functions
-// ====================================================================================================
-float D_Beckmann(float NH2, float tan2Alpha, float roughness2) // Beckmann = exp(-tan^2(alpha) / m^2) / PI * m^2 * cos^4(alpha)
-{
-	float denom = PI * roughness2 * (pow(NH2, 2.0));
-	return exp(tan2Alpha / roughness2) / denom;
-}
-
-float D_TrowbridgeReitz(float NH2, float roughness2) // Trowbridge-Reitz = m^2 / (1 - m^2) * cos^2(alpha) - 1
-{
-	float denom = NH2 * roughness2 + (1.0 - NH2);
-	return roughness2 / (PI * pow(denom, 2.0));
-}
-
-// ====================================================================================================
-// Geometric Attenuation Functions
-// ====================================================================================================
-float G_CookTorrance(float NH2, float NdotV, float NdotL, float VdotH) // Cook-Torrance = min(1, ((N.H)^2 * (N.V)) / (V.H), ((N.H)^2 * (N.L)) / (V.H))
-{
-	float g1 = (NH2 * NdotV) / VdotH;
-	float g2 = (NH2 * NdotL) / VdotH;
-	return min(1.0, min(g1, g2));
-}
-
-float G_GGXSmith(float roughness2, float NdotV, float NdotL)
-{
-	float g1 = (NdotL * 2.0) / (NdotL + sqrt(roughness2 + (1.0 - roughness2) * pow(NdotL, 2.0)));
-	float g2 = (NdotV * 2.0) / (NdotV + sqrt(roughness2 + (1.0 - roughness2) * pow(NdotV, 2.0)));
-	return g1 * g2;
-}
-
-float G_BeckmannSmith(float NdotV, float NdotL, float roughness)
-{
-	float g1 = NdotV / roughness * sqrt(1.0 - (pow(NdotV, 2.0)));
-	float g2 = NdotL / roughness * sqrt(1.0 - (pow(NdotL, 2.0)));
-
-	if (g1 >= 1.6) {
-		g1 = ((3.535 * g1) + pow((2.181 * g1), 2.0)) / 1.0 + (2.276 * g1) + pow((2.577 * g1), 2.0);
-	} else {
-		g1 = 1.0;
-	}
-
-	if (g2 >= 1.6) {
-		g2 = ((3.535 * g2) + pow((2.181 * g2), 2.0)) / 1.0 + (2.276 * g2) + pow((2.577 * g2), 2.0);
-	} else {
-		g2 = 1.0;
-	}
-
-	return g1 * g2;
-}
-
-float G_Neumann(float NdotL, float NdotV)
-{
-	return (NdotL * NdotV) / max(NdotL, NdotV);
-}
-
-float G_Kelemen(float NdotL, float NdotV, float VdotH)
-{
-	return (NdotL * NdotV) / pow(VdotH, 2.0);
-}
-
-// ====================================================================================================
-// Fresnel Functions
-// ====================================================================================================
-float F_Shlick(float NdotL, float Kr) // Shlick Approximation = Kr + (1 - Kr) * (1 - (N.V))^5
-{
-	return Kr + (1.0 - Kr) * pow((1.0 - NdotL), 5.0);
-}
-
-float F_CookTorrance(float VdotH, float Kr)
-{
-	float n = (1.0 + sqrt(Kr)) / (1.0 - sqrt(Kr));
-	float g = sqrt(pow(n, 2.0) + pow(VdotH, 2.0) - 1.0);
-	return 0.5 * pow((g - VdotH) / (g + VdotH), 2.0) * (1.0 + pow(((g + VdotH) * VdotH - 1.0) / ((g - VdotH) * VdotH + 1.0), 2.0));
-}
+#endif

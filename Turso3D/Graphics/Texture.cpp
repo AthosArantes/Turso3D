@@ -173,6 +173,18 @@ namespace Turso3D
 		srgb(false)
 	{
 	}
+	Texture::Texture(bool loadSRGB) :
+		texture(0),
+		target(0),
+		type(TEX_2D),
+		size(IntVector3::ZERO),
+		format(FMT_NONE),
+		multisample(0),
+		numLevels(0),
+		loadSRGB(loadSRGB),
+		srgb(false)
+	{
+	}
 
 	Texture::~Texture()
 	{

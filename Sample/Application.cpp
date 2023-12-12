@@ -309,12 +309,12 @@ void Application::CreateDefaultScene()
 		light->SetStatic(true);
 		light->SetLightType(LIGHT_POINT);
 		light->SetCastShadows(true);
-		Vector3 colorVec = 2.0f * Vector3(Random(), Random(), Random()).Normalized();
+		Vector3 colorVec = 5.0f * Vector3(Random(), Random(), Random()).Normalized();
 		light->SetColor(Color(colorVec.x, colorVec.y, colorVec.z, 1.0f));
 		light->SetRange(50.0f);
 		light->SetShadowMapSize(1024);
 		light->SetShadowMaxDistance(200.0f);
-		light->SetMaxDistance(900.0f);
+		light->SetMaxDistance(0.0f);
 
 		for (;;) {
 			Vector3 newPos = quadrantCenters[i % 4] + Vector3(Random() * 500.0f - 250.0f, 10.0f, Random() * 500.0f - 250.0f);
@@ -337,11 +337,13 @@ void Application::CreateDefaultScene()
 	}
 
 	{
+		Vector4 color = 25.0f * Vector4(1.0f, 1.0f, 0.5f, 1.0);
+
 		Light* light = root->CreateChild<Light>();
 		//light->SetStatic(true);
 		light->SetLightType(LIGHT_DIRECTIONAL);
 		light->SetCastShadows(true);
-		light->SetColor(Color(6.0f, 6.0f, 3.0f, 0.5f));
+		light->SetColor(Color(color.Data()));
 		light->SetDirection(Vector3(0.45f, -0.45f, 0.0f));
 		//light->SetRange(600.0f);
 		light->SetShadowMapSize(DIRECTIONAL_LIGHT_SIZE);

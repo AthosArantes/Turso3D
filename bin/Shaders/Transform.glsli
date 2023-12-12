@@ -1,3 +1,6 @@
+#ifndef I_TRANSFORM_H
+#define I_TRANSFORM_H
+
 #if defined(INSTANCED)
 	in vec4 texCoord3;
 	in vec4 texCoord4;
@@ -40,3 +43,5 @@ vec2 CalculateScreenPos(vec4 outPos)
 		-outPos.y / outPos.w * 0.5 + 0.5
 	);
 }
+
+#endif

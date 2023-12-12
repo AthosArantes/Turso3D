@@ -132,6 +132,7 @@ void main()
 	vec3 hdr = texture(diffuseTex0, vTexCoord).rgb;
 	hdr *= exposure;
 
+	//vec3 ldr = LinearToneMapping(hdr);
 	vec3 ldr = HableToneMapping(hdr);
 	//vec3 ldr = ACESFitted(hdr);
 

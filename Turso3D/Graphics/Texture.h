@@ -16,8 +16,12 @@ namespace Turso3D
 	class Texture : public Resource
 	{
 	public:
-		// Construct. Graphics subsystem must have been initialized.
+		// Construct.
+		// Graphics subsystem must have been initialized.
 		Texture();
+		// Construct.
+		// Graphics subsystem must have been initialized.
+		Texture(bool loadSRGB);
 		// Destruct.
 		~Texture();
 
@@ -90,7 +94,9 @@ namespace Turso3D
 		// Set the sRGB flag used when loading from a stream.
 		// Must be set before calling EndLoad().
 		void SetLoadSRGB(bool srgb = true) { loadSRGB = srgb; }
-		// Return whether the texture format is sRGB.
+		// Return whether the image will be loaded in sRGB format.
+		bool GetLoadSRGB() const { return loadSRGB; }
+		// Return whether the texture format is actually sRGB.
 		bool SRGB() const { return srgb; }
 
 		// Return the OpenGL object identifier.
@@ -138,7 +144,7 @@ namespace Turso3D
 		// Border color. Only effective in border addressing mode.
 		Color borderColor;
 
-		// sRGB load flag. Set before loading from a stream.
+		// sRGB load flag. Must be set before loading from a stream.
 		bool loadSRGB;
 		// Effectively determines if the format is sRGB.
 		bool srgb;

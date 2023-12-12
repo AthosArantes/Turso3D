@@ -213,7 +213,12 @@ namespace Turso3D
 				std::unique_ptr<Stream> image;
 
 				std::string texname {texture.attribute("name").value()};
-				if (nameIsPath) {
+
+				// Force absolute if it begins with a forward slash
+				if (texname.front() == '/') {
+					image = cache->OpenResource(texname.substr(1));
+
+				} else if (nameIsPath) {
 					image = cache->OpenResource(std::filesystem::path {Name()}.replace_filename(texname).string());
 					if (!image) {
 						// Try again with texture name being absolute.
@@ -253,32 +258,33 @@ namespace Turso3D
 		return true;
 	}
 
-	std::shared_ptr<Material> Material::Clone()
+	std::shared_ptr<Material> Material::Clone() const
 	{
-		std::shared_ptr<Material> ret = std::make_shared<Material>();
+		std::shared_ptr<Material> mtl = std::make_shared<Material>();
 
-		ret->cullMode = cullMode;
+		mtl->SetName(Name());
+		mtl->cullMode = cullMode;
 
 		for (size_t i = 0; i < MAX_PASS_TYPES; ++i) {
 			Pass* pass = passes[i].get();
 			if (pass) {
-				Pass* clonePass = ret->CreatePass((PassType)i);
+				Pass* clonePass = mtl->CreatePass((PassType)i);
 				clonePass->SetShader(pass->GetShader(), pass->VSDefines(), pass->FSDefines());
 				clonePass->SetRenderState(pass->GetBlendMode(), pass->GetDepthTest(), pass->GetColorWrite(), pass->GetDepthWrite());
 			}
 		}
 
 		for (size_t i = 0; i < MAX_MATERIAL_TEXTURE_UNITS; ++i) {
-			ret->textures[i] = textures[i];
+			mtl->textures[i] = textures[i];
 		}
 
-		ret->uniformBuffer = uniformBuffer;
-		ret->uniformValues = uniformValues;
-		ret->uniformNameHashes = uniformNameHashes;
-		ret->vsDefines = vsDefines;
-		ret->fsDefines = fsDefines;
+		mtl->uniformBuffer = uniformBuffer;
+		mtl->uniformValues = uniformValues;
+		mtl->uniformNameHashes = uniformNameHashes;
+		mtl->vsDefines = vsDefines;
+		mtl->fsDefines = fsDefines;
 
-		return ret;
+		return mtl;
 	}
 
 	Pass* Material::CreatePass(PassType type)

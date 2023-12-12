@@ -125,7 +125,7 @@ namespace Turso3D
 		bool LoadXML(pugi::xml_node& root);
 
 		// Return a clone of the material.
-		std::shared_ptr<Material> Clone();
+		std::shared_ptr<Material> Clone() const;
 
 		// Create and return a new pass.
 		// If pass with same name exists, it will be returned.
@@ -162,8 +162,13 @@ namespace Turso3D
 		Pass* GetPass(PassType type) const { return passes[type].get(); }
 		// Return texture by texture unit.
 		const std::shared_ptr<Texture>& GetTexture(size_t index) const { return textures[index]; }
-		// Return the uniform buffer. Update first if dirty.
+		
+		// Return the uniform buffer.
+		// If the uniform buffer was not yet created, a new one will be created.
+		// If the uniform buffer is shared and this material changes any of the uniform values,
+		// a new uniform buffer will be created.
 		UniformBuffer* GetUniformBuffer() const;
+
 		// Return number of uniforms.
 		size_t NumUniforms() const { return uniformValues.size(); }
 		// Return uniform value by index.

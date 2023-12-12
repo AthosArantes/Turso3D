@@ -8,7 +8,7 @@
 		<texture slot="0" name="leaves.png" srgb="true" />
 	</textures>
 	<uniforms>
-		<uniform name="matDiffColor" value="1 1 1 1" />
-		<uniform name="matSpecColor" value="0 0 0 1" />
+		<uniform name="matDiffColor" value="1 1 1 0.5" />
+		<uniform name="matSpecColor" value="0.04 0.04 0.04 0" />
 	</uniforms>
 </material>

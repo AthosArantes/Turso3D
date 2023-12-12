@@ -37,9 +37,7 @@ void main()
 
 #ifdef ALPHAMASK
 	in vec2 vTexCoord;
-#endif
 
-#ifdef ALPHAMASK
 	uniform sampler2D diffuseTex0;
 #endif
 
