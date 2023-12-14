@@ -31,7 +31,7 @@ namespace Turso3D
 		1,      // FMT_R8
 		2,      // FMT_RG8
 		4,      // FMT_RGBA8
-		3,		// FMT_R11_G11_B10
+		3,		// FMT_R11_G11_B10F
 		1,      // FMT_A8
 		0,      // FMT_R16
 		0,      // FMT_RG16
@@ -65,7 +65,7 @@ namespace Turso3D
 		1,      // FMT_R8
 		2,      // FMT_RG8
 		4,      // FMT_RGBA8
-		4,		// FMT_R11_G11_B10
+		4,		// FMT_R11_G11_B10F
 		1,      // FMT_A8
 		2,      // FMT_R16
 		4,      // FMT_RG16

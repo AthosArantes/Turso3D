@@ -98,16 +98,19 @@ bool Application::Initialize()
 	debugRenderer = std::make_unique<DebugRenderer>();
 
 	// Rendertarget textures
-	viewFbo = std::make_unique<FrameBuffer>();
-	viewMRTFbo = std::make_unique<FrameBuffer>();
-	ssaoFbo = std::make_unique<FrameBuffer>();
-	tonemapFbo = std::make_unique<FrameBuffer>();
-	tonemapBuffer = std::make_unique<Texture>();
-	colorBuffer = std::make_unique<Texture>();
+	hdrFbo = std::make_unique<FrameBuffer>();
+	hdrMRTFbo = std::make_unique<FrameBuffer>();
+	ldrFbo = std::make_unique<FrameBuffer>();
+	hdrBuffer = std::make_unique<Texture>();
+	ldrBuffer = std::make_unique<Texture>();
 	normalBuffer = std::make_unique<Texture>();
 	depthStencilBuffer = std::make_unique<Texture>();
+
+	bloomFbo = std::make_unique<FrameBuffer>();
+	bloomBuffer = std::make_unique<Texture>();
+
+	ssaoFbo = std::make_unique<FrameBuffer>();
 	ssaoTexture = std::make_unique<Texture>();
-	occlusionDebugTexture = std::make_unique<Texture>();
 
 	// Random noise texture for SSAO
 	unsigned char noiseData[4 * 4 * 4];
@@ -457,43 +460,44 @@ void Application::OnMouseEnterLeave(bool entered)
 
 void Application::OnFramebufferSize(int width, int height)
 {
-	if (width <= 0 || height <= 0) {
+	if (width <= 0 || height <= 0 || (hdrBuffer->Width() == width && hdrBuffer->Height() == height)) {
 		return;
 	}
 	IntVector2 sz(width, height);
 
-	if (colorBuffer->Width() != width || colorBuffer->Height() != height) {
-		bool success = colorBuffer->Define(TEX_2D, sz, FMT_R11_G11_B10);
-		if (!success) {
-			LOG_WARNING("FMT_R11_G11_B10 not supported, falling back to FMT_RGBA16F");
-			colorBuffer->Define(TEX_2D, sz, FMT_RGBA16F);
-		}
-		colorBuffer->DefineSampler(FILTER_BILINEAR, ADDRESS_CLAMP, ADDRESS_CLAMP, ADDRESS_CLAMP);
+	hdrBuffer->Define(TEX_2D, sz, FMT_R11_G11_B10F);
+	hdrBuffer->DefineSampler(FILTER_BILINEAR, ADDRESS_CLAMP, ADDRESS_CLAMP, ADDRESS_CLAMP);
+	ldrBuffer->Define(TEX_2D, sz, FMT_RGBA8, true);
+	ldrBuffer->DefineSampler(FILTER_BILINEAR, ADDRESS_CLAMP, ADDRESS_CLAMP, ADDRESS_CLAMP);
+	normalBuffer->Define(TEX_2D, sz, FMT_RGBA8);
+	normalBuffer->DefineSampler(FILTER_BILINEAR, ADDRESS_CLAMP, ADDRESS_CLAMP, ADDRESS_CLAMP);
+	depthStencilBuffer->Define(TEX_2D, sz, FMT_D32);
+	depthStencilBuffer->DefineSampler(FILTER_BILINEAR, ADDRESS_CLAMP, ADDRESS_CLAMP, ADDRESS_CLAMP);
 
-		tonemapBuffer->Define(TEX_2D, sz, FMT_RGBA8, true);
-		tonemapBuffer->DefineSampler(FILTER_BILINEAR, ADDRESS_CLAMP, ADDRESS_CLAMP, ADDRESS_CLAMP);
-
-		depthStencilBuffer->Define(TEX_2D, sz, FMT_D32);
-		depthStencilBuffer->DefineSampler(FILTER_BILINEAR, ADDRESS_CLAMP, ADDRESS_CLAMP, ADDRESS_CLAMP);
-
-		normalBuffer->Define(TEX_2D, sz, FMT_RGBA8);
-		normalBuffer->DefineSampler(FILTER_BILINEAR, ADDRESS_CLAMP, ADDRESS_CLAMP, ADDRESS_CLAMP);
-
-		viewFbo->Define(colorBuffer.get(), depthStencilBuffer.get());
-		tonemapFbo->Define(tonemapBuffer.get(), depthStencilBuffer.get());
-
+	hdrFbo->Define(hdrBuffer.get(), depthStencilBuffer.get());
+	{
 		std::vector<Texture*> mrt;
-		mrt.push_back(colorBuffer.get());
+		mrt.push_back(hdrBuffer.get());
 		mrt.push_back(normalBuffer.get());
-		viewMRTFbo->Define(mrt, depthStencilBuffer.get());
+		hdrMRTFbo->Define(mrt, depthStencilBuffer.get());
+	}
+	ldrFbo->Define(ldrBuffer.get(), depthStencilBuffer.get());
+
+	// Bloom resources
+	bloomBuffer->Define(TEX_2D, IntVector2(width, height), FMT_R11_G11_B10F);
+	bloomBuffer->DefineSampler(FILTER_BILINEAR, ADDRESS_CLAMP, ADDRESS_CLAMP, ADDRESS_CLAMP);
+	bloomMips.clear();
+	for (int hw = width / 2, hh = height / 2; hw >= 8 && hh >= 8; hw /= 2, hh /= 2) {
+		std::unique_ptr<Texture> mip = std::make_unique<Texture>();
+		mip->Define(TEX_2D, IntVector2(hw, hh), FMT_R11_G11_B10F);
+		mip->DefineSampler(FILTER_BILINEAR, ADDRESS_CLAMP, ADDRESS_CLAMP, ADDRESS_CLAMP);
+		bloomMips.push_back(std::move(mip));
 	}
 
-	// Similarly recreate SSAO texture if needed
-	if ((ssaoTexture->Width() != colorBuffer->Width() / 2 || ssaoTexture->Height() != colorBuffer->Height() / 2)) {
-		ssaoTexture->Define(TEX_2D, IntVector2(colorBuffer->Width() / 2, colorBuffer->Height() / 2), FMT_R32F, false, 1, 1);
-		ssaoTexture->DefineSampler(FILTER_BILINEAR, ADDRESS_CLAMP, ADDRESS_CLAMP, ADDRESS_CLAMP);
-		ssaoFbo->Define(ssaoTexture.get(), nullptr);
-	}
+	// SSAO resources
+	ssaoTexture->Define(TEX_2D, IntVector2(width / 2, height / 2), FMT_RGBA8);
+	ssaoTexture->DefineSampler(FILTER_BILINEAR, ADDRESS_CLAMP, ADDRESS_CLAMP, ADDRESS_CLAMP);
+	ssaoFbo->Define(ssaoTexture.get(), nullptr);
 
 	camera->SetAspectRatio((float)width / (float)height);
 
@@ -557,6 +561,15 @@ void Application::Update(double dt)
 		}
 	}
 
+	// Raycast into the scene using the camera forward vector. If has a hit, draw a small debug sphere at the hit location
+	{
+		Ray cameraRay(camera->WorldPosition(), camera->WorldDirection());
+		RaycastResult res = scene->GetOctree()->RaycastSingle(cameraRay, Drawable::FLAG_GEOMETRY);
+		if (res.drawable) {
+			debugRenderer->AddSphere(Sphere(res.position, 0.05f), Color::WHITE, true);
+		}
+	}
+
 #endif
 
 	Render(dt);
@@ -592,8 +605,8 @@ void Application::FixedUpdate(double dt)
 
 void Application::Render(double dt)
 {
-	int width = colorBuffer->Width();
-	int height = colorBuffer->Height();
+	int width = hdrBuffer->Width();
+	int height = hdrBuffer->Height();
 
 	Octree* octree = scene->GetOctree();
 
@@ -601,54 +614,95 @@ void Application::Render(double dt)
 	renderer->PrepareView(scene.get(), camera.get(), true, true, (float)dt);
 	debugRenderer->SetView(camera.get());
 
-	// Raycast into the scene using the camera forward vector. If has a hit, draw a small debug sphere at the hit location
-	{
-		Ray cameraRay(camera->WorldPosition(), camera->WorldDirection());
-		RaycastResult res = octree->RaycastSingle(cameraRay, Drawable::FLAG_GEOMETRY);
-		if (res.drawable) {
-			debugRenderer->AddSphere(Sphere(res.position, 0.05f), Color::WHITE, true);
-		}
-	}
-
 	// Now render the scene, starting with shadowmaps and opaque geometries
 	renderer->RenderShadowMaps();
 
-	// The default opaque shaders can write both color (first RT) and view-space normals (second RT).
-	// If going to render SSAO, bind both rendertargets, else just the color RT
-//	if (drawSSAO) {
-	graphics->SetFrameBuffer(viewMRTFbo.get());
-//	} else {
-//		graphics->SetFrameBuffer(viewFbo);
-//	}
+	graphics->SetFrameBuffer(hdrMRTFbo.get());
 
 	graphics->SetViewport(IntRect(0, 0, width, height));
 	renderer->RenderOpaque();
 
+	// Apply bloom
+	{
+		graphics->SetFrameBuffer(bloomFbo.get());
+		graphics->SetRenderState(BLEND_REPLACE, CULL_NONE, CMP_ALWAYS, true, false);
+
+		// Sample bright areas
+		{
+			ShaderProgram* program = graphics->SetProgram("PostProcess/Brightness.glsl", "", "");
+			bloomFbo->Define(bloomBuffer.get(), nullptr);
+			graphics->SetUniform(program, "threshold", 3.0f);
+			graphics->SetTexture(0, hdrBuffer.get());
+			graphics->DrawQuad();
+		}
+
+		// Downsample
+		{
+			ShaderProgram* program = graphics->SetProgram("PostProcess/Downsample.glsl", "", "");
+			for (int i = 0; i < bloomMips.size(); ++i) {
+				Texture* src = (i == 0) ? bloomBuffer.get() : bloomMips[i - 1].get();
+				Texture* dst = bloomMips[i].get();
+
+				bloomFbo->Define(dst, nullptr);
+				graphics->SetViewport(IntRect(0, 0, dst->Width(), dst->Height()));
+				graphics->SetUniform(program, "invSrcSize", Vector2(1.0f / src->Width(), 1.0f / src->Height()));
+				graphics->SetTexture(0, src);
+				graphics->DrawQuad();
+			}
+		}
+		// Upsample
+		{
+			ShaderProgram* program = graphics->SetProgram("PostProcess/Upsample.glsl", "", "");
+			for (int i = bloomMips.size() - 1; i > 0; --i) {
+				Texture* src = bloomMips[i].get();
+				Texture* dst = bloomMips[i - 1].get();
+
+				bloomFbo->Define(dst, nullptr);
+				graphics->SetViewport(IntRect(0, 0, dst->Width(), dst->Height()));
+				graphics->SetUniform(program, "filterRadius", 0.005f);
+				graphics->SetTexture(0, src);
+				graphics->DrawQuad();
+			}
+		}
+
+		// Compose
+		graphics->SetViewport(IntRect(0, 0, width, height));
+		{
+			ShaderProgram* program = graphics->SetProgram("PostProcess/BloomCompose.glsl", "", "");
+			bloomFbo->Define(bloomBuffer.get(), nullptr);
+			graphics->SetUniform(program, "intensity", 0.05f);
+			graphics->SetTexture(0, hdrBuffer.get());
+			graphics->SetTexture(1, bloomMips[0].get());
+			graphics->DrawQuad();
+		}
+	}
+
 	// Apply tonemap
 	{
-		graphics->SetFrameBuffer(tonemapFbo.get());
-		ShaderProgram* program = graphics->SetProgram("Tonemap.glsl", "", "");
-		graphics->SetUniform(program, "exposure", 2.0f);
-		graphics->SetTexture(0, colorBuffer.get());
+		graphics->SetFrameBuffer(ldrFbo.get());
+		ShaderProgram* program = graphics->SetProgram("PostProcess/Tonemap.glsl", "", "");
+		graphics->SetUniform(program, "exposure", 1.0f);
+		graphics->SetTexture(0, bloomBuffer.get());
 		graphics->SetRenderState(BLEND_REPLACE, CULL_NONE, CMP_ALWAYS, true, false);
 		graphics->DrawQuad();
 	}
 
 	// SSAO effect.
 	// First sample the normals and depth buffer, then apply a blurred SSAO result that darkens the opaque geometry
+#if 0
 	{
 		float farClip = camera->FarClip();
 		float nearClip = camera->NearClip();
 		Vector3 nearVec, farVec;
 		camera->FrustumSize(nearVec, farVec);
 
-		ShaderProgram* program = graphics->SetProgram("SSAO.glsl", "", "");
+		ShaderProgram* program = graphics->SetProgram("PostProcess/SSAO.glsl", "", "");
 		graphics->SetFrameBuffer(ssaoFbo.get());
 		graphics->SetViewport(IntRect(0, 0, ssaoTexture->Width(), ssaoTexture->Height()));
 		graphics->SetUniform(program, "noiseInvSize", Vector2(ssaoTexture->Width() / 4.0f, ssaoTexture->Height() / 4.0f));
 		graphics->SetUniform(program, "screenInvSize", Vector2(1.0f / (float)width, 1.0f / (float)height));
 		graphics->SetUniform(program, "frustumSize", Vector4(farVec, (float)height / (float)width));
-		graphics->SetUniform(program, "aoParameters", Vector4(0.30f, 1.0f, 0.010f, 0.15f));
+		graphics->SetUniform(program, "aoParameters", Vector4(0.15f, 1.0f, 0.025f, 0.15f));
 		graphics->SetUniform(program, "depthReconstruct", Vector2(farClip / (farClip - nearClip), -nearClip / (farClip - nearClip)));
 		graphics->SetTexture(0, depthStencilBuffer.get());
 		graphics->SetTexture(1, normalBuffer.get());
@@ -658,8 +712,8 @@ void Application::Render(double dt)
 		graphics->SetTexture(1, nullptr);
 		graphics->SetTexture(2, nullptr);
 
-		program = graphics->SetProgram("SSAOBlur.glsl", "", "");
-		graphics->SetFrameBuffer(tonemapFbo.get());
+		program = graphics->SetProgram("PostProcess/SSAOBlur.glsl", "", "");
+		graphics->SetFrameBuffer(ldrFbo.get());
 		graphics->SetViewport(IntRect(0, 0, width, height));
 		graphics->SetUniform(program, "blurInvSize", Vector2(1.0f / ssaoTexture->Width(), 1.0f / ssaoTexture->Height()));
 		graphics->SetTexture(0, ssaoTexture.get());
@@ -667,49 +721,47 @@ void Application::Render(double dt)
 		graphics->DrawQuad();
 		graphics->SetTexture(0, nullptr);
 	}
+#endif
 
-	// Render alpha geometry. Now only the color rendertarget is needed
-	graphics->SetFrameBuffer(tonemapFbo.get());
+	// Render alpha geometry.
+	// Now only the color rendertarget is needed
+	graphics->SetFrameBuffer(ldrFbo.get());
 	graphics->SetViewport(IntRect(0, 0, width, height));
 	renderer->RenderAlpha();
 
 	// Optional render of debug geometry
-	/*
-	bool drawDebug = true;
+	bool drawDebug = false;
 	if (drawDebug) {
 		renderer->RenderDebug();
+		debugRenderer->Render();
 	}
-	//*/
-	debugRenderer->Render();
 
 #if 0
 	// Optional debug render of shadowmap.
 	// Draw both dir light cascades and the shadow atlas
-	if (drawShadowDebug) {
-		Matrix4 quadMatrix = Matrix4::IDENTITY;
-		quadMatrix.m00 = 0.33f * 2.0f * (9.0f / 16.0f);
-		quadMatrix.m11 = 0.33f;
-		quadMatrix.m03 = -1.0f + quadMatrix.m00;
-		quadMatrix.m13 = -1.0f + quadMatrix.m11;
+	Matrix4 quadMatrix = Matrix4::IDENTITY;
+	quadMatrix.m00 = 0.33f * 2.0f * (9.0f / 16.0f);
+	quadMatrix.m11 = 0.33f;
+	quadMatrix.m03 = -1.0f + quadMatrix.m00;
+	quadMatrix.m13 = -1.0f + quadMatrix.m11;
 
-		ShaderProgram* program = graphics->SetProgram("DebugShadow.glsl", "", "");
-		graphics->SetUniform(program, "worldViewProjMatrix", quadMatrix);
-		graphics->SetTexture(0, renderer->ShadowMapTexture(0));
-		graphics->SetRenderState(BLEND_REPLACE, CULL_NONE, CMP_ALWAYS, true, false);
-		graphics->DrawQuad();
+	ShaderProgram* program = graphics->SetProgram("DebugShadow.glsl", "", "");
+	graphics->SetUniform(program, "worldViewProjMatrix", quadMatrix);
+	graphics->SetTexture(0, renderer->ShadowMapTexture(0));
+	graphics->SetRenderState(BLEND_REPLACE, CULL_NONE, CMP_ALWAYS, true, false);
+	graphics->DrawQuad();
 
-		quadMatrix.m03 += 1.5f * quadMatrix.m00;
-		quadMatrix.m00 = 0.33f * (9.0f / 16.0f);
+	quadMatrix.m03 += 1.5f * quadMatrix.m00;
+	quadMatrix.m00 = 0.33f * (9.0f / 16.0f);
 
-		graphics->SetUniform(program, "worldViewProjMatrix", quadMatrix);
-		graphics->SetTexture(0, renderer->ShadowMapTexture(1));
-		graphics->DrawQuad();
+	graphics->SetUniform(program, "worldViewProjMatrix", quadMatrix);
+	graphics->SetTexture(0, renderer->ShadowMapTexture(1));
+	graphics->DrawQuad();
 
-		graphics->SetTexture(0, nullptr);
-	}
+	//graphics->SetTexture(0, nullptr);
 #endif
 
 	// Blit rendered contents to backbuffer now before presenting
-	graphics->Blit(nullptr, IntRect(0, 0, width, height), tonemapFbo.get(), IntRect(0, 0, width, height), true, false, FILTER_POINT);
+	graphics->Blit(nullptr, IntRect(0, 0, width, height), ldrFbo.get(), IntRect(0, 0, width, height), true, false, FILTER_POINT);
 	graphics->Present();
 }

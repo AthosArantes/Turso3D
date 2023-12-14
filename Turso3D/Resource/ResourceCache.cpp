@@ -91,10 +91,12 @@ namespace Turso3D
 
 	void ResourceCache::ClearUnused()
 	{
-		for (auto it = resources.begin(); it != resources.end(); ++it) {
+		for (auto it = resources.begin(); it != resources.end(); ) {
 			// use_count of 1 means only the cache is keeping it alive.
 			if (it->second.use_count() == 1) {
 				it = resources.erase(it);
+			} else {
+				++it;
 			}
 		}
 	}

@@ -3,6 +3,7 @@
 #include <Turso3D/Math/Vector2.h>
 #include <map>
 #include <memory>
+#include <vector>
 
 namespace Turso3D
 {
@@ -66,16 +67,20 @@ private:
 	std::unique_ptr<Turso3D::Renderer> renderer;
 	std::unique_ptr<Turso3D::DebugRenderer> debugRenderer;
 
-	std::unique_ptr<Turso3D::FrameBuffer> viewFbo;
-	std::unique_ptr<Turso3D::FrameBuffer> viewMRTFbo;
-	std::unique_ptr<Turso3D::FrameBuffer> ssaoFbo;
-	std::unique_ptr<Turso3D::FrameBuffer> tonemapFbo;
-	std::unique_ptr<Turso3D::Texture> tonemapBuffer;
-	std::unique_ptr<Turso3D::Texture> colorBuffer;
+	std::unique_ptr<Turso3D::FrameBuffer> hdrFbo;
+	std::unique_ptr<Turso3D::FrameBuffer> hdrMRTFbo;
+	std::unique_ptr<Turso3D::FrameBuffer> ldrFbo;
+	std::unique_ptr<Turso3D::Texture> hdrBuffer;
+	std::unique_ptr<Turso3D::Texture> ldrBuffer;
 	std::unique_ptr<Turso3D::Texture> normalBuffer;
 	std::unique_ptr<Turso3D::Texture> depthStencilBuffer;
+
+	std::unique_ptr<Turso3D::FrameBuffer> bloomFbo;
+	std::unique_ptr<Turso3D::Texture> bloomBuffer;
+	std::vector<std::unique_ptr<Turso3D::Texture>> bloomMips;
+
+	std::unique_ptr<Turso3D::FrameBuffer> ssaoFbo;
 	std::unique_ptr<Turso3D::Texture> ssaoTexture;
-	std::unique_ptr<Turso3D::Texture> occlusionDebugTexture;
 	std::unique_ptr<Turso3D::Texture> ssaoNoiseTexture;
 
 	std::shared_ptr<Turso3D::Camera> camera;

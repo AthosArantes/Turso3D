@@ -1,7 +1,7 @@
 #ifndef I_BRDF_H
 #define I_BRDF_H
 
-const float PI = 3.14159;
+#define PI 3.141592653589793
 
 // ====================================================================================================
 // Normal Distribution Functions

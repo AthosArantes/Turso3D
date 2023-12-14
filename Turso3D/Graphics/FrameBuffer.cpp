@@ -55,7 +55,7 @@ namespace Turso3D
 			glFramebufferRenderbuffer(GL_DRAW_FRAMEBUFFER, GL_STENCIL_ATTACHMENT, GL_RENDERBUFFER, 0);
 		}
 
-		LOG_DEBUG("Defined framebuffer width {} height {}", size.x, size.y);
+		//LOG_DEBUG("Defined framebuffer width {} height {}", size.x, size.y);
 	}
 
 	void FrameBuffer::Define(Texture* colorTexture, Texture* depthStencilTexture)
@@ -86,7 +86,7 @@ namespace Turso3D
 			glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_STENCIL_ATTACHMENT, GL_TEXTURE_2D, 0, 0);
 		}
 
-		LOG_DEBUG("Defined framebuffer width {} height {}", size.x, size.y);
+		//LOG_DEBUG("Defined framebuffer width {} height {}", size.x, size.y);
 	}
 
 	void FrameBuffer::Define(Texture* colorTexture, size_t cubeMapFace, Texture* depthStencilTexture)
@@ -117,7 +117,7 @@ namespace Turso3D
 			glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_STENCIL_ATTACHMENT, GL_TEXTURE_2D, 0, 0);
 		}
 
-		LOG_DEBUG("Defined framebuffer width {} height {} from cube texture", size.x, size.y);
+		//LOG_DEBUG("Defined framebuffer width {} height {} from cube texture", size.x, size.y);
 	}
 
 	void FrameBuffer::Define(const std::vector<Texture*>& colorTextures, Texture* depthStencilTexture)
@@ -160,7 +160,7 @@ namespace Turso3D
 			glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_STENCIL_ATTACHMENT, GL_TEXTURE_2D, 0, 0);
 		}
 
-		LOG_DEBUG("Defined MRT framebuffer width {} height {}", size.x, size.y);
+		//LOG_DEBUG("Defined MRT framebuffer width {} height {}", size.x, size.y);
 	}
 
 	void FrameBuffer::Bind()
