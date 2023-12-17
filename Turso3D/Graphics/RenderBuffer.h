@@ -11,7 +11,7 @@ namespace Turso3D
 	class RenderBuffer
 	{
 	public:
-		// Construct. Graphics subsystem must have been initialized.
+		// Construct.
 		RenderBuffer();
 		// Destruct.
 		~RenderBuffer();

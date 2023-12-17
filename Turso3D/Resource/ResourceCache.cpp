@@ -1,10 +1,10 @@
 #include "ResourceCache.h"
+#include "Image.h"
+#include "Resource.h"
 #include <Turso3D/Graphics/GraphicsDefs.h>
 #include <Turso3D/Graphics/Shader.h>
 #include <Turso3D/IO/FileStream.h>
 #include <Turso3D/IO/Log.h>
-#include <Turso3D/Resource/Image.h>
-#include <Turso3D/Resource/Resource.h>
 #include <algorithm>
 #include <filesystem>
 
@@ -15,13 +15,11 @@ namespace Turso3D
 	// ==========================================================================================
 	ResourceCache::ResourceCache()
 	{
-		RegisterSubsystem(this);
 	}
 
 	ResourceCache::~ResourceCache()
 	{
 		resources.clear();
-		RemoveSubsystem(this);
 	}
 
 	bool ResourceCache::AddResourceDir(const std::string& pathName, unsigned priority)
@@ -67,7 +65,7 @@ namespace Turso3D
 		}
 	}
 
-	std::unique_ptr<Stream> ResourceCache::OpenResource(const std::string& name_)
+	std::unique_ptr<Stream> ResourceCache::OpenData(const std::string& name_)
 	{
 		// Try opening from file
 		std::unique_ptr<FileStream> stream = std::make_unique<FileStream>();
@@ -99,5 +97,11 @@ namespace Turso3D
 				++it;
 			}
 		}
+	}
+
+	ResourceCache* ResourceCache::Instance()
+	{
+		static ResourceCache instance {};
+		return &instance;
 	}
 }

@@ -5,12 +5,14 @@
 #include <Turso3D/Graphics/VertexBuffer.h>
 #include <Turso3D/Math/Polyhedron.h>
 #include <Turso3D/Renderer/Camera.h>
+#include <cassert>
 
 namespace Turso3D
 {
-	DebugRenderer::DebugRenderer()
+	DebugRenderer::DebugRenderer(Graphics* graphics) :
+		graphics(graphics)
 	{
-		RegisterSubsystem(this);
+		assert(graphics->IsInitialized());
 
 		vertexBuffer = std::make_unique<VertexBuffer>();
 		vertexElements.push_back(VertexElement(ELEM_VECTOR3, SEM_POSITION));
@@ -18,12 +20,11 @@ namespace Turso3D
 
 		indexBuffer = std::make_unique<IndexBuffer>();
 
-		shaderProgram = Subsystem<Graphics>()->CreateProgram("DebugLines.glsl", "", "");
+		shaderProgram = graphics->CreateProgram("DebugLines.glsl", "", "");
 	}
 
 	DebugRenderer::~DebugRenderer()
 	{
-		RemoveSubsystem(this);
 	}
 
 	void DebugRenderer::SetView(Camera* camera)
@@ -310,7 +311,6 @@ namespace Turso3D
 			indexBuffer->SetData(indices.size(), noDepthIndices.size(), &noDepthIndices[0]);
 		}
 
-		Graphics* graphics = Subsystem<Graphics>();
 		shaderProgram->Bind();
 		graphics->SetUniform(shaderProgram.get(), "viewProjMatrix", projection * view);
 		graphics->SetVertexBuffer(vertexBuffer.get(), shaderProgram.get());

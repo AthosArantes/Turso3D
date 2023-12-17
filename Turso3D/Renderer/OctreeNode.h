@@ -23,8 +23,6 @@ namespace Turso3D
 		// Construct.
 		OctreeNodeBase();
 
-		RTTI_IMPL();
-
 	protected:
 		// Handle the layer changing.
 		void OnLayerChanged(uint8_t newLayer) override;
@@ -202,8 +200,6 @@ namespace Turso3D
 	class OctreeNode : public OctreeNodeBase
 	{
 	public:
-		RTTI_IMPL();
-
 		// Set whether is static. Used for optimizations.
 		// A static node should not move after scene load. Default false.
 		void SetStatic(bool enable);
@@ -258,6 +254,3 @@ namespace Turso3D
 		void RemoveFromOctree();
 	};
 }
-
-RTTI_REGISTER(Turso3D::OctreeNodeBase, Turso3D::SpatialNode);
-RTTI_REGISTER(Turso3D::OctreeNode, Turso3D::OctreeNodeBase);

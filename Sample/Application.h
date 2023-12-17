@@ -1,5 +1,7 @@
 #pragma once
 
+#include <Turso3D/Graphics/FrameBuffer.h>
+#include <Turso3D/Graphics/Texture.h>
 #include <Turso3D/Math/Vector2.h>
 #include <map>
 #include <memory>
@@ -7,14 +9,10 @@
 
 namespace Turso3D
 {
-	class WorkQueue;
-	class ResourceCache;
-
 	class Graphics;
 	class Renderer;
 	class DebugRenderer;
-	class FrameBuffer;
-	class Texture;
+	class WorkQueue;
 
 	class Scene;
 	class Camera;
@@ -53,6 +51,7 @@ private:
 	void OnMouseMove(double xpos, double ypos);
 	void OnMouseEnterLeave(bool entered);
 	void OnFramebufferSize(int width, int height);
+	void OnWindowFocusChanged(int focused);
 
 	void Update(double dt);
 	void PostUpdate(double dt);
@@ -60,50 +59,52 @@ private:
 	void Render(double dt);
 
 private:
+	// Cached graphics subsystem.
 	std::unique_ptr<Turso3D::WorkQueue> workQueue;
-	std::unique_ptr<Turso3D::ResourceCache> resourceCache;
-
 	std::unique_ptr<Turso3D::Graphics> graphics;
 	std::unique_ptr<Turso3D::Renderer> renderer;
 	std::unique_ptr<Turso3D::DebugRenderer> debugRenderer;
 
-	std::unique_ptr<Turso3D::FrameBuffer> hdrFbo;
-	std::unique_ptr<Turso3D::FrameBuffer> hdrMRTFbo;
-	std::unique_ptr<Turso3D::FrameBuffer> ldrFbo;
-	std::unique_ptr<Turso3D::Texture> hdrBuffer;
-	std::unique_ptr<Turso3D::Texture> ldrBuffer;
-	std::unique_ptr<Turso3D::Texture> normalBuffer;
-	std::unique_ptr<Turso3D::Texture> depthStencilBuffer;
+	Turso3D::FrameBuffer mrtFbo[2];
+	Turso3D::Texture hdrBuffer[2];
+	Turso3D::Texture normalBuffer[2];
+	Turso3D::Texture depthStencilBuffer[2];
 
-	std::unique_ptr<Turso3D::FrameBuffer> bloomFbo;
-	std::unique_ptr<Turso3D::Texture> bloomBuffer;
-	std::vector<std::unique_ptr<Turso3D::Texture>> bloomMips;
+	Turso3D::FrameBuffer ldrFbo;
+	Turso3D::Texture ldrBuffer;
 
-	std::unique_ptr<Turso3D::FrameBuffer> ssaoFbo;
-	std::unique_ptr<Turso3D::Texture> ssaoTexture;
-	std::unique_ptr<Turso3D::Texture> ssaoNoiseTexture;
+	Turso3D::FrameBuffer bloomFbo;
+	Turso3D::Texture bloomBuffer;
+	Turso3D::Texture bloomMips[6];
+	int maxBloomMip;
+
+	Turso3D::FrameBuffer ssaoFbo;
+	Turso3D::Texture ssaoTexture;
+	Turso3D::Texture ssaoNoiseTexture;
 
 	std::shared_ptr<Turso3D::Camera> camera;
 	std::shared_ptr<Turso3D::Scene> scene;
 
-	double timestamp {};
-	double deltaTime {};
-	double deltaTimeAccumulator {};
+	int multiSample;
 
-	int frameLimit {};
+	double timestamp;
+	double deltaTime;
+	double deltaTimeAccumulator;
+
+	int frameLimit;
 
 	std::map<int, InputState> keyStates;
 	std::map<int, InputState> mouseButtonStates;
 
-	Turso3D::Vector2 prevCursorPos {};
+	Turso3D::Vector2 prevCursorPos;
 	// The cursor speed (in pixels) calculated from current cursor position and previous one.
-	Turso3D::Vector2 cursorSpeed {};
+	Turso3D::Vector2 cursorSpeed;
 	// Determimnes whether the cursor is inside the client area.
-	bool cursorInside {};
+	bool cursorInside;
 
-	float camYaw {};
-	float camPitch {};
+	float camYaw;
+	float camPitch;
 
-	Turso3D::AnimatedModel* characterModel {};
-	Turso3D::SpatialNode* model {};
+	Turso3D::AnimatedModel* characterModel;
+	Turso3D::SpatialNode* model;
 };

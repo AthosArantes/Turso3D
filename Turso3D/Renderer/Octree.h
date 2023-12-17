@@ -10,11 +10,10 @@
 namespace Turso3D
 {
 	constexpr size_t NUM_OCTANTS = 8;
-	constexpr unsigned char OF_DRAWABLES_SORT_DIRTY = 0x1;
-	constexpr unsigned char OF_CULLING_BOX_DIRTY = 0x2;
 	constexpr float OCCLUSION_QUERY_INTERVAL = 0.133333f; // About 8 frame stagger at 60fps
 
 	class Ray;
+	class Graphics;
 	class WorkQueue;
 	struct Task;
 	struct ReinsertDrawablesTask;
@@ -50,13 +49,20 @@ namespace Turso3D
 		friend class Octree;
 
 	public:
+		enum Flag
+		{
+			FLAG_DRAWABLES_SORT_DIRTY = 0x1,
+			FLAG_CULLING_BOX_DIRTY = 0x2
+		};
+
+	public:
 		// Construct with defaults.
 		Octant();
 		// Destruct. If has a pending occlusion query, free it.
 		~Octant();
 
 		// Initialize parent and bounds.
-		void Initialize(Octant* parent, const BoundingBox& boundingBox, unsigned char level, unsigned char childIndex);
+		void Initialize(Graphics* graphics, Octant* parent, const BoundingBox& boundingBox, unsigned char level, unsigned char childIndex);
 		// Add debug geometry to be rendered.
 		void OnRenderDebug(DebugRenderer* debug);
 		// React to occlusion query being rendered for the octant.
@@ -91,7 +97,7 @@ namespace Turso3D
 		bool OcclusionQueryPending() const { return occlusionQueryId != 0; }
 
 		// Set bit flag.
-		void SetFlag(unsigned char bit, bool set) const
+		void SetFlag(unsigned bit, bool set) const
 		{
 			if (set) {
 				flags |= bit;
@@ -100,7 +106,7 @@ namespace Turso3D
 			}
 		}
 		// Test bit flag.
-		bool TestFlag(unsigned char bit) const
+		bool TestFlag(unsigned bit) const
 		{
 			return (flags & bit) != 0;
 		}
@@ -129,8 +135,8 @@ namespace Turso3D
 		void MarkCullingBoxDirty() const
 		{
 			const Octant* octant = this;
-			while (octant && !octant->TestFlag(OF_CULLING_BOX_DIRTY)) {
-				octant->SetFlag(OF_CULLING_BOX_DIRTY, true);
+			while (octant && !octant->TestFlag(FLAG_CULLING_BOX_DIRTY)) {
+				octant->SetFlag(FLAG_CULLING_BOX_DIRTY, true);
 				octant = octant->parent;
 			}
 		}
@@ -181,6 +187,9 @@ namespace Turso3D
 		}
 
 	private:
+		// Cached graphics subsystem.
+		Graphics* graphics;
+
 		// Combined drawable and child octant bounding box. Used for culling tests.
 		mutable BoundingBox cullingBox;
 		// Drawables contained in the octant.
@@ -218,7 +227,8 @@ namespace Turso3D
 	public:
 		// Construct.
 		// The WorkQueue subsystem must have been initialized, as it will be used during update.
-		Octree();
+		// The Graphics subsystem must also have been initialized, as it's used by octants to free occlusion queries.
+		Octree(WorkQueue* workQueue, Graphics* graphics);
 		// Destruct.
 		// Delete all child octants and detach the drawables.
 		~Octree();
@@ -268,8 +278,8 @@ namespace Turso3D
 			octant->MarkCullingBoxDirty();
 			drawable->octant = octant;
 
-			if (!octant->TestFlag(OF_DRAWABLES_SORT_DIRTY)) {
-				octant->SetFlag(OF_DRAWABLES_SORT_DIRTY, true);
+			if (!octant->TestFlag(Octant::FLAG_DRAWABLES_SORT_DIRTY)) {
+				octant->SetFlag(Octant::FLAG_DRAWABLES_SORT_DIRTY, true);
 				sortDirtyOctants.push_back(octant);
 			}
 		}
@@ -384,6 +394,11 @@ namespace Turso3D
 		// During threaded update moved drawables should go directly to thread-specific reinsert queues.
 		volatile bool threadedUpdate;
 
+		// Cached WorkQueue subsystem.
+		WorkQueue* workQueue;
+		// Cached Graphics subsystem
+		Graphics* graphics;
+
 		// Current framenumber.
 		unsigned short frameNumber;
 		// Queue of nodes to be reinserted.
@@ -397,8 +412,6 @@ namespace Turso3D
 
 		// Allocator for child octants.
 		Allocator<Octant> allocator;
-		// Cached WorkQueue subsystem.
-		WorkQueue* workQueue;
 
 		// Tasks for threaded reinsert execution.
 		std::vector<std::unique_ptr<ReinsertDrawablesTask>> reinsertTasks;

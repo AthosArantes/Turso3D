@@ -1,6 +1,5 @@
 #pragma once
 
-#include <Turso3D/Core/Object.h>
 #include <Turso3D/Graphics/GraphicsDefs.h>
 #include <Turso3D/Math/Color.h>
 #include <Turso3D/Math/Frustum.h>
@@ -11,6 +10,7 @@ namespace Turso3D
 {
 	class BoundingBox;
 	class Camera;
+	class Graphics;
 	class IndexBuffer;
 	class Matrix3x4;
 	class Polyhedron;
@@ -34,16 +34,16 @@ namespace Turso3D
 		unsigned color;
 	};
 
+	// ==========================================================================================
 	// Debug line geometry rendering subsystem.
-	class DebugRenderer : public Object
+	class DebugRenderer
 	{
 	public:
-		// Construct. Register subsystem. Graphics subsystem must have been initialized.
-		DebugRenderer();
+		// Construct.
+		// Graphics must have been initialized.
+		DebugRenderer(Graphics* graphics);
 		// Destruct.
 		~DebugRenderer();
-
-		RTTI_IMPL();
 
 		// Set the camera viewpoint.
 		// Call before rendering, or before adding geometry if you want to use culling.
@@ -72,6 +72,9 @@ namespace Turso3D
 		bool IsInside(const BoundingBox& box) const { return frustum.IsInsideFast(box) == INSIDE; }
 
 	private:
+		// Cached graphics subsystem.
+		Graphics* graphics;
+
 		// Debug geometry vertices.
 		std::vector<DebugVertex> vertices;
 		// Indices rendered with depth test.
@@ -94,5 +97,3 @@ namespace Turso3D
 		std::shared_ptr<ShaderProgram> shaderProgram;
 	};
 }
-
-RTTI_REGISTER(Turso3D::DebugRenderer, Turso3D::Object);

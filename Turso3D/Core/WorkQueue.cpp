@@ -19,6 +19,7 @@ namespace Turso3D
 {
 	thread_local unsigned WorkQueue::threadIndex = 0;
 
+	// ==========================================================================================
 	Task::Task()
 	{
 		numDependencies.store(0);
@@ -28,21 +29,12 @@ namespace Turso3D
 	{
 	}
 
-	WorkQueue::WorkQueue(unsigned numThreads) :
+	// ==========================================================================================
+	WorkQueue::WorkQueue() :
 		shouldExit(false)
 	{
-		RegisterSubsystem(this);
-
 		numQueuedTasks.store(0);
 		numPendingTasks.store(0);
-
-		if (numThreads == 0) {
-			numThreads = std::thread::hardware_concurrency() - 1;
-			// Avoid completely excessive core count
-			if (numThreads > 16) {
-				numThreads = 16;
-			}
-		}
 
 #ifdef _WIN32
 		{
@@ -52,8 +44,47 @@ namespace Turso3D
 			assert(SUCCEEDED(hr));
 		}
 #endif
+	}
 
-		LOG_INFO("Initializing work queue with {} workers", numThreads);
+	WorkQueue::~WorkQueue()
+	{
+		if (!threads.size()) {
+			return;
+		}
+
+		// Signal exit and wait for threads to finish
+		shouldExit = true;
+
+		signal.notify_all();
+		for (std::thread& thread : threads) {
+			thread.join();
+		}
+	}
+
+	void WorkQueue::CreateWorkerThreads(unsigned numThreads)
+	{
+		// Exit all current worker threads (if any)
+		if (!threads.empty()) {
+			LOG_INFO("Finalizing {} worker threads.", threads.size());
+
+			// Signal exit and wait for threads to finish
+			shouldExit = true;
+			signal.notify_all();
+			for (std::thread& thread : threads) {
+				thread.join();
+			}
+			threads.clear();
+		}
+
+		if (numThreads == 0) {
+			numThreads = std::thread::hardware_concurrency();
+			// Avoid completely excessive core count
+			if (numThreads > 16) {
+				numThreads = 16;
+			}
+		}
+
+		LOG_INFO("Creating {} worker threads.", numThreads);
 
 		for (unsigned i = 0; i < numThreads; ++i) {
 			std::thread& worker = threads.emplace_back(std::thread(&WorkQueue::WorkerLoop, this, i + 1));
@@ -76,21 +107,6 @@ namespace Turso3D
 			HRESULT hr = SetThreadDescription(handle, wthreadname.c_str());
 			assert(SUCCEEDED(hr));
 #endif
-		}
-	}
-
-	WorkQueue::~WorkQueue()
-	{
-		if (!threads.size()) {
-			return;
-		}
-
-		// Signal exit and wait for threads to finish
-		shouldExit = true;
-
-		signal.notify_all();
-		for (auto it = threads.begin(); it != threads.end(); ++it) {
-			it->join();
 		}
 	}
 
@@ -217,6 +233,7 @@ namespace Turso3D
 		return true;
 	}
 
+	// ==========================================================================================
 	void WorkQueue::WorkerLoop(unsigned threadIndex_)
 	{
 		WorkQueue::threadIndex = threadIndex_;

@@ -53,16 +53,11 @@ namespace Turso3D
 
 	VertexBuffer::~VertexBuffer()
 	{
-		// Context may be gone at destruction time. In this case just no-op the cleanup
-		if (Object::Subsystem<Graphics>()) {
-			Release();
-		}
+		Release();
 	}
 
 	bool VertexBuffer::Define(ResourceUsage usage_, size_t numVertices_, const std::vector<VertexElement>& elements_, const void* data)
 	{
-		assert(Object::Subsystem<Graphics>()->IsInitialized());
-
 		Release();
 
 		if (!numVertices_ || !elements_.size()) {

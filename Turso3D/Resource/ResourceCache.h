@@ -1,6 +1,5 @@
 #pragma once
 
-#include <Turso3D/Core/Object.h>
 #include <Turso3D/IO/Stream.h>
 #include <Turso3D/Utils/StringHash.h>
 #include <limits.h>
@@ -13,28 +12,15 @@ namespace Turso3D
 	class Resource;
 	class Shader;
 
-	// Resource cache subsystem.
+	// Resource cache, an independent subsystem.
 	// Loads resources on demand and stores them for later access.
-	class ResourceCache : public Object
+	class ResourceCache
 	{
-		struct ResourceMapHasher
-		{
-			size_t operator()(const std::pair<RTTI::typeid_t, StringHash>& value) const noexcept
-			{
-				return (size_t)value.first ^ ((size_t)value.first + 0x9e3779b9 + (size_t)value.second);
-			}
-		};
-		// Maps a pair of resource type id and string hash of it's name to a Resource.
-		using ResourceMap = std::unordered_map<std::pair<RTTI::typeid_t, StringHash>, std::shared_ptr<Resource>, ResourceMapHasher>;
+		ResourceCache();
+		ResourceCache(const ResourceCache&) = delete;
 
 	public:
-		// Construct and register subsystem and object types.
-		ResourceCache();
-		// Destruct.
-		// Destroy all owned resources and unregister subsystem.
 		~ResourceCache();
-
-		RTTI_IMPL();
 
 		// Add a resource directory.
 		// Return true on success.
@@ -42,9 +28,9 @@ namespace Turso3D
 		// Remove a resource directory.
 		void RemoveResourceDir(const std::string& pathName);
 
-		// Open a resource data stream.
+		// Open a data stream.
 		// Return a pointer to the stream, or null if not found.
-		std::unique_ptr<Stream> OpenResource(const std::string& name);
+		std::unique_ptr<Stream> OpenData(const std::string& name);
 
 		// Load and return a resource.
 		// The loaded resource will be stored in the cache.
@@ -53,34 +39,66 @@ namespace Turso3D
 		auto LoadResource(const std::string& name, Args&&... args) -> std::enable_if_t<std::is_default_constructible_v<T>&& std::is_base_of_v<Resource, T>, std::shared_ptr<T>>
 		{
 			// Check if the resource was previously loaded
-			auto k = std::make_pair(RTTI::GetTypeId<T>(), StringHash {name});
-
-			if (auto it = resources.find(k); it != resources.end()) {
+			StringHash hash {name};
+			if (auto it = resources.find(hash); it != resources.end()) {
 				return std::static_pointer_cast<T>(it->second);
 			}
 
-			std::unique_ptr<Stream> stream = OpenResource(name);
+			std::unique_ptr<Stream> stream = OpenData(name);
 			if (stream) {
-				std::shared_ptr<T> instance = std::make_shared<T>(std::forward<Args>(args)...);
-				instance->SetName(name);
+				std::shared_ptr<T> resource = std::make_shared<T>(std::forward<Args>(args)...);
+				resource->SetName(name);
 
-				if (instance->BeginLoad(*stream) && instance->EndLoad()) {
-					auto iit = resources.insert(std::make_pair(k, std::static_pointer_cast<Resource>(instance)));
-					assert(iit.second);
-					return instance;
+				if (resource->BeginLoad(*stream) && resource->EndLoad()) {
+					StoreResource<T>(resource);
+					return resource;
 				}
 			}
 
 			return {};
 		}
 
+		// Store a resource in the cache, it's name hash will be used as key.
+		// Returns true if the resource was stored, false otherwise.
+		template <typename T>
+		auto StoreResource(const std::shared_ptr<T>& resource, bool replace = false) -> std::enable_if_t<std::is_base_of_v<Resource, T>, bool>
+		{
+			auto iit = resources.insert(std::make_pair(resource->NameHash(), std::static_pointer_cast<Resource>(resource)));
+			if (iit.second) {
+				return true;
+			}
+			if (!replace) {
+				return false;
+			}
+			iit.first->second = std::static_pointer_cast<Resource>(resource);
+			return true;
+		}
+
+		// Get an existing resource by it's name hash.
+		template <typename T>
+		auto GetResource(StringHash nameHash) -> std::enable_if_t<std::is_base_of_v<Resource, T>, std::shared_ptr<T>>
+		{
+			auto it = resources.find(nameHash);
+			if (it != resources.end()) {
+				return std::static_pointer_cast<T>(it->second);
+			}
+			return {};
+		}
+		// Get an existing resource by it's name hash.
+		template <typename T>
+		auto GetResource(const std::string& name) -> std::enable_if_t<std::is_base_of_v<Resource, T>, std::shared_ptr<T>>
+		{
+			return GetResource(StringHash {name});
+		}
+
 		// Releases all resources that are only being kept alive by this cache.
 		void ClearUnused();
 
+		// Get the ResourceCache instance.
+		static ResourceCache* Instance();
+
 	private:
 		std::vector<std::string> resourceDirs;
-		ResourceMap resources;
+		std::unordered_map<StringHash, std::shared_ptr<Resource>> resources;
 	};
 }
-
-RTTI_REGISTER(Turso3D::ResourceCache, Turso3D::Object);

@@ -1,6 +1,5 @@
 #pragma once
 
-#include <Turso3D/Core/WorkQueue.h>
 #include <Turso3D/Graphics/GraphicsDefs.h>
 #include <Turso3D/Math/AreaAllocator.h>
 #include <Turso3D/Math/Color.h>
@@ -13,6 +12,7 @@
 namespace Turso3D
 {
 	class Camera;
+	class DebugRenderer;
 	class Drawable;
 	class FrameBuffer;
 	class GeometryDrawable;
@@ -29,6 +29,7 @@ namespace Turso3D
 	class UniformBuffer;
 	class VertexBuffer;
 	class IndexBuffer;
+	class WorkQueue;
 	struct CollectOctantsTask;
 	struct CollectBatchesTask;
 	struct CollectShadowBatchesTask;
@@ -36,6 +37,7 @@ namespace Turso3D
 	struct CullLightsTask;
 	struct ShadowView;
 	struct ThreadOctantResult;
+	struct Task;
 
 	constexpr size_t NUM_CLUSTER_X = 16;
 	constexpr size_t NUM_CLUSTER_Y = 8;
@@ -182,16 +184,16 @@ namespace Turso3D
 		unsigned char numLights;
 	};
 
-	// High-level rendering subsystem. Performs rendering of 3D scenes.
-	class Renderer : public Object
+	// High-level rendering subsystem.
+	// Performs rendering of 3D scenes.
+	class Renderer
 	{
 	public:
-		// Construct. Register subsystem and objects. Graphics and WorkQueue subsystems must have been initialized.
-		Renderer();
+		// Construct.
+		// WorkQueue and Graphics subsystems must have been initialized.
+		Renderer(WorkQueue* workQueue, Graphics* graphics);
 		// Destruct.
 		~Renderer();
-
-		RTTI_IMPL();
 
 		// Set size and format of shadow maps. First map is used for a directional light, the second as an atlas for others.
 		void SetupShadowMaps(int dirLightSize, int lightAtlasSize, ImageFormat format);
@@ -206,8 +208,10 @@ namespace Turso3D
 		void RenderOpaque(bool clear = true);
 		// Render transparent objects into the currently set framebuffer and viewport.
 		void RenderAlpha();
-		// Add debug geometry from the objects in frustum into DebugRenderer. Note: does not automatically render, to allow more geometry to be added elsewhere.
-		void RenderDebug();
+
+		// Add debug geometry from the objects in frustum into debugRenderer.
+		// NOTE: does not automatically render, to allow more geometry to be added elsewhere.
+		void RenderDebug(DebugRenderer* debugRenderer);
 
 		// Return a shadow map texture by index for debugging.
 		Texture* ShadowMapTexture(size_t index) const;
@@ -257,6 +261,11 @@ namespace Turso3D
 		void CullLightsToFrustumWork(Task* task, unsigned threadIndex);
 
 	private:
+		// Cached work queue subsystem.
+		WorkQueue* workQueue;
+		// Cached graphics subsystem.
+		Graphics* graphics;
+
 		// Current scene.
 		Scene* scene;
 		// Current scene octree.
@@ -267,10 +276,6 @@ namespace Turso3D
 		Camera* camera;
 		// Camera frustum.
 		Frustum frustum;
-		// Cached graphics subsystem.
-		Graphics* graphics;
-		// Cached work queue subsystem.
-		WorkQueue* workQueue;
 		// Camera view mask.
 		unsigned viewMask;
 		// Framenumber.
@@ -384,5 +389,3 @@ namespace Turso3D
 		std::vector<VertexElement> instanceVertexElements;
 	};
 }
-
-RTTI_REGISTER(Turso3D::Renderer, Turso3D::Object);

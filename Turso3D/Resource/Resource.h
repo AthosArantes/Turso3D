@@ -1,6 +1,5 @@
 #pragma once
 
-#include <Turso3D/Core/Object.h>
 #include <Turso3D/Utils/StringHash.h>
 
 namespace Turso3D
@@ -8,10 +7,10 @@ namespace Turso3D
 	class Stream;
 
 	// Base class for resources.
-	class Resource : public Object
+	class Resource
 	{
 	public:
-		RTTI_IMPL();
+		virtual ~Resource() {}
 
 		// Load the resource data from a stream.
 		// May be executed outside the main thread, should not access GPU resources.
@@ -43,5 +42,3 @@ namespace Turso3D
 		StringHash nameHash;
 	};
 }
-
-RTTI_REGISTER(Turso3D::Resource, Turso3D::Object);

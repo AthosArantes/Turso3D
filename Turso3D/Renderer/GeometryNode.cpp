@@ -18,7 +18,7 @@ namespace Turso3D
 
 		data.resize(num);
 		for (size_t i = 0; i < num; ++i) {
-			data[i].material = Material::DefaultMaterial();
+			data[i].material = Material::GetDefault();
 			data[i].geometry = nullptr;
 		}
 	}
@@ -80,7 +80,7 @@ namespace Turso3D
 	{
 		GeometryDrawable* geomDrawable = static_cast<GeometryDrawable*>(drawable);
 		for (size_t i = 0; i < geomDrawable->batches.NumGeometries(); ++i) {
-			geomDrawable->batches.SetMaterial(i, material ? material : Material::DefaultMaterial());
+			geomDrawable->batches.SetMaterial(i, material ? material : Material::GetDefault());
 		}
 	}
 
@@ -88,7 +88,7 @@ namespace Turso3D
 	{
 		GeometryDrawable* geomDrawable = static_cast<GeometryDrawable*>(drawable);
 		if (index < geomDrawable->batches.NumGeometries()) {
-			geomDrawable->batches.SetMaterial(index, material ? material : Material::DefaultMaterial());
+			geomDrawable->batches.SetMaterial(index, material ? material : Material::GetDefault());
 		}
 	}
 }

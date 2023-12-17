@@ -5,7 +5,6 @@
 #include <Turso3D/Graphics/ShaderProgram.h>
 #include <Turso3D/Math/Vector4.h>
 #include <Turso3D/Resource/Resource.h>
-#include <set>
 #include <memory>
 
 namespace pugi
@@ -112,8 +111,6 @@ namespace Turso3D
 		// Destruct.
 		~Material();
 
-		RTTI_IMPL();
-
 		// Load material from a stream.
 		// Return true on success.
 		bool BeginLoad(Stream& source) override;
@@ -162,7 +159,7 @@ namespace Turso3D
 		Pass* GetPass(PassType type) const { return passes[type].get(); }
 		// Return texture by texture unit.
 		const std::shared_ptr<Texture>& GetTexture(size_t index) const { return textures[index]; }
-		
+
 		// Return the uniform buffer.
 		// If the uniform buffer was not yet created, a new one will be created.
 		// If the uniform buffer is shared and this material changes any of the uniform values,
@@ -187,17 +184,16 @@ namespace Turso3D
 		// Return fragment shader defines.
 		const std::string& FSDefines() const { return fsDefines; }
 
-		// Set global (lighting-related) shader defines. Resets all loaded pass shaders.
-		static void SetGlobalShaderDefines(const std::string& vsDefines, const std::string& fsDefines);
 		// Return a default opaque untextured material.
-		static const std::shared_ptr<Material>& DefaultMaterial();
+		static std::shared_ptr<Material> GetDefault();
+
+		// Set global (lighting-related) shader defines.
+		// Resets all loaded pass shaders.
+		static void SetGlobalShaderDefines(const std::string& vsDefines, const std::string& fsDefines);
 		// Return global vertex shader defines.
 		static const std::string& GlobalVSDefines() { return globalVSDefines; }
 		// Return global fragment shader defines.
 		static const std::string& GlobalFSDefines() { return globalFSDefines; }
-
-		// TODO: Move default material to ResourceCache
-		static void FreeDefaultMaterial();
 
 	private:
 		// Culling mode.
@@ -220,10 +216,10 @@ namespace Turso3D
 		// Fragment shader defines for all passes.
 		std::string fsDefines;
 
-		// TODO: rename
-		struct LoadedMaterialData
+		// Represents material data that was read from file.
+		struct MaterialLoadBuffer
 		{
-			struct QueuedPass
+			struct PassBuffer
 			{
 				PassType type;
 				BlendMode blendMode;
@@ -234,24 +230,20 @@ namespace Turso3D
 				std::string vsDefines;
 				std::string fsDefines;
 			};
-			std::vector<QueuedPass> queuedPasses;
+			std::vector<PassBuffer> passes;
 
-			struct QueuedTexture
+			struct TextureBuffer
 			{
 				unsigned slot;
 				std::shared_ptr<Texture> texture;
 			};
-			std::vector<QueuedTexture> queuedTextures;
+			std::vector<TextureBuffer> textures;
 
 			std::string vsDefines;
 			std::string fsDefines;
 		};
-		std::unique_ptr<LoadedMaterialData> loadedMaterial;
+		std::unique_ptr<MaterialLoadBuffer> loadBuffer;
 
-		// Default material.
-		static std::shared_ptr<Material> defaultMaterial;
-		// All materials.
-		static std::set<Material*> allMaterials;
 		// Global vertex shader defines.
 		static std::string globalVSDefines;
 		// Global fragment shader defines.
@@ -279,5 +271,3 @@ namespace Turso3D
 		return newShaderProgram.get();
 	}
 }
-
-RTTI_REGISTER(Turso3D::Material, Turso3D::Resource);

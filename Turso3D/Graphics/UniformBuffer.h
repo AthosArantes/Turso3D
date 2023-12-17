@@ -10,7 +10,7 @@ namespace Turso3D
 	class UniformBuffer
 	{
 	public:
-		// Construct. Graphics subsystem must have been initialized.
+		// Construct.
 		UniformBuffer();
 		// Destruct.
 		~UniformBuffer();

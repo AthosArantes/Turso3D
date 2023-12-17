@@ -1,5 +1,4 @@
 #include "FrameBuffer.h"
-#include <Turso3D/Core/Object.h>
 #include <Turso3D/Graphics/Graphics.h>
 #include <Turso3D/Graphics/RenderBuffer.h>
 #include <Turso3D/Graphics/Texture.h>
@@ -12,23 +11,22 @@ namespace Turso3D
 	static FrameBuffer* boundDrawBuffer = nullptr;
 	static FrameBuffer* boundReadBuffer = nullptr;
 
-	FrameBuffer::FrameBuffer()
+	FrameBuffer::FrameBuffer() :
+		buffer(0)
 	{
-		assert(Object::Subsystem<Graphics>()->IsInitialized());
-
-		glGenFramebuffers(1, &buffer);
 	}
 
 	FrameBuffer::~FrameBuffer()
 	{
-		// Context may be gone at destruction time. In this case just no-op the cleanup
-		if (Object::Subsystem<Graphics>()) {
-			Release();
-		}
+		Release();
 	}
 
 	void FrameBuffer::Define(RenderBuffer* colorBuffer, RenderBuffer* depthStencilBuffer)
 	{
+		if (!buffer) {
+			glGenFramebuffers(1, &buffer);
+		}
+
 		Bind();
 
 		IntVector2 size = IntVector2::ZERO;
@@ -60,6 +58,10 @@ namespace Turso3D
 
 	void FrameBuffer::Define(Texture* colorTexture, Texture* depthStencilTexture)
 	{
+		if (!buffer) {
+			glGenFramebuffers(1, &buffer);
+		}
+
 		Bind();
 
 		IntVector2 size = IntVector2::ZERO;
@@ -91,6 +93,10 @@ namespace Turso3D
 
 	void FrameBuffer::Define(Texture* colorTexture, size_t cubeMapFace, Texture* depthStencilTexture)
 	{
+		if (!buffer) {
+			glGenFramebuffers(1, &buffer);
+		}
+
 		Bind();
 
 		IntVector2 size = IntVector2::ZERO;
@@ -120,14 +126,18 @@ namespace Turso3D
 		//LOG_DEBUG("Defined framebuffer width {} height {} from cube texture", size.x, size.y);
 	}
 
-	void FrameBuffer::Define(const std::vector<Texture*>& colorTextures, Texture* depthStencilTexture)
+	void FrameBuffer::Define(Texture** colorTextures, size_t countColorTextures, Texture* depthStencilTexture)
 	{
+		if (!buffer) {
+			glGenFramebuffers(1, &buffer);
+		}
+
 		Bind();
 
 		IntVector2 size = IntVector2::ZERO;
 
 		std::vector<GLenum> drawBufferIds;
-		for (size_t i = 0; i < colorTextures.size(); ++i) {
+		for (size_t i = 0; i < countColorTextures; ++i) {
 			if (colorTextures[i] && colorTextures[i]->TexType() == TEX_2D) {
 				if (size != IntVector2::ZERO && size != colorTextures[i]->Size2D()) {
 					LOG_WARNING("Framebuffer color dimensions don't match");

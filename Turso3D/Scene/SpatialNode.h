@@ -22,8 +22,6 @@ namespace Turso3D
 		// Destruct.
 		~SpatialNode();
 
-		RTTI_IMPL();
-
 		// Set position in parent space.
 		void SetPosition(const Vector3& newPosition);
 		// Set rotation in parent space.
@@ -140,5 +138,3 @@ namespace Turso3D
 		mutable Matrix3x4 worldTransform;
 	};
 }
-
-RTTI_REGISTER(Turso3D::SpatialNode, Turso3D::Node);

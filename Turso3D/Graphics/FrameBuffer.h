@@ -2,7 +2,6 @@
 
 #include <Turso3D/Graphics/GraphicsDefs.h>
 #include <Turso3D/Math/IntRect.h>
-#include <vector>
 
 namespace Turso3D
 {
@@ -14,7 +13,7 @@ namespace Turso3D
 	class FrameBuffer
 	{
 	public:
-		// Construct. Graphics subsystem must have been initialized.
+		// Construct.
 		FrameBuffer();
 		// Destruct.
 		~FrameBuffer();
@@ -28,7 +27,8 @@ namespace Turso3D
 		// Define cube map face to render to.
 		void Define(Texture* colorTexture, size_t cubeMapFace, Texture* depthStencilTexture);
 		// Define MRT textures to render to.
-		void Define(const std::vector<Texture*>& colorTextures, Texture* depthStencilTexture);
+		void Define(Texture** colorTextures, size_t countColorTextures, Texture* depthStencilTexture);
+		
 		// Bind as draw framebuffer.
 		// No-op if already bound.
 		// Used also when defining.

@@ -12,6 +12,7 @@ namespace Turso3D
 
 	static Allocator<StaticModelDrawable> drawableAllocator;
 
+	// ==========================================================================================
 	StaticModelDrawable::StaticModelDrawable() :
 		lodBias(1.0f)
 	{

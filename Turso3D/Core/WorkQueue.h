@@ -1,6 +1,5 @@
 #pragma once
 
-#include <Turso3D/Core/Object.h>
 #include <atomic>
 #include <condition_variable>
 #include <mutex>
@@ -76,25 +75,28 @@ namespace Turso3D
 		MemberWorkFunctionPtr function;
 	};
 
+	// ==========================================================================================
 	// Worker thread subsystem for dividing tasks between CPU cores.
-	class WorkQueue : public Object
+	class WorkQueue
 	{
 	public:
-		// Create with specified amount of threads including the main thread.
-		// 1 to use just the main thread.
-		// 0 to guess a suitable amount of threads from CPU core count.
-		WorkQueue(unsigned numThreads);
+		// Construct
+		WorkQueue();
 		// Destruct.
 		// Stop worker threads.
 		~WorkQueue();
 
-		RTTI_IMPL();
+		// Optional.
+		// Create the specified number of worker threads.
+		// A value of 0 will use the value of std::thread::hardware_concurrency()
+		// for the number of worker threads to be created, but will cap at 16.
+		void CreateWorkerThreads(unsigned numThreads);
 
 		// Queue a task for execution.
-		// If no threads, completes immediately in the main thread.
+		// If no worker threads, completes immediately in the main thread.
 		void QueueTask(Task* task);
 		// Queue several tasks execution.
-		// If no threads, completes immediately in the main thread.
+		// If no worker threads, completes immediately in the main thread.
 		void QueueTasks(size_t count, Task** tasks);
 		// Add a dependency to a task.
 		// These tasks should not be queued via QueueTask(), they will instead queue themselves when the dependencies have finished.
@@ -120,6 +122,7 @@ namespace Turso3D
 		// Complete a task by calling its work function and signal dependents.
 		void CompleteTask(Task*, unsigned threadIndex);
 
+	private:
 		// Mutex for the work queue.
 		std::mutex queueMutex;
 		// Condition variable to wake up workers.
@@ -139,5 +142,3 @@ namespace Turso3D
 		static thread_local unsigned threadIndex;
 	};
 }
-
-RTTI_REGISTER(Turso3D::WorkQueue, Turso3D::Object);

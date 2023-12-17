@@ -8,7 +8,7 @@ namespace Turso3D
 	class IndexBuffer
 	{
 	public:
-		// Construct. Graphics subsystem must have been initialized.
+		// Construct.
 		IndexBuffer();
 		// Destruct.
 		~IndexBuffer();

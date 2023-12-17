@@ -140,8 +140,6 @@ namespace Turso3D
 		// Destruct.
 		~Model();
 
-		RTTI_IMPL();
-
 		// Load model from a stream.
 		// Return true on success.
 		bool BeginLoad(Stream& source) override;
@@ -189,5 +187,3 @@ namespace Turso3D
 		std::vector<std::vector<GeometryDesc>> geomDescs;
 	};
 }
-
-RTTI_REGISTER(Turso3D::Model, Turso3D::Resource);

@@ -1,5 +1,4 @@
 #include "Resource.h"
-#include <Turso3D/IO/Log.h>
 
 namespace Turso3D
 {
@@ -16,7 +15,6 @@ namespace Turso3D
 
 	bool Resource::Save(Stream&)
 	{
-		LOG_ERROR("Save not supported for {:s}", GetTypeName());
 		return false;
 	}
 

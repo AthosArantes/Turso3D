@@ -47,9 +47,9 @@ namespace Turso3D
 			if (node->NameHash() == it->second.nameHash || tracks.size() == 1) {
 				stateTrack.node = node;
 			} else {
-				SpatialNode* targetNode = node->FindChild<SpatialNode>(it->second.nameHash, true);
-				if (targetNode) {
-					stateTrack.node = targetNode;
+				Node* targetNode = node->FindChild(it->second.nameHash, true);
+				if (targetNode && targetNode->TestFlag(Node::FLAG_SPATIAL)) {
+					stateTrack.node = static_cast<SpatialNode*>(targetNode);
 				} else {
 					LOG_WARNING("Node \"{:s}\" not found for node animation \"{:s}\".", it->second.name, animation->Name());
 				}
@@ -95,7 +95,10 @@ namespace Turso3D
 			if (nameHash == startBone->NameHash()) {
 				stateTrack.node = startBone;
 			} else {
-				stateTrack.node = startBone->FindChild<Bone>(nameHash, true);
+				Node* bone = startBone->FindChild(nameHash, true);
+				if (bone->TestFlag(Node::FLAG_BONE)) {
+					stateTrack.node = static_cast<SpatialNode*>(bone);
+				}
 			}
 
 			if (stateTrack.node) {
@@ -143,7 +146,6 @@ namespace Turso3D
 		}
 
 		weight_ = Clamp(weight_, 0.0f, 1.0f);
-
 		if (weight_ != stateTracks[index].weight) {
 			stateTracks[index].weight = weight_;
 			if (drawable) {
@@ -152,13 +154,11 @@ namespace Turso3D
 		}
 
 		if (recursive && stateTracks[index].node) {
-			const std::vector<std::unique_ptr<Node>>& children = stateTracks[index].node->Children();
-			for (auto it = children.begin(); it != children.end(); ++it) {
-				Node* node = it->get();
-				if (node->GetTypeId() == RTTI::GetTypeId<Bone>()) {
-					size_t childTrackIndex = FindTrackIndex(static_cast<Bone*>(node));
-					if (childTrackIndex < stateTracks.size()) {
-						SetBoneWeight(childTrackIndex, weight, true);
+			for (const std::unique_ptr<Node>& child : stateTracks[index].node->Children()) {
+				if (child->TestFlag(Node::FLAG_BONE)) {
+					size_t trackIndex = FindTrackIndex(static_cast<Bone*>(child.get()));
+					if (trackIndex < stateTracks.size()) {
+						SetBoneWeight(trackIndex, weight, true);
 					}
 				}
 			}

@@ -41,8 +41,6 @@ namespace Turso3D
 		// Destruct.
 		~StaticModel();
 
-		RTTI_IMPL();
-
 		// Set the model resource.
 		void SetModel(const std::shared_ptr<Model>& model);
 		// Set LOD bias. Values higher than 1 use higher quality LOD (acts if distance is smaller.)
@@ -54,5 +52,3 @@ namespace Turso3D
 		float LodBias() const { return static_cast<StaticModelDrawable*>(drawable)->lodBias; }
 	};
 }
-
-RTTI_REGISTER(Turso3D::StaticModel, Turso3D::GeometryNode);

@@ -6,27 +6,33 @@
 
 namespace Turso3D
 {
+	class Graphics;
+	class WorkQueue;
+
 	class Scene
 	{
 	public:
-		Scene();
+		// WorkQueue and Graphics subsystems must have been initialized, as it's required by Octree.
+		Scene(WorkQueue* workQueue, Graphics* graphics);
 
 		// Destroy child nodes recursively, leaving the scene empty.
 		void Clear();
 
 		// Return the scene's root node.
 		Node* GetRoot() { return &root; }
-		// Return the scene's octree.
-		Octree* GetOctree() { return &octree; }
 		// Return environment lighting
 		LightEnvironment* GetEnvironmentLighting() { return &lighting; }
+
+		// Return the scene's octree.
+		Octree* GetOctree() { return &octree; }
 
 	private:
 		// The root node.
 		Node root;
-		// The octree used for rendering drawables.
-		Octree octree;
 		// The scene environment lighting
 		LightEnvironment lighting;
+
+		// The octree used for rendering drawables.
+		Octree octree;
 	};
 }

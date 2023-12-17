@@ -21,8 +21,6 @@ namespace Turso3D
 		// Destruct.
 		~LightEnvironment();
 
-		RTTI_IMPL();
-
 		// Set ambient light color.
 		void SetAmbientColor(const Color& color);
 		// Set fog end color.
@@ -52,5 +50,3 @@ namespace Turso3D
 		float fogEnd;
 	};
 }
-
-RTTI_REGISTER(Turso3D::LightEnvironment, Turso3D::Node);

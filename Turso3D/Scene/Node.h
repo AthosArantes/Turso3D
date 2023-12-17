@@ -2,7 +2,6 @@
 
 #include <Turso3D/Math/Quaternion.h>
 #include <Turso3D/Utils/StringHash.h>
-#include <RTTI/RTTI.hpp>
 #include <vector>
 #include <memory>
 
@@ -29,12 +28,10 @@ namespace Turso3D
 			FLAG_BONE = 0x20,
 			FLAG_HELPER = 0x40
 		};
-	
+
 	public:
 		// Destruct. Destroy any child nodes.
 		virtual ~Node();
-
-		RTTI_IMPL();
 
 		// Set name. Is not required to be unique within the scene.
 		void SetName(const std::string& newName);
@@ -90,7 +87,7 @@ namespace Turso3D
 		// Remove all child nodes.
 		void RemoveAllChildren();
 		// Remove self from the parent node. No-op if no parent.
-		// Note: Causes deletion of self.
+		// NOTE: Causes deletion of self.
 		void RemoveSelf();
 
 		// Return number of immediate child nodes.
@@ -98,32 +95,17 @@ namespace Turso3D
 		// Return number of immediate child nodes that are not temporary.
 		size_t NumPersistentChildren() const;
 
-		template <typename T>
-		T* FindChild(bool recursive = false) const
+		Node* FindChild(StringHash childNameHash, bool recursive = false) const
 		{
-			const RTTI::typeid_t type = RTTI::GetTypeId<T>();
-			for (const std::unique_ptr<Node>& node : children) {
-				if (node->GetTypeId() == type) {
-					return static_cast<T*>(node.get());
-				} else if (recursive) {
-					if (T* obj = node->FindChild<T>(true); obj) {
-						return obj;
-					}
+			for (const std::unique_ptr<Node>& child : children) {
+				if (child->nameHash == childNameHash) {
+					return child.get();
 				}
 			}
-			return nullptr;
-		}
-
-		template <typename T>
-		T* FindChild(StringHash childNameHash, bool recursive = false) const
-		{
-			const RTTI::typeid_t type = RTTI::GetTypeId<T>();
-			for (const std::unique_ptr<Node>& node : children) {
-				if (node->GetTypeId() == type && node->nameHash == childNameHash) {
-					return static_cast<T*>(node.get());
-				} else if (recursive) {
-					if (T* obj = node->FindChild<T>(childNameHash, true); obj) {
-						return obj;
+			if (recursive) {
+				for (const std::unique_ptr<Node>& child : children) {
+					if (Node* node = child->FindChild(childNameHash, true); node) {
+						return node;
 					}
 				}
 			}
@@ -185,5 +167,3 @@ namespace Turso3D
 		std::vector<std::unique_ptr<Node>> children;
 	};
 }
-
-RTTI_REGISTER(Turso3D::Node);

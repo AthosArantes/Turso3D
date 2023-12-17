@@ -22,6 +22,7 @@ namespace Turso3D
 		animationEnabled(true),
 		numChildBones(0)
 	{
+		SetFlag(FLAG_BONE, true);
 	}
 
 	Bone::~Bone()
@@ -41,9 +42,8 @@ namespace Turso3D
 	void Bone::CountChildBones()
 	{
 		numChildBones = 0;
-
-		for (auto it = children.begin(); it != children.end(); ++it) {
-			if ((*it)->GetTypeId() == RTTI::GetTypeId<Bone>()) {
+		for (const std::unique_ptr<Node>& child : children) {
+			if (child->TestFlag(FLAG_BONE)) {
 				++numChildBones;
 			}
 		}
@@ -53,8 +53,10 @@ namespace Turso3D
 	{
 		SpatialNode::OnTransformChanged();
 
-		// Avoid duplicate dirtying calls if model's skinning is already dirty. Do not signal changes either during animation update,
-		// as the model will set the hierarchy dirty when finished. This is also used to optimize when only the model node moves.
+		// Avoid duplicate dirtying calls if model's skinning is already dirty.
+		// Do not signal changes either during animation update,
+		// as the model will set the hierarchy dirty when finished.
+		// This is also used to optimize when only the model node moves.
 		if (drawable && !(drawable->AnimatedModelFlags() & (AMF_IN_ANIMATION_UPDATE | AMF_SKINNING_DIRTY))) {
 			drawable->OnBoneTransformChanged();
 		}
@@ -170,7 +172,7 @@ namespace Turso3D
 
 					if (hitDistance < maxDistance_ && hitDistance < res.distance) {
 						res.position = hitPosition;
-						// \todo Hit normal not calculated correctly
+						// TODO: Hit normal not calculated correctly
 						res.normal = -ray.direction;
 						res.distance = hitDistance;
 						res.drawable = this;
@@ -219,9 +221,9 @@ namespace Turso3D
 		for (size_t i = 0; i < modelBones.size(); ++i) {
 			const ModelBone& modelBone = modelBones[i];
 
-			Bone* existingBone = owner->FindChild<Bone>(modelBone.nameHash, true);
-			if (existingBone) {
-				bones[i] = existingBone;
+			Node* existingBone = owner->FindChild(modelBone.nameHash, true);
+			if (existingBone && existingBone->TestFlag(Node::FLAG_BONE)) {
+				bones[i] = static_cast<Bone*>(existingBone);
 			} else {
 				bones[i] = new Bone();
 				bones[i]->SetName(modelBone.name);

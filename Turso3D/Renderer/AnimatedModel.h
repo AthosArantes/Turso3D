@@ -14,6 +14,7 @@ namespace Turso3D
 	class UniformBuffer;
 	struct ModelBone;
 
+	// TODO: put these in enum
 	constexpr unsigned char AMF_ANIMATION_ORDER_DIRTY = 0x1;
 	constexpr unsigned char AMF_ANIMATION_DIRTY = 0x2;
 	constexpr unsigned char AMF_SKINNING_DIRTY = 0x4;
@@ -31,8 +32,6 @@ namespace Turso3D
 		Bone();
 		// Destruct.
 		~Bone();
-
-		RTTI_IMPL();
 
 		// Set the animated model drawable associated with.
 		// When the bone moves, the model's skinning is dirtied.
@@ -154,13 +153,13 @@ namespace Turso3D
 		const std::vector<std::shared_ptr<AnimationState>>& AnimationStates() const { return animationStates; }
 		
 		// Return the internal dirty status flags.
-		unsigned char AnimatedModelFlags() { return animatedModelFlags; }
+		unsigned AnimatedModelFlags() { return animatedModelFlags; }
 
 	protected:
 		// Combined bounding box of the bones in model space, used for quick updates when only the node moves without animation
 		mutable BoundingBox boneBoundingBox;
 		// Internal dirty status flags.
-		mutable unsigned char animatedModelFlags;
+		mutable unsigned animatedModelFlags;
 		// Number of bones.
 		unsigned short numBones;
 		// Octree.
@@ -185,8 +184,6 @@ namespace Turso3D
 		AnimatedModel();
 		// Destruct.
 		~AnimatedModel();
-
-		RTTI_IMPL();
 
 		// Set the model resource and create / acquire bone scene nodes.
 		void SetModel(const std::shared_ptr<Model>& model);
@@ -237,6 +234,3 @@ namespace Turso3D
 		void OnTransformChanged() override;
 	};
 }
-
-RTTI_REGISTER(Turso3D::Bone, Turso3D::SpatialNode);
-RTTI_REGISTER(Turso3D::AnimatedModel, Turso3D::StaticModel);

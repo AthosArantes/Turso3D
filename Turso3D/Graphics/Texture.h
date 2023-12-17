@@ -17,15 +17,11 @@ namespace Turso3D
 	{
 	public:
 		// Construct.
-		// Graphics subsystem must have been initialized.
 		Texture();
 		// Construct.
-		// Graphics subsystem must have been initialized.
 		Texture(bool loadSRGB);
 		// Destruct.
 		~Texture();
-
-		RTTI_IMPL();
 
 		// Load the texture image data from a stream.
 		// Return true on success.
@@ -153,5 +149,3 @@ namespace Turso3D
 		std::vector<std::unique_ptr<Image>> loadImages;
 	};
 }
-
-RTTI_REGISTER(Turso3D::Texture, Turso3D::Resource);

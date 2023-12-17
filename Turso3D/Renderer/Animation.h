@@ -57,8 +57,6 @@ namespace Turso3D
 		// Destruct.
 		~Animation();
 
-		RTTI_IMPL();
-
 		// Load animation from a stream. Return true on success.
 		bool BeginLoad(Stream& source) override;
 
@@ -104,5 +102,3 @@ namespace Turso3D
 		std::map<StringHash, AnimationTrack> tracks;
 	};
 }
-
-RTTI_REGISTER(Turso3D::Animation, Turso3D::Resource);

@@ -1,4 +1,5 @@
 #include "Renderer.h"
+#include <Turso3D/Core/WorkQueue.h>
 #include <Turso3D/Graphics/FrameBuffer.h>
 #include <Turso3D/Graphics/Graphics.h>
 #include <Turso3D/Graphics/IndexBuffer.h>
@@ -152,18 +153,15 @@ namespace Turso3D
 	}
 
 	// ==========================================================================================
-	Renderer::Renderer() :
-		graphics(Subsystem<Graphics>()),
-		workQueue(Subsystem<WorkQueue>()),
+	Renderer::Renderer(WorkQueue* workQueue, Graphics* graphics) :
+		workQueue(workQueue),
+		graphics(graphics),
 		frameNumber(0),
 		clusterFrustumsDirty(true),
 		depthBiasMul(1.0f),
 		slopeScaleBiasMul(1.0f)
 	{
-		assert(graphics && graphics->IsInitialized());
-		assert(workQueue);
-
-		RegisterSubsystem(this);
+		assert(graphics->IsInitialized());
 
 		hasInstancing = graphics->HasInstancing();
 		if (hasInstancing) {
@@ -209,7 +207,6 @@ namespace Turso3D
 
 	Renderer::~Renderer()
 	{
-		RemoveSubsystem(this);
 	}
 
 	void Renderer::SetupShadowMaps(int dirLightSize, int lightAtlasSize, ImageFormat format)
@@ -490,15 +487,14 @@ namespace Turso3D
 		RenderBatches(camera, alphaBatches);
 	}
 
-	void Renderer::RenderDebug()
+	void Renderer::RenderDebug(DebugRenderer* debugRenderer)
 	{
-		DebugRenderer* debug = Subsystem<DebugRenderer>();
-		if (!debug) {
+		if (!debugRenderer) {
 			return;
 		}
 
 		for (auto it = lights.begin(); it != lights.end(); ++it) {
-			(*it)->OnRenderDebug(debug);
+			(*it)->OnRenderDebug(debugRenderer);
 		}
 
 		for (size_t i = 0; i < rootLevelOctants.size(); ++i) {
@@ -506,13 +502,13 @@ namespace Turso3D
 
 			for (auto oIt = result.octants.begin(); oIt != result.octants.end(); ++oIt) {
 				Octant* octant = oIt->first;
-				octant->OnRenderDebug(debug);
+				octant->OnRenderDebug(debugRenderer);
 				const std::vector<Drawable*>& drawables = octant->Drawables();
 
 				for (auto dIt = drawables.begin(); dIt != drawables.end(); ++dIt) {
 					Drawable* drawable = *dIt;
 					if (drawable->TestFlag(Drawable::FLAG_GEOMETRY) && drawable->LastFrameNumber() == frameNumber) {
-						drawable->OnRenderDebug(debug);
+						drawable->OnRenderDebug(debugRenderer);
 					}
 				}
 			}

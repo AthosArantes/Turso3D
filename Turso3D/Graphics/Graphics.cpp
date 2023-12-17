@@ -83,7 +83,8 @@ namespace Turso3D
 
 	unsigned occlusionQueryType = GL_SAMPLES_PASSED;
 
-	Graphics::Graphics(const char* windowTitle, const IntVector2& windowSize) :
+	// ==========================================================================================
+	Graphics::Graphics() :
 		window(nullptr),
 		context(nullptr),
 		lastBlendMode(MAX_BLEND_MODES),
@@ -96,25 +97,6 @@ namespace Turso3D
 		hasInstancing(false),
 		instancingEnabled(false)
 	{
-		RegisterSubsystem(this);
-
-		if (!glfwInit()) {
-			throw std::exception("Failed to initialize GLFW.");
-		}
-
-		glfwWindowHint(GLFW_DOUBLEBUFFER, GLFW_TRUE);
-
-		glfwWindowHint(GLFW_DEPTH_BITS, 24);
-		glfwWindowHint(GLFW_STENCIL_BITS, 8);
-
-		glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-		glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-		glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-
-		window = glfwCreateWindow(windowSize.x, windowSize.y, windowTitle, nullptr, nullptr);
-		if (!window) {
-			throw std::exception("Failed to create GLFW window.");
-		}
 	}
 
 	Graphics::~Graphics()
@@ -128,19 +110,35 @@ namespace Turso3D
 			window = nullptr;
 		}
 
-		RemoveSubsystem(this);
 		glfwTerminate();
 	}
 
-	bool Graphics::Initialize()
+	bool Graphics::Initialize(const char* windowTitle, const IntVector2& windowSize)
 	{
 		if (context) {
 			return true;
 		}
 
+		if (!glfwInit()) {
+			throw std::exception("Failed to initialize GLFW.");
+		}
+
+#ifdef _DEBUG
+		glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GLFW_TRUE);
+#endif
+
+		glfwWindowHint(GLFW_SRGB_CAPABLE, GLFW_TRUE);
+
+		glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+		glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+		glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+
+		lastWindowPos = IntVector2::ZERO;
+		lastWindowSize = windowSize;
+
+		window = glfwCreateWindow(windowSize.x, windowSize.y, windowTitle, nullptr, nullptr);
 		if (!window) {
-			LOG_ERROR("Window not opened");
-			return false;
+			throw std::exception("Failed to create GLFW window.");
 		}
 
 		glfwMakeContextCurrent(window);
@@ -165,6 +163,7 @@ namespace Turso3D
 		glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 		glEnable(GL_DEPTH_TEST);
 		glEnable(GL_MULTISAMPLE);
+		glEnable(GL_FRAMEBUFFER_SRGB);
 		glClearDepth(1.0f);
 		glDepthRange(0.0f, 1.0f);
 		glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
@@ -255,12 +254,10 @@ namespace Turso3D
 
 	std::shared_ptr<ShaderProgram> Graphics::CreateProgram(const std::string& shaderName, const std::string& vsDefines, const std::string& fsDefines)
 	{
-		ResourceCache* cache = Object::Subsystem<ResourceCache>();
-		if (cache) {
-			std::shared_ptr<Shader> shader = cache->LoadResource<Shader>(shaderName);
-			if (shader) {
-				return shader->CreateProgram(vsDefines, fsDefines);
-			}
+		ResourceCache* cache = ResourceCache::Instance();
+		std::shared_ptr<Shader> shader = cache->LoadResource<Shader>(shaderName);
+		if (shader) {
+			return shader->CreateProgram(vsDefines, fsDefines);
 		}
 		return {};
 	}

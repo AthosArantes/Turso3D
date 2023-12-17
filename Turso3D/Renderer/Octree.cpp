@@ -15,8 +15,6 @@ namespace Turso3D
 	constexpr int MAX_OCTREE_LEVELS = 255;
 	constexpr size_t MIN_THREADED_UPDATE = 16;
 
-	static std::vector<unsigned> freeQueries;
-
 	static inline bool CompareRaycastResults(const RaycastResult& lhs, const RaycastResult& rhs)
 	{
 		return lhs.distance < rhs.distance;
@@ -55,6 +53,7 @@ namespace Turso3D
 
 	// ==========================================================================================
 	Octant::Octant() :
+		graphics(nullptr),
 		parent(nullptr),
 		visibility(VIS_VISIBLE_UNKNOWN),
 		occlusionQueryId(0),
@@ -69,24 +68,24 @@ namespace Turso3D
 	Octant::~Octant()
 	{
 		if (occlusionQueryId) {
-			Graphics* graphics = Object::Subsystem<Graphics>();
 			if (graphics) {
 				graphics->FreeOcclusionQuery(occlusionQueryId);
 			}
 		}
 	}
 
-	void Octant::Initialize(Octant* parent_, const BoundingBox& boundingBox, unsigned char level_, unsigned char childIndex_)
+	void Octant::Initialize(Graphics* graphics_, Octant* parent_, const BoundingBox& boundingBox, unsigned char level_, unsigned char childIndex_)
 	{
 		BoundingBox worldBoundingBox = boundingBox;
 		center = worldBoundingBox.Center();
 		halfSize = worldBoundingBox.HalfSize();
 		fittingBox = BoundingBox(worldBoundingBox.min - halfSize, worldBoundingBox.max + halfSize);
 
+		graphics = graphics_;
 		parent = parent_;
 		level = level_;
 		childIndex = childIndex_;
-		flags = OF_CULLING_BOX_DIRTY;
+		flags = FLAG_CULLING_BOX_DIRTY;
 	}
 
 	void Octant::OnRenderDebug(DebugRenderer* debug)
@@ -141,7 +140,7 @@ namespace Turso3D
 
 	const BoundingBox& Octant::CullingBox() const
 	{
-		if (TestFlag(OF_CULLING_BOX_DIRTY)) {
+		if (TestFlag(FLAG_CULLING_BOX_DIRTY)) {
 			if (!numChildren && drawables.empty()) {
 				cullingBox.Define(center);
 			} else {
@@ -163,21 +162,20 @@ namespace Turso3D
 				cullingBox = tempBox;
 			}
 
-			SetFlag(OF_CULLING_BOX_DIRTY, false);
+			SetFlag(FLAG_CULLING_BOX_DIRTY, false);
 		}
 
 		return cullingBox;
 	}
 
 	// ==========================================================================================
-	Octree::Octree() :
+	Octree::Octree(WorkQueue* workQueue, Graphics* graphics) :
 		threadedUpdate(false),
-		frameNumber(0),
-		workQueue(Object::Subsystem<WorkQueue>())
+		workQueue(workQueue),
+		graphics(graphics),
+		frameNumber(0)
 	{
-		assert(workQueue);
-
-		root.Initialize(nullptr, BoundingBox(-DEFAULT_OCTREE_SIZE, DEFAULT_OCTREE_SIZE), DEFAULT_OCTREE_LEVELS, 0);
+		root.Initialize(graphics, nullptr, BoundingBox(-DEFAULT_OCTREE_SIZE, DEFAULT_OCTREE_SIZE), DEFAULT_OCTREE_LEVELS, 0);
 
 		// Have at least 1 task for reinsert processing
 		reinsertTasks.push_back(std::make_unique<ReinsertDrawablesTask>(this, &Octree::CheckReinsertWork));
@@ -253,7 +251,7 @@ namespace Turso3D
 		for (auto it = sortDirtyOctants.begin(); it != sortDirtyOctants.end(); ++it) {
 			Octant* octant = *it;
 			std::sort(octant->drawables.begin(), octant->drawables.end(), CompareDrawables);
-			octant->SetFlag(OF_DRAWABLES_SORT_DIRTY, false);
+			octant->SetFlag(Octant::FLAG_DRAWABLES_SORT_DIRTY, false);
 		}
 
 		sortDirtyOctants.clear();
@@ -269,7 +267,7 @@ namespace Turso3D
 		DeleteChildOctants(&root, false);
 
 		allocator.Reset();
-		root.Initialize(nullptr, boundingBox, (unsigned char)Clamp(numLevels, 1, MAX_OCTREE_LEVELS), 0);
+		root.Initialize(graphics, nullptr, boundingBox, (unsigned char)Clamp(numLevels, 1, MAX_OCTREE_LEVELS), 0);
 	}
 
 	void Octree::OnRenderDebug(DebugRenderer* debug)
@@ -445,7 +443,7 @@ namespace Turso3D
 		}
 
 		Octant* child = allocator.Allocate();
-		child->Initialize(octant, BoundingBox(newMin, newMax), octant->level - 1, index);
+		child->Initialize(graphics, octant, BoundingBox(newMin, newMax), octant->level - 1, index);
 		octant->children[index] = child;
 		++octant->numChildren;
 

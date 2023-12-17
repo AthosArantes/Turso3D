@@ -188,10 +188,7 @@ namespace Turso3D
 
 	Texture::~Texture()
 	{
-		// Context may be gone at destruction time. In this case just no-op the cleanup
-		if (Object::Subsystem<Graphics>()) {
-			Release();
-		}
+		Release();
 	}
 
 	bool Texture::BeginLoad(Stream& source)

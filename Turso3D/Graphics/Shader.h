@@ -27,8 +27,6 @@ namespace Turso3D
 		using VariationMap = std::unordered_map<std::pair<StringHash, StringHash>, std::shared_ptr<ShaderProgram>, VariationMapHasher>;
 
 	public:
-		RTTI_IMPL();
-
 		bool BeginLoad(Stream& source) override;
 
 		// Create and return a shader program with defines.
@@ -57,5 +55,3 @@ namespace Turso3D
 		VariationMap programs;
 	};
 }
-
-RTTI_REGISTER(Turso3D::Shader, Turso3D::Resource);

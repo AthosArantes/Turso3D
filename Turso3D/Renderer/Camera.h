@@ -25,8 +25,6 @@ namespace Turso3D
 		// Construct.
 		Camera();
 
-		RTTI_IMPL();
-
 		// Set near clip distance.
 		void SetNearClip(float distance) { nearClip = std::max(distance, M_EPSILON); }
 		// Set far clip distance.
@@ -171,5 +169,3 @@ namespace Turso3D
 		bool useClipping = false;
 	};
 }
-
-RTTI_REGISTER(Turso3D::Camera, Turso3D::SpatialNode);

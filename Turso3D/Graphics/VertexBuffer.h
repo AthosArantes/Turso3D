@@ -9,7 +9,7 @@ namespace Turso3D
 	class VertexBuffer
 	{
 	public:
-		// Construct. Graphics subsystem must have been initialized.
+		// Construct.
 		VertexBuffer();
 		// Destruct.
 		~VertexBuffer();

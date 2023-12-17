@@ -125,7 +125,9 @@ namespace Turso3D
 			return allInside ? INSIDE : INTERSECTS;
 		}
 
-		// Test if a bounding box is inside, outside or intersects. Updates a bitmask for speeding up further tests of hierarchies. Returns updated plane mask: 0xff if outside, 0x00 if completely inside, otherwise intersecting.
+		// Test if a bounding box is inside, outside or intersects.
+		// Updates a bitmask for speeding up further tests of hierarchies.
+		// Returns updated plane mask: 0xff if outside, 0x00 if completely inside, otherwise intersecting.
 		unsigned char IsInsideMasked(const BoundingBox& box, unsigned char planeMask = 0x3f) const
 		{
 			Vector3 center = box.Center();

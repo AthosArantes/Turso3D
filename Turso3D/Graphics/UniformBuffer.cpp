@@ -18,16 +18,11 @@ namespace Turso3D
 
 	UniformBuffer::~UniformBuffer()
 	{
-		// Context may be gone at destruction time. In this case just no-op the cleanup
-		if (Object::Subsystem<Graphics>()) {
-			Release();
-		}
+		Release();
 	}
 
 	bool UniformBuffer::Define(ResourceUsage usage_, size_t size_, const void* data)
 	{
-		assert(Object::Subsystem<Graphics>()->IsInitialized());
-
 		Release();
 
 		if (!size_) {

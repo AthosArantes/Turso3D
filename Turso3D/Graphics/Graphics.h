@@ -1,6 +1,5 @@
 #pragma once
 
-#include <Turso3D/Core/Object.h>
 #include <Turso3D/Math/Color.h>
 #include <Turso3D/Math/IntRect.h>
 #include <Turso3D/Math/Matrix3x4.h>
@@ -31,20 +30,18 @@ namespace Turso3D
 	};
 
 	// Graphics rendering context and application window.
-	class Graphics : public Object
+	class Graphics
 	{
 	public:
-		// Create window with initial size and register subsystem and object.
-		// Rendering context is not created yet.
-		Graphics(const char* windowTitle, const IntVector2& windowSize);
+		// Construct.
+		Graphics();
 		// Destruct. Closes the application window.
 		~Graphics();
 
-		RTTI_IMPL();
-
-		// Initialize rendering context.
+		// Create window and rendering context.
 		// Return true on success.
-		bool Initialize();
+		bool Initialize(const char* windowTitle, const IntVector2& windowSize);
+
 		// Set new window size.
 		void Resize(const IntVector2& size);
 		// Set fullscreen mode.
@@ -124,7 +121,7 @@ namespace Turso3D
 		void Blit(FrameBuffer* dest, const IntRect& destRect, FrameBuffer* src, const IntRect& srcRect, bool blitColor, bool blitDepth, TextureFilterMode filter);
 		// Draw non-indexed geometry with the currently bound vertex buffer.
 		void Draw(PrimitiveType type, size_t drawStart, size_t drawCount);
-	   // Draw indexed geometry with the currently bound vertex and index buffer.
+		// Draw indexed geometry with the currently bound vertex and index buffer.
 		void DrawIndexed(PrimitiveType type, size_t drawStart, size_t drawCount);
 		// Draw instanced non-indexed geometry with the currently bound vertex and index buffer, and the specified instance data vertex buffer.
 		void DrawInstanced(PrimitiveType type, size_t drawStart, size_t drawCount, VertexBuffer* instanceVertexBuffer, size_t instanceStart, size_t instanceCount);
@@ -214,5 +211,3 @@ namespace Turso3D
 		IntVector2 lastWindowSize;
 	};
 }
-
-RTTI_REGISTER(Turso3D::Graphics, Turso3D::Object);

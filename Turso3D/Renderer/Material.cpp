@@ -5,6 +5,7 @@
 #include <Turso3D/IO/MemoryStream.h>
 #include <Turso3D/Resource/ResourceCache.h>
 #include <pugixml/pugixml.hpp>
+#include <set>
 #include <filesystem>
 
 namespace Turso3D
@@ -26,16 +27,12 @@ namespace Turso3D
 	};
 
 	// ==========================================================================================
-	std::set<Material*> Material::allMaterials;
-	std::shared_ptr<Material> Material::defaultMaterial;
+	static std::set<Material*> allMaterials;
+
 	std::string Material::globalVSDefines;
 	std::string Material::globalFSDefines;
 
-	void Material::FreeDefaultMaterial()
-	{
-		defaultMaterial.reset();
-	}
-
+	// ==========================================================================================
 	Pass::Pass(Material* parent) :
 		parent(parent),
 		blendMode(BLEND_REPLACE),
@@ -110,42 +107,43 @@ namespace Turso3D
 
 	bool Material::EndLoad()
 	{
-		if (loadedMaterial) {
-			ResourceCache* cache = Subsystem<ResourceCache>();
-
-			// Create passes
-			for (auto& data : loadedMaterial->queuedPasses) {
-				Pass* pass = CreatePass(data.type);
-				pass->SetRenderState(data.blendMode, data.depthTest, data.colorWrite, data.depthWrite);
-				pass->SetShader(cache->LoadResource<Shader>(data.shader), data.vsDefines, data.fsDefines);
-			}
-
-			// Load textures
-			for (auto& data : loadedMaterial->queuedTextures) {
-				if (data.texture && data.texture->EndLoad()) {
-					SetTexture(data.slot, data.texture);
-				}
-			}
-
-			SetShaderDefines(loadedMaterial->vsDefines, loadedMaterial->fsDefines);
-
-			loadedMaterial.reset();
-			return true;
+		if (!loadBuffer) {
+			return false;
 		}
-		return false;
+
+		ResourceCache* cache = ResourceCache::Instance();
+
+		// Create passes
+		for (auto& data : loadBuffer->passes) {
+			Pass* pass = CreatePass(data.type);
+			pass->SetRenderState(data.blendMode, data.depthTest, data.colorWrite, data.depthWrite);
+			pass->SetShader(cache->LoadResource<Shader>(data.shader), data.vsDefines, data.fsDefines);
+		}
+
+		// Load textures
+		for (auto& data : loadBuffer->textures) {
+			if (data.texture && data.texture->EndLoad()) {
+				SetTexture(data.slot, data.texture);
+			}
+		}
+
+		SetShaderDefines(loadBuffer->vsDefines, loadBuffer->fsDefines);
+
+		loadBuffer.reset();
+		return true;
 	}
 
 	bool Material::LoadXML(pugi::xml_node& root)
 	{
 		using namespace pugi;
 
-		loadedMaterial = std::make_unique<LoadedMaterialData>();
+		loadBuffer = std::make_unique<MaterialLoadBuffer>();
 
 		if (xml_attribute attribute = root.attribute("vsDefines"); attribute) {
-			loadedMaterial->vsDefines = attribute.value();
+			loadBuffer->vsDefines = attribute.value();
 		}
 		if (xml_attribute attribute = root.attribute("fsDefines"); attribute) {
-			loadedMaterial->fsDefines = attribute.value();
+			loadBuffer->fsDefines = attribute.value();
 		}
 
 		// Cull mode
@@ -168,7 +166,7 @@ namespace Turso3D
 						continue;
 					}
 
-					auto& data = loadedMaterial->queuedPasses.emplace_back();
+					auto& data = loadBuffer->passes.emplace_back();
 					data.type = (PassType)t;
 					data.blendMode = BLEND_REPLACE;
 					data.depthTest = CMP_LESS_EQUAL;
@@ -204,7 +202,7 @@ namespace Turso3D
 		}
 
 		if (xml_node node = root.child("textures"); node) {
-			ResourceCache* cache = Subsystem<ResourceCache>();
+			ResourceCache* cache = ResourceCache::Instance();
 
 			// Material names containing a directory separator will be used as base path for texture loading.
 			bool nameIsPath = Name().find_first_of("/\\") != std::string::npos;
@@ -216,24 +214,24 @@ namespace Turso3D
 
 				// Force absolute if it begins with a forward slash
 				if (texname.front() == '/') {
-					image = cache->OpenResource(texname.substr(1));
+					image = cache->OpenData(texname.substr(1));
 
 				} else if (nameIsPath) {
-					image = cache->OpenResource(std::filesystem::path {Name()}.replace_filename(texname).string());
+					image = cache->OpenData(std::filesystem::path {Name()}.replace_filename(texname).string());
 					if (!image) {
 						// Try again with texture name being absolute.
-						image = cache->OpenResource(texname);
+						image = cache->OpenData(texname);
 					}
 
 				} else {
-					image = cache->OpenResource(texname);
+					image = cache->OpenData(texname);
 				}
 
 				if (!image) {
 					continue;
 				}
 
-				auto& data = loadedMaterial->queuedTextures.emplace_back();
+				auto& data = loadBuffer->textures.emplace_back();
 				data.slot = texture.attribute("slot").as_uint();
 				bool srgb = texture.attribute("srgb").as_bool();
 
@@ -404,8 +402,7 @@ namespace Turso3D
 			globalFSDefines += ' ';
 		}
 
-		for (auto it = allMaterials.begin(); it != allMaterials.end(); ++it) {
-			Material* material = *it;
+		for (Material* material : allMaterials) {
 			for (size_t i = 0; i < MAX_PASS_TYPES; ++i) {
 				if (material->passes[i]) {
 					material->passes[i]->ResetShaderPrograms();
@@ -460,28 +457,33 @@ namespace Turso3D
 		return Vector4::ZERO;
 	}
 
-	const std::shared_ptr<Material>& Material::DefaultMaterial()
+	std::shared_ptr<Material> Material::GetDefault()
 	{
-		ResourceCache* cache = Subsystem<ResourceCache>();
+		constexpr const char* mtlName = "__defaultMaterial";
+		constexpr StringHash defaultNameHash {mtlName};
 
-		// Create on demand
-		if (!defaultMaterial) {
-			defaultMaterial = std::make_shared<Material>();
+		ResourceCache* cache = ResourceCache::Instance();
+
+		std::shared_ptr<Material> mtl = cache->GetResource<Material>(defaultNameHash);
+		if (!mtl) {
+			mtl = std::make_shared<Material>();
+			mtl->SetName(mtlName);
 
 			std::vector<std::pair<std::string, Vector4>> defaultUniforms;
 			defaultUniforms.push_back(std::make_pair("matDiffColor", Vector4::ONE));
-			defaultUniforms.push_back(std::make_pair("matSpecColor", Vector4(0.25f, 0.25f, 0.25f, 1.0f)));
-			defaultMaterial->DefineUniforms(defaultUniforms);
+			defaultUniforms.push_back(std::make_pair("matSpecColor", Vector4 {0.04f, 0.04f, 0.04f, 0.0f}));
+			mtl->DefineUniforms(defaultUniforms);
 
-			Pass* pass = defaultMaterial->CreatePass(PASS_SHADOW);
+			Pass* pass = mtl->CreatePass(PASS_SHADOW);
 			pass->SetShader(cache->LoadResource<Shader>("Shadow.glsl"), "", "");
 			pass->SetRenderState(BLEND_REPLACE, CMP_LESS_EQUAL, false, true);
 
-			pass = defaultMaterial->CreatePass(PASS_OPAQUE);
+			pass = mtl->CreatePass(PASS_OPAQUE);
 			pass->SetShader(cache->LoadResource<Shader>("NoTexture.glsl"), "", "");
 			pass->SetRenderState(BLEND_REPLACE, CMP_LESS_EQUAL, true, true);
-		}
 
-		return defaultMaterial;
+			cache->StoreResource(mtl);
+		}
+		return mtl;
 	}
 }

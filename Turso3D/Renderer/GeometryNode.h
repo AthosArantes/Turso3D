@@ -131,8 +131,6 @@ namespace Turso3D
 	class GeometryNode : public OctreeNode
 	{
 	public:
-		RTTI_IMPL();
-
 		// Set number of geometries.
 		void SetNumGeometries(size_t num);
 		// Set geometry at index.
@@ -156,5 +154,3 @@ namespace Turso3D
 		const SourceBatches& Batches() const { return static_cast<GeometryDrawable*>(drawable)->batches; }
 	};
 }
-
-RTTI_REGISTER(Turso3D::GeometryNode, Turso3D::OctreeNode);

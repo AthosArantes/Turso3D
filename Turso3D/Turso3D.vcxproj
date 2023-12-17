@@ -73,7 +73,6 @@
 		</ClCompile>
 		<Lib>
 			<TargetMachine>MachineX64</TargetMachine>
-			<AdditionalDependencies>Winmm.lib;%(AdditionalDependencies)</AdditionalDependencies>
 		</Lib>
 		<ProjectReference />
 	</ItemDefinitionGroup>
@@ -102,14 +101,12 @@
 		</ClCompile>
 		<Lib>
 			<TargetMachine>MachineX64</TargetMachine>
-			<AdditionalDependencies>Winmm.lib;%(AdditionalDependencies)</AdditionalDependencies>
 		</Lib>
 		<ProjectReference />
 	</ItemDefinitionGroup>
 
 	<ItemGroup>
 		<ClInclude Include="Core\Allocator.h" />
-		<ClInclude Include="Core\Object.h" />
 		<ClInclude Include="Core\WorkQueue.h" />
 		<ClInclude Include="Graphics\FrameBuffer.h" />
 		<ClInclude Include="Graphics\Graphics.h" />
@@ -173,7 +170,6 @@
 	</ItemGroup>
 	<ItemGroup>
 		<ClCompile Include="Core\Allocator.cpp" />
-		<ClCompile Include="Core\Object.cpp" />
 		<ClCompile Include="Core\WorkQueue.cpp" />
 		<ClCompile Include="Graphics\FrameBuffer.cpp" />
 		<ClCompile Include="Graphics\Graphics.cpp" />

@@ -34,16 +34,11 @@ namespace Turso3D
 
 	ShaderProgram::~ShaderProgram()
 	{
-		// Context may be gone at destruction time. In this case just no-op the cleanup
-		if (Object::Subsystem<Graphics>()) {
-			Release();
-		}
+		Release();
 	}
 
 	bool ShaderProgram::Create(const std::string& code, const std::vector<std::string>& vsDefines, const std::vector<std::string>& fsDefines)
 	{
-		assert(Object::Subsystem<Graphics>()->IsInitialized());
-
 		if (program) {
 			return true;
 		}

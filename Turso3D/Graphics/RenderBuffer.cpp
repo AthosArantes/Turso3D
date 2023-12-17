@@ -17,16 +17,11 @@ namespace Turso3D
 
 	RenderBuffer::~RenderBuffer()
 	{
-		// Context may be gone at destruction time. In this case just no-op the cleanup
-		if (Object::Subsystem<Graphics>()) {
-			Release();
-		}
+		Release();
 	}
 
 	bool RenderBuffer::Define(const IntVector2& size_, ImageFormat format_, int multisample_)
 	{
-		assert(Object::Subsystem<Graphics>()->IsInitialized());
-
 		Release();
 
 		if (format_ > FMT_DXT1) {

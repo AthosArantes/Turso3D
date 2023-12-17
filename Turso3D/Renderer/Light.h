@@ -216,8 +216,6 @@ namespace Turso3D
 		// Destruct.
 		virtual ~Light();
 
-		RTTI_IMPL();
-
 		// Set light type.
 		void SetLightType(LightType type);
 		// Set color.
@@ -286,5 +284,3 @@ namespace Turso3D
 		Sphere WorldSphere() const { return static_cast<LightDrawable*>(drawable)->WorldSphere(); }
 	};
 }
-
-RTTI_REGISTER(Turso3D::Light, Turso3D::OctreeNode);

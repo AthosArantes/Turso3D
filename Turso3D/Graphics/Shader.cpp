@@ -113,7 +113,7 @@ namespace Turso3D
 			return;
 		}
 
-		ResourceCache* cache = Object::Subsystem<ResourceCache>();
+		ResourceCache* cache = ResourceCache::Instance();
 		assert(cache);
 
 		size_t line_start = 0;
@@ -132,9 +132,9 @@ namespace Turso3D
 
 				std::unique_ptr<Stream> stream;
 				if (line.at(start) == '<') {
-					stream = cache->OpenResource(std::string {filename});
+					stream = cache->OpenData(std::string {filename});
 				} else {
-					stream = cache->OpenResource(std::filesystem::path {Name()}.replace_filename(filename).string());
+					stream = cache->OpenData(std::filesystem::path {Name()}.replace_filename(filename).string());
 				}
 
 				if (stream) {
@@ -142,7 +142,7 @@ namespace Turso3D
 					// Mark of included files
 					outResult += "// @";
 					outResult += filename;
-					outResult += ' {\n';
+					outResult += " {\n";
 #endif
 
 					// Add the include file into the current code recursively

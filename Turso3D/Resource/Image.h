@@ -85,8 +85,6 @@ namespace Turso3D
 		// Destruct.
 		~Image();
 
-		RTTI_IMPL();
-
 		// Load image from a stream.
 		// Return true on success.
 		bool BeginLoad(Stream& source) override;
@@ -165,5 +163,3 @@ namespace Turso3D
 		std::unique_ptr<uint8_t[]> data;
 	};
 }
-
-RTTI_REGISTER(Turso3D::Image, Turso3D::Resource);
