@@ -1,7 +1,5 @@
 #pragma once
 
-#include <Turso3D/Graphics/FrameBuffer.h>
-#include <Turso3D/Graphics/Texture.h>
 #include <Turso3D/Math/Vector2.h>
 #include <map>
 #include <memory>
@@ -13,12 +11,16 @@ namespace Turso3D
 	class Renderer;
 	class DebugRenderer;
 	class WorkQueue;
+	class FrameBuffer;
+	class Texture;
 
 	class Scene;
 	class Camera;
 	class StaticModel;
 	class AnimatedModel;
 	class SpatialNode;
+
+	class BloomRenderer;
 }
 
 class Application
@@ -40,6 +42,8 @@ public:
 
 private:
 	void ApplyFrameLimit();
+
+	void CreateTextures();
 	void CreateDefaultScene();
 
 	bool IsKeyDown(int key);
@@ -65,22 +69,19 @@ private:
 	std::unique_ptr<Turso3D::Renderer> renderer;
 	std::unique_ptr<Turso3D::DebugRenderer> debugRenderer;
 
-	Turso3D::FrameBuffer mrtFbo[2];
-	Turso3D::Texture hdrBuffer[2];
-	Turso3D::Texture normalBuffer[2];
-	Turso3D::Texture depthStencilBuffer[2];
+	std::unique_ptr<Turso3D::FrameBuffer> mrtFbo[2];
+	std::unique_ptr<Turso3D::Texture> hdrBuffer[2];
+	std::unique_ptr<Turso3D::Texture> normalBuffer[2];
+	std::unique_ptr<Turso3D::Texture> depthStencilBuffer[2];
 
-	Turso3D::FrameBuffer ldrFbo;
-	Turso3D::Texture ldrBuffer;
+	std::unique_ptr<Turso3D::FrameBuffer> ldrFbo;
+	std::unique_ptr<Turso3D::Texture> ldrBuffer;
 
-	Turso3D::FrameBuffer bloomFbo;
-	Turso3D::Texture bloomBuffer;
-	Turso3D::Texture bloomMips[6];
-	int maxBloomMip;
+	std::unique_ptr<Turso3D::BloomRenderer> bloomRenderer;
 
-	Turso3D::FrameBuffer ssaoFbo;
-	Turso3D::Texture ssaoTexture;
-	Turso3D::Texture ssaoNoiseTexture;
+	std::unique_ptr<Turso3D::FrameBuffer> ssaoFbo;
+	std::unique_ptr<Turso3D::Texture> ssaoTexture;
+	std::unique_ptr<Turso3D::Texture> ssaoNoiseTexture;
 
 	std::shared_ptr<Turso3D::Camera> camera;
 	std::shared_ptr<Turso3D::Scene> scene;
@@ -101,6 +102,9 @@ private:
 	Turso3D::Vector2 cursorSpeed;
 	// Determimnes whether the cursor is inside the client area.
 	bool cursorInside;
+	// Variable used to delay mouse movement capturing.
+	// Prevents sudden changes that happens in the same frame the mouse changed mode.
+	bool captureMouse;
 
 	float camYaw;
 	float camPitch;

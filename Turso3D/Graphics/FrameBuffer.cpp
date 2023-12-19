@@ -24,7 +24,7 @@ namespace Turso3D
 	void FrameBuffer::Define(RenderBuffer* colorBuffer, RenderBuffer* depthStencilBuffer)
 	{
 		if (!buffer) {
-			glGenFramebuffers(1, &buffer);
+			Create();
 		}
 
 		Bind();
@@ -53,13 +53,13 @@ namespace Turso3D
 			glFramebufferRenderbuffer(GL_DRAW_FRAMEBUFFER, GL_STENCIL_ATTACHMENT, GL_RENDERBUFFER, 0);
 		}
 
-		//LOG_DEBUG("Defined framebuffer width {} height {}", size.x, size.y);
+		LOG_DEBUG("Defined framebuffer object from render buffer: [{:d} x {:d}]", size.x, size.y);
 	}
 
 	void FrameBuffer::Define(Texture* colorTexture, Texture* depthStencilTexture)
 	{
 		if (!buffer) {
-			glGenFramebuffers(1, &buffer);
+			Create();
 		}
 
 		Bind();
@@ -88,13 +88,13 @@ namespace Turso3D
 			glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_STENCIL_ATTACHMENT, GL_TEXTURE_2D, 0, 0);
 		}
 
-		//LOG_DEBUG("Defined framebuffer width {} height {}", size.x, size.y);
+		LOG_DEBUG("Defined framebuffer object from texture: [{:d} x {:d}]", size.x, size.y);
 	}
 
 	void FrameBuffer::Define(Texture* colorTexture, size_t cubeMapFace, Texture* depthStencilTexture)
 	{
 		if (!buffer) {
-			glGenFramebuffers(1, &buffer);
+			Create();
 		}
 
 		Bind();
@@ -123,13 +123,13 @@ namespace Turso3D
 			glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_STENCIL_ATTACHMENT, GL_TEXTURE_2D, 0, 0);
 		}
 
-		//LOG_DEBUG("Defined framebuffer width {} height {} from cube texture", size.x, size.y);
+		LOG_DEBUG("Defined framebuffer object from cube texture: [{:d} x {:d}] Face [{:d}]", size.x, size.y, cubeMapFace);
 	}
 
 	void FrameBuffer::Define(Texture** colorTextures, size_t countColorTextures, Texture* depthStencilTexture)
 	{
 		if (!buffer) {
-			glGenFramebuffers(1, &buffer);
+			Create();
 		}
 
 		Bind();
@@ -170,7 +170,7 @@ namespace Turso3D
 			glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_STENCIL_ATTACHMENT, GL_TEXTURE_2D, 0, 0);
 		}
 
-		//LOG_DEBUG("Defined MRT framebuffer width {} height {}", size.x, size.y);
+		LOG_DEBUG("Defined MRT framebuffer object: {:d} [{:d} x {:d}]", countColorTextures, size.x, size.y);
 	}
 
 	void FrameBuffer::Bind()
@@ -205,6 +205,16 @@ namespace Turso3D
 			glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
 			boundReadBuffer = nullptr;
 		}
+	}
+
+	bool FrameBuffer::Create()
+	{
+		glGenFramebuffers(1, &buffer);
+		if (!buffer) {
+			LOG_ERROR("Failed to create framebuffer object");
+			return false;
+		}
+		return true;
 	}
 
 	void FrameBuffer::Release()

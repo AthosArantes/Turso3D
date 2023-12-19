@@ -3,6 +3,7 @@
 #include <ctime>
 #include <mutex>
 #include <fstream>
+#include <deque>
 
 #ifdef _WIN32
 	#ifndef WIN32_LEAN_AND_MEAN
@@ -30,10 +31,27 @@ namespace
 
 	static std::mutex logMutex {};
 	static std::fstream logFile {};
+
+	static thread_local std::deque<std::string> scopes {};
 }
 
 namespace Turso3D
 {
+	Log::Scope::Scope(const std::string& name)
+	{
+		scopes.push_back(name);
+	}
+	Log::Scope::Scope(const char* name)
+	{
+		scopes.push_back(std::string {name});
+	}
+	Log::Scope::~Scope()
+	{
+		assert(scopes.size());
+		scopes.pop_back();
+	}
+
+	// ==========================================================================================
 	void Log::Initialize(const std::string& filepath, bool truncate)
 	{
 		int flags = std::ios::binary | std::ios::in | std::ios::out;
@@ -48,7 +66,7 @@ namespace Turso3D
 		}
 	}
 
-	void Log::Write(bool timestamp, LogLevel level, std::string_view message)
+	void Log::Write(LogLevel level, std::string_view message, bool timestamp)
 	{
 		// Format the message
 		std::string output;
@@ -78,6 +96,12 @@ namespace Turso3D
 			output.append("] ");
 		}
 #endif
+
+		if (scopes.size()) {
+			output.append("[");
+			output.append(scopes.back());
+			output.append("] ");
+		}
 
 		size_t intLevel = static_cast<size_t>(level);
 		if (level != LogLevel::None && intLevel < std::size(LogLevelPrefixes)) {

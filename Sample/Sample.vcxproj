@@ -1,124 +1,127 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <ItemGroup Label="ProjectConfigurations">
-    <ProjectConfiguration Include="Release|x64">
-      <Configuration>Release</Configuration>
-      <Platform>x64</Platform>
-    </ProjectConfiguration>
-    <ProjectConfiguration Include="Debug|x64">
-      <Configuration>Debug</Configuration>
-      <Platform>x64</Platform>
-    </ProjectConfiguration>
-  </ItemGroup>
-  <PropertyGroup Label="Globals">
-    <ProjectGuid>{E09BC8D2-07C8-4509-B845-81E0B81143A0}</ProjectGuid>
-    <ProjectName>Sample</ProjectName>
-    <RootNamespace>Sample</RootNamespace>
-    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
-  </PropertyGroup>
-  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
-  <PropertyGroup Label="Configuration" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <ConfigurationType>Application</ConfigurationType>
-    <PlatformToolset>v143</PlatformToolset>
-    <CharacterSet>MultiByte</CharacterSet>
-  </PropertyGroup>
-  <PropertyGroup Label="Configuration" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <ConfigurationType>Application</ConfigurationType>
-    <PlatformToolset>v143</PlatformToolset>
-    <CharacterSet>Unicode</CharacterSet>
-  </PropertyGroup>
-  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
-  <ImportGroup Label="ExtensionSettings">
-  </ImportGroup>
-  <PropertyGroup Label="UserMacros">
-  </PropertyGroup>
-  <PropertyGroup>
-    <LinkIncremental>false</LinkIncremental>
-    <TargetName>$(ProjectName)</TargetName>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <OutDir>$(SolutionDir)bin\$(Platform)$(Configuration)\</OutDir>
-    <IntDir>$(SolutionDir)obj\$(Platform)$(Configuration)\$(ProjectName)\</IntDir>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <OutDir>$(SolutionDir)bin\$(Platform)$(Configuration)\</OutDir>
-    <IntDir>$(SolutionDir)obj\$(Platform)$(Configuration)\$(ProjectName)\</IntDir>
-  </PropertyGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <ClCompile>
-      <AdditionalIncludeDirectories>$(SolutionDir);$(SolutionDir)ThirdParty\;$(SolutionDir)ThirdParty\GLFW\include\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <AssemblerListingLocation>Release/</AssemblerListingLocation>
-      <BufferSecurityCheck>false</BufferSecurityCheck>
-      <CompileAs>CompileAsCpp</CompileAs>
-      <DebugInformationFormat>None</DebugInformationFormat>
-      <FloatingPointModel>Fast</FloatingPointModel>
-      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
-      <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <Optimization>MaxSpeed</Optimization>
-      <PrecompiledHeader>NotUsing</PrecompiledHeader>
-      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
-      <WarningLevel>Level3</WarningLevel>
-      <PreprocessorDefinitions>_WIN32;GLEW_STATIC;SDL_STATIC;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <ObjectFileName>$(IntDir)</ObjectFileName>
-      <LanguageStandard>stdcpp17</LanguageStandard>
-      <EnableModules>false</EnableModules>
-      <ConformanceMode>true</ConformanceMode>
-      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
-      <IntrinsicFunctions>true</IntrinsicFunctions>
-      <WholeProgramOptimization>true</WholeProgramOptimization>
-      <AdditionalOptions>/Zc:__cplusplus %(AdditionalOptions)</AdditionalOptions>
-    </ClCompile>
-    <Link>
-      <GenerateDebugInformation>false</GenerateDebugInformation>
-      <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
-      <SubSystem>Windows</SubSystem>
-      <AdditionalLibraryDirectories>$(SolutionDir)lib\$(Platform)$(Configuration)\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>GLFW.lib;glew.lib;%(AdditionalDependencies)</AdditionalDependencies>
-    </Link>
-  </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <ClCompile>
-      <AdditionalIncludeDirectories>$(SolutionDir);$(SolutionDir)ThirdParty\;$(SolutionDir)ThirdParty\GLFW\include\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <AssemblerListingLocation>Debug/</AssemblerListingLocation>
-      <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
-      <CompileAs>CompileAsCpp</CompileAs>
-      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
-      <InlineFunctionExpansion>Disabled</InlineFunctionExpansion>
-      <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <Optimization>Disabled</Optimization>
-      <PrecompiledHeader>NotUsing</PrecompiledHeader>
-      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
-      <WarningLevel>Level3</WarningLevel>
-      <PreprocessorDefinitions>_WIN32;GLEW_STATIC;SDL_STATIC;_DEBUG;NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <ObjectFileName>$(IntDir)</ObjectFileName>
-      <LanguageStandard>stdcpp17</LanguageStandard>
-      <EnableModules>false</EnableModules>
-      <ConformanceMode>true</ConformanceMode>
-      <AdditionalOptions>/Zc:__cplusplus /Zo %(AdditionalOptions)</AdditionalOptions>
-      <FloatingPointModel>Fast</FloatingPointModel>
-    </ClCompile>
-    <Link>
-      <GenerateDebugInformation>true</GenerateDebugInformation>
-      <SubSystem>Windows</SubSystem>
-      <AdditionalLibraryDirectories>$(SolutionDir)lib\$(Platform)$(Configuration)\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>GLFW.lib;glew.lib;%(AdditionalDependencies)</AdditionalDependencies>
-    </Link>
-  </ItemDefinitionGroup>
-  <ItemGroup>
-    <ClCompile Include="Application.cpp" />
-    <ClCompile Include="main.cpp" />
-    <ClCompile Include="ModelConverter.cpp" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\Turso3D\Turso3D.vcxproj">
-      <Project>{3CA1B824-72EB-4605-93A3-29B99AF2C03E}</Project>
-    </ProjectReference>
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="Application.h" />
-    <ClInclude Include="ModelConverter.h" />
-  </ItemGroup>
-  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
-  <ImportGroup Label="ExtensionTargets">
-  </ImportGroup>
+<Project DefaultTargets="Build" ToolsVersion="15.0"
+	xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+	<ItemGroup Label="ProjectConfigurations">
+		<ProjectConfiguration Include="Release|x64">
+			<Configuration>Release</Configuration>
+			<Platform>x64</Platform>
+		</ProjectConfiguration>
+		<ProjectConfiguration Include="Debug|x64">
+			<Configuration>Debug</Configuration>
+			<Platform>x64</Platform>
+		</ProjectConfiguration>
+	</ItemGroup>
+	<PropertyGroup Label="Globals">
+		<ProjectGuid>{E09BC8D2-07C8-4509-B845-81E0B81143A0}</ProjectGuid>
+		<ProjectName>Sample</ProjectName>
+		<RootNamespace>Sample</RootNamespace>
+		<WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+	</PropertyGroup>
+	<Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+
+	<PropertyGroup Label="Configuration" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+		<ConfigurationType>Application</ConfigurationType>
+		<PlatformToolset>v143</PlatformToolset>
+		<CharacterSet>MultiByte</CharacterSet>
+		<WholeProgramOptimization>true</WholeProgramOptimization>
+	</PropertyGroup>
+	<PropertyGroup Label="Configuration" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+		<ConfigurationType>Application</ConfigurationType>
+		<PlatformToolset>v143</PlatformToolset>
+		<CharacterSet>MultiByte</CharacterSet>
+	</PropertyGroup>
+
+	<Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+	<ImportGroup Label="ExtensionSettings"></ImportGroup>
+	<PropertyGroup Label="UserMacros"></PropertyGroup>
+
+	<PropertyGroup>
+		<LinkIncremental>false</LinkIncremental>
+		<TargetName>$(ProjectName)</TargetName>
+	</PropertyGroup>
+	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+		<OutDir>$(SolutionDir)bin\$(Platform)$(Configuration)\</OutDir>
+		<IntDir>$(SolutionDir)obj\$(Platform)$(Configuration)\$(ProjectName)\</IntDir>
+	</PropertyGroup>
+	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+		<OutDir>$(SolutionDir)bin\$(Platform)$(Configuration)\</OutDir>
+		<IntDir>$(SolutionDir)obj\$(Platform)$(Configuration)\$(ProjectName)\</IntDir>
+	</PropertyGroup>
+
+	<ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+		<ClCompile>
+			<AdditionalIncludeDirectories>$(SolutionDir);$(SolutionDir)ThirdParty\;$(SolutionDir)ThirdParty\GLFW\include\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+			<AssemblerListingLocation>Release/</AssemblerListingLocation>
+			<BufferSecurityCheck>false</BufferSecurityCheck>
+			<CompileAs>CompileAsCpp</CompileAs>
+			<FloatingPointModel>Fast</FloatingPointModel>
+			<InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
+			<MultiProcessorCompilation>true</MultiProcessorCompilation>
+			<Optimization>MaxSpeed</Optimization>
+			<PrecompiledHeader>NotUsing</PrecompiledHeader>
+			<RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+			<WarningLevel>Level3</WarningLevel>
+			<PreprocessorDefinitions>_WIN32;GLEW_STATIC;SDL_STATIC;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+			<ObjectFileName>$(IntDir)</ObjectFileName>
+			<LanguageStandard>stdcpp17</LanguageStandard>
+			<EnableModules>false</EnableModules>
+			<ConformanceMode>true</ConformanceMode>
+			<FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
+			<IntrinsicFunctions>true</IntrinsicFunctions>
+			<WholeProgramOptimization>true</WholeProgramOptimization>
+		</ClCompile>
+		<Link>
+			<GenerateDebugInformation>true</GenerateDebugInformation>
+			<LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
+			<AdditionalLibraryDirectories>$(SolutionDir)lib\$(Platform)$(Configuration)\;$(SolutionDir)ThirdParty\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+			<AdditionalDependencies>GLFW.lib;glew.lib;%(AdditionalDependencies)</AdditionalDependencies>
+			<SubSystem>Windows</SubSystem>
+		</Link>
+	</ItemDefinitionGroup>
+	<ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+		<ClCompile>
+			<AdditionalIncludeDirectories>$(SolutionDir);$(SolutionDir)ThirdParty\;$(SolutionDir)ThirdParty\GLFW\include\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+			<AssemblerListingLocation>Debug/</AssemblerListingLocation>
+			<BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
+			<CompileAs>CompileAsCpp</CompileAs>
+			<InlineFunctionExpansion>Disabled</InlineFunctionExpansion>
+			<MultiProcessorCompilation>true</MultiProcessorCompilation>
+			<Optimization>Disabled</Optimization>
+			<PrecompiledHeader>NotUsing</PrecompiledHeader>
+			<RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+			<WarningLevel>Level3</WarningLevel>
+			<PreprocessorDefinitions>_WIN32;GLEW_STATIC;SDL_STATIC;_DEBUG;NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+			<ObjectFileName>$(IntDir)</ObjectFileName>
+			<LanguageStandard>stdcpp17</LanguageStandard>
+			<EnableModules>false</EnableModules>
+			<ConformanceMode>true</ConformanceMode>
+			<FloatingPointModel>Fast</FloatingPointModel>
+		</ClCompile>
+		<Link>
+			<GenerateDebugInformation>true</GenerateDebugInformation>
+			<AdditionalLibraryDirectories>$(SolutionDir)lib\$(Platform)$(Configuration)\;$(SolutionDir)ThirdParty\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+			<AdditionalDependencies>GLFW.lib;glew.lib;%(AdditionalDependencies)</AdditionalDependencies>
+			<SubSystem>Windows</SubSystem>
+		</Link>
+	</ItemDefinitionGroup>
+
+	<ItemGroup>
+		<ClInclude Include="Application.h" />
+		<ClInclude Include="BloomRenderer.h" />
+		<ClInclude Include="ModelConverter.h" />
+	</ItemGroup>
+	<ItemGroup>
+		<ClCompile Include="Application.cpp" />
+		<ClCompile Include="BloomRenderer.cpp" />
+		<ClCompile Include="main.cpp" />
+		<ClCompile Include="ModelConverter.cpp" />
+	</ItemGroup>
+	<ItemGroup>
+		<ProjectReference Include="..\Turso3D\Turso3D.vcxproj">
+			<Project>{3CA1B824-72EB-4605-93A3-29B99AF2C03E}</Project>
+		</ProjectReference>
+	</ItemGroup>
+
+	<Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+	<ImportGroup Label="ExtensionTargets"></ImportGroup>
 </Project>

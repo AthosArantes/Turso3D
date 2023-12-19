@@ -43,6 +43,8 @@ namespace Turso3D
 		static void Unbind();
 
 	private:
+		// Create a framebuffer object.
+		bool Create();
 		// Release the framebuffer object.
 		void Release();
 

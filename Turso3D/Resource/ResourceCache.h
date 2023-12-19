@@ -17,7 +17,7 @@ namespace Turso3D
 	class ResourceCache
 	{
 		ResourceCache();
-		ResourceCache(const ResourceCache&) = delete;
+		ResourceCache(const ResourceCache&);
 
 	public:
 		~ResourceCache();
