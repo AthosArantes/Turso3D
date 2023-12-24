@@ -5,23 +5,23 @@
 // ================================================================================================
 #ifdef COMPILE_VS
 
-uniform vec2 _translate;
-uniform mat4 _transform;
+uniform vec2 uTranslate;
+uniform mat4 uTransform;
 
-in vec2 inPosition;
-in vec4 inColor0;
-in vec2 inTexCoord0;
+in vec2 position;
+in vec4 color;
+in vec2 texCoord;
 
-out vec2 fragTexCoord;
-out vec4 fragColor;
+out vec2 vTexCoord;
+out vec4 vColor;
 
 void main()
 {
-	fragTexCoord = inTexCoord0;
-	fragColor = inColor0;
+	vTexCoord = texCoord;
+	vColor = color;
 
-	vec2 translatedPos = inPosition + _translate.xy;
-	vec4 outPos = _transform * vec4(translatedPos, 0, 1);
+	vec2 translatedPos = position + uTranslate.xy;
+	vec4 outPos = uTransform * vec4(translatedPos, 0.0, 1.0);
 
 	gl_Position = outPos;
 }
@@ -33,22 +33,22 @@ void main()
 // ================================================================================================
 #ifdef COMPILE_FS
 
-in vec2 fragTexCoord;
-in vec4 fragColor;
+#ifdef TEXTURED
+	uniform sampler2D tex0;
+#endif
+
+in vec2 vTexCoord;
+in vec4 vColor;
 
 out vec4 finalColor;
-
-#ifdef TEXTURED
-	uniform sampler2D _tex0;
-#endif
 
 void main()
 {
 #ifdef TEXTURED
-	vec4 texColor = texture(_tex0, fragTexCoord);
-	finalColor = fragColor * texColor;
+	vec4 texColor = texture(tex0, vTexCoord);
+	finalColor = vColor * texColor;
 #else
-	finalColor = fragColor;
+	finalColor = vColor;
 #endif
 }
 

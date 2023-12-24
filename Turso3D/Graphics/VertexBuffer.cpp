@@ -56,11 +56,11 @@ namespace Turso3D
 		Release();
 	}
 
-	bool VertexBuffer::Define(ResourceUsage usage_, size_t numVertices_, const std::vector<VertexElement>& elements_, const void* data)
+	bool VertexBuffer::Define(ResourceUsage usage_, size_t numVertices_, const VertexElement* elements_, size_t numElements, const void* data)
 	{
 		Release();
 
-		if (!numVertices_ || !elements_.size()) {
+		if (!numVertices_ || !numElements) {
 			LOG_ERROR("Can not define vertex buffer with no vertices or no elements");
 			return false;
 		}
@@ -70,7 +70,7 @@ namespace Turso3D
 
 		// Determine offset of elements and the vertex size
 		vertexSize = 0;
-		elements.resize(elements_.size());
+		elements.resize(numElements);
 		for (size_t i = 0; i < elements.size(); ++i) {
 			elements[i] = elements_[i];
 			elements[i].offset = vertexSize;

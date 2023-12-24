@@ -472,6 +472,24 @@ namespace Turso3D
 		}
 	}
 
+#if 0
+	void Graphics::SetScissor(const IntRect& scissor)
+	{
+		 if (scissor == IntRect::ZERO) {
+			 if (lastScissor) {
+				glDisable(GL_SCISSOR_TEST);
+				lastScissor = false;
+			 }
+		 } else {
+			 if (!lastScissor) {
+				 glEnable(GL_SCISSOR_TEST);
+				 lastScissor = true;
+			 }
+			 glScissor(scissor.left, scissor.top, scissor.Width(), scissor.Height());
+		 }
+	}
+#endif
+
 	void Graphics::Clear(bool clearColor, bool clearDepth, const IntRect& clearRect, const Color& backgroundColor)
 	{
 		if (clearColor) {

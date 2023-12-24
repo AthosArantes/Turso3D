@@ -17,11 +17,18 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Turso3D", "Turso3D\Turso3D.
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "GLFW", "ThirdParty\GLFW\GLFW.vcxproj", "{51140ADB-6305-466C-BD8E-5EB1B6392226}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "GLEW", "ThirdParty\GLEW\GLEW.vcxproj", "{DE45D5E8-EAD2-401B-958D-5BC7BEDCAC38}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "glew", "ThirdParty\glew\glew.vcxproj", "{DE45D5E8-EAD2-401B-958D-5BC7BEDCAC38}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "fmt", "ThirdParty\fmt\fmt.vcxproj", "{BD44D4D5-BA4B-4E62-A34A-2FA78E911B5D}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "pugixml", "ThirdParty\pugixml\pugixml.vcxproj", "{48FD29FE-CE68-4756-9412-EC794DF0C3BC}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "freetype", "ThirdParty\freetype\freetype.vcxproj", "{9811EF16-02B9-43B4-9406-07722EFB3C35}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "RmlUi", "ThirdParty\RmlUi\RmlUi.vcxproj", "{029FEA18-D976-4A17-86B0-70533F7F68B0}"
+	ProjectSection(ProjectDependencies) = postProject
+		{48FD29FE-CE68-4756-9412-EC794DF0C3BC} = {48FD29FE-CE68-4756-9412-EC794DF0C3BC}
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -58,6 +65,16 @@ Global
 		{48FD29FE-CE68-4756-9412-EC794DF0C3BC}.Debug|x64.Build.0 = Debug|x64
 		{48FD29FE-CE68-4756-9412-EC794DF0C3BC}.Release|x64.ActiveCfg = Release|x64
 		{48FD29FE-CE68-4756-9412-EC794DF0C3BC}.Release|x64.Build.0 = Release|x64
+		
+		{9811EF16-02B9-43B4-9406-07722EFB3C35}.Debug|x64.ActiveCfg = Debug|x64
+		{9811EF16-02B9-43B4-9406-07722EFB3C35}.Debug|x64.Build.0 = Debug|x64
+		{9811EF16-02B9-43B4-9406-07722EFB3C35}.Release|x64.ActiveCfg = Release|x64
+		{9811EF16-02B9-43B4-9406-07722EFB3C35}.Release|x64.Build.0 = Release|x64
+		
+		{029FEA18-D976-4A17-86B0-70533F7F68B0}.Debug|x64.ActiveCfg = Debug|x64
+		{029FEA18-D976-4A17-86B0-70533F7F68B0}.Debug|x64.Build.0 = Debug|x64
+		{029FEA18-D976-4A17-86B0-70533F7F68B0}.Release|x64.ActiveCfg = Release|x64
+		{029FEA18-D976-4A17-86B0-70533F7F68B0}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

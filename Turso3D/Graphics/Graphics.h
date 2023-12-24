@@ -110,15 +110,18 @@ namespace Turso3D
 		// Bind an index buffer for use.
 		// Provided for convenience.
 		void SetIndexBuffer(IndexBuffer* buffer);
+		
 		// Set basic renderstates.
 		void SetRenderState(BlendMode blendMode, CullMode cullMode = CULL_BACK, CompareMode depthTest = CMP_LESS, bool colorWrite = true, bool depthWrite = true);
 		// Set depth bias.
 		void SetDepthBias(float constantBias = 0.0f, float slopeScaleBias = 0.0f);
 		// Clear the current framebuffer.
 		void Clear(bool clearColor = true, bool clearDepth = true, const IntRect& clearRect = IntRect::ZERO, const Color& backgroundColor = Color::BLACK);
+		
 		// Blit from one framebuffer to another.
 		// The destination framebuffer will be left bound for rendering.
 		void Blit(FrameBuffer* dest, const IntRect& destRect, FrameBuffer* src, const IntRect& srcRect, bool blitColor, bool blitDepth, TextureFilterMode filter);
+		
 		// Draw non-indexed geometry with the currently bound vertex buffer.
 		void Draw(PrimitiveType type, size_t drawStart, size_t drawCount);
 		// Draw indexed geometry with the currently bound vertex and index buffer.

@@ -54,27 +54,28 @@
 			<AssemblerListingLocation>Release/</AssemblerListingLocation>
 			<BufferSecurityCheck>false</BufferSecurityCheck>
 			<CompileAs>CompileAsCpp</CompileAs>
+			<ConformanceMode>true</ConformanceMode>
+			<EnableModules>false</EnableModules>
+			<FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
 			<FloatingPointModel>Fast</FloatingPointModel>
 			<InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
+			<IntrinsicFunctions>true</IntrinsicFunctions>
+			<LanguageStandard>stdcpp17</LanguageStandard>
 			<MultiProcessorCompilation>true</MultiProcessorCompilation>
+			<ObjectFileName>$(IntDir)</ObjectFileName>
 			<Optimization>MaxSpeed</Optimization>
 			<PrecompiledHeader>NotUsing</PrecompiledHeader>
+			<PreprocessorDefinitions>NDEBUG;_WIN32;GLEW_STATIC;RMLUI_STATIC_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
 			<RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+			<RuntimeTypeInfo>false</RuntimeTypeInfo>
 			<WarningLevel>Level3</WarningLevel>
-			<PreprocessorDefinitions>_WIN32;GLEW_STATIC;SDL_STATIC;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-			<ObjectFileName>$(IntDir)</ObjectFileName>
-			<LanguageStandard>stdcpp17</LanguageStandard>
-			<EnableModules>false</EnableModules>
-			<ConformanceMode>true</ConformanceMode>
-			<FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
-			<IntrinsicFunctions>true</IntrinsicFunctions>
 			<WholeProgramOptimization>true</WholeProgramOptimization>
 		</ClCompile>
 		<Link>
+			<AdditionalDependencies>GLFW.lib;glew.lib;%(AdditionalDependencies)</AdditionalDependencies>
+			<AdditionalLibraryDirectories>$(SolutionDir)lib\$(Platform)$(Configuration)\;$(SolutionDir)ThirdParty\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
 			<GenerateDebugInformation>true</GenerateDebugInformation>
 			<LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
-			<AdditionalLibraryDirectories>$(SolutionDir)lib\$(Platform)$(Configuration)\;$(SolutionDir)ThirdParty\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-			<AdditionalDependencies>GLFW.lib;glew.lib;%(AdditionalDependencies)</AdditionalDependencies>
 			<SubSystem>Windows</SubSystem>
 		</Link>
 	</ItemDefinitionGroup>
@@ -84,23 +85,24 @@
 			<AssemblerListingLocation>Debug/</AssemblerListingLocation>
 			<BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
 			<CompileAs>CompileAsCpp</CompileAs>
+			<ConformanceMode>true</ConformanceMode>
+			<EnableModules>false</EnableModules>
+			<FloatingPointModel>Fast</FloatingPointModel>
 			<InlineFunctionExpansion>Disabled</InlineFunctionExpansion>
+			<LanguageStandard>stdcpp17</LanguageStandard>
 			<MultiProcessorCompilation>true</MultiProcessorCompilation>
+			<ObjectFileName>$(IntDir)</ObjectFileName>
 			<Optimization>Disabled</Optimization>
 			<PrecompiledHeader>NotUsing</PrecompiledHeader>
+			<PreprocessorDefinitions>_DEBUG;_WIN32;NOMINMAX;GLEW_STATIC;RMLUI_STATIC_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
 			<RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+			<RuntimeTypeInfo>false</RuntimeTypeInfo>
 			<WarningLevel>Level3</WarningLevel>
-			<PreprocessorDefinitions>_WIN32;GLEW_STATIC;SDL_STATIC;_DEBUG;NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-			<ObjectFileName>$(IntDir)</ObjectFileName>
-			<LanguageStandard>stdcpp17</LanguageStandard>
-			<EnableModules>false</EnableModules>
-			<ConformanceMode>true</ConformanceMode>
-			<FloatingPointModel>Fast</FloatingPointModel>
 		</ClCompile>
 		<Link>
-			<GenerateDebugInformation>true</GenerateDebugInformation>
-			<AdditionalLibraryDirectories>$(SolutionDir)lib\$(Platform)$(Configuration)\;$(SolutionDir)ThirdParty\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
 			<AdditionalDependencies>GLFW.lib;glew.lib;%(AdditionalDependencies)</AdditionalDependencies>
+			<AdditionalLibraryDirectories>$(SolutionDir)lib\$(Platform)$(Configuration)\;$(SolutionDir)ThirdParty\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+			<GenerateDebugInformation>true</GenerateDebugInformation>
 			<SubSystem>Windows</SubSystem>
 		</Link>
 	</ItemDefinitionGroup>
@@ -109,16 +111,21 @@
 		<ClInclude Include="Application.h" />
 		<ClInclude Include="BloomRenderer.h" />
 		<ClInclude Include="ModelConverter.h" />
+		<ClInclude Include="RmlUi\RmlUiRenderer.h" />
 	</ItemGroup>
 	<ItemGroup>
 		<ClCompile Include="Application.cpp" />
 		<ClCompile Include="BloomRenderer.cpp" />
 		<ClCompile Include="main.cpp" />
 		<ClCompile Include="ModelConverter.cpp" />
+		<ClCompile Include="RmlUi\RmlUiRenderer.cpp" />
 	</ItemGroup>
 	<ItemGroup>
 		<ProjectReference Include="..\Turso3D\Turso3D.vcxproj">
 			<Project>{3CA1B824-72EB-4605-93A3-29B99AF2C03E}</Project>
+		</ProjectReference>
+		<ProjectReference Include="..\ThirdParty\RmlUi\RmlUi.vcxproj">
+			<Project>{029FEA18-D976-4A17-86B0-70533F7F68B0}</Project>
 		</ProjectReference>
 	</ItemGroup>
 

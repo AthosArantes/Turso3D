@@ -234,6 +234,9 @@ namespace Turso3D
 				glType = GL_FRAGMENT_SHADER;
 				shaderCode += "#define COMPILE_FS\n";
 				break;
+			default:
+				LOG_ERROR("Shader type {:d} not implemented.", type);
+				return 0;
 		}
 
 		for (std::string define : defines) {

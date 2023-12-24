@@ -1,0 +1,268 @@
+#include "RmlUiRenderer.h"
+#include <Turso3D/Graphics/Graphics.h>
+#include <Turso3D/Graphics/FrameBuffer.h>
+#include <Turso3D/Graphics/Shader.h>
+#include <Turso3D/Graphics/ShaderProgram.h>
+#include <Turso3D/Graphics/Texture.h>
+#include <Turso3D/IO/Log.h>
+#include <Turso3D/Resource/ResourceCache.h>
+#include <GLEW/glew.h>
+#include <RmlUi/Core.h>
+#include <cassert>
+
+namespace Turso3D
+{
+	constexpr StringHash UniformTranslation = {"uTranslation"};
+	constexpr StringHash UniformTransform = {"uTransform"};
+
+	static VertexElement VertexElementArray[] = {
+		VertexElement {ELEM_VECTOR2, SEM_POSITION},
+		VertexElement {ELEM_UBYTE4, SEM_COLOR},
+		VertexElement {ELEM_VECTOR2, SEM_TEXCOORD}
+	};
+
+	// ==========================================================================================
+	RmlUiRenderer::RmlUiRenderer(Graphics* graphics) :
+		graphics(graphics)
+	{
+		for (int i = 0; i < 2; ++i) {
+			buffer[i] = std::make_unique<Texture>();
+			fbo[i] = std::make_unique<FrameBuffer>();
+		}
+
+		texProgram = graphics->CreateProgram("RmlUi.glsl", "TEXTURED", "TEXTURED");
+		colorProgram = graphics->CreateProgram("RmlUi.glsl", "", "");
+	}
+
+	RmlUiRenderer::~RmlUiRenderer()
+	{
+	}
+
+	void RmlUiRenderer::RenderGeometry(Rml::Vertex* vertices, int num_vertices, int* indices, int num_indices, const Rml::TextureHandle texture, const Rml::Vector2f& translation)
+	{
+		CompiledGeometry cg;
+		cg.vbo.Define(USAGE_DEFAULT, num_vertices, VertexElementArray, std::size(VertexElementArray), vertices);
+		cg.ibo.Define(USAGE_DEFAULT, num_indices, sizeof(unsigned), indices);
+		cg.texture = reinterpret_cast<Texture*>(texture);
+		cg.program = texture ? texProgram.get() : colorProgram.get();
+		cg.uTranslate = cg.program->Uniform(UniformTranslation);
+		cg.uTransform = cg.program->Uniform(UniformTransform);
+
+		RenderCompiledGeometry(reinterpret_cast<Rml::CompiledGeometryHandle>(&cg), translation);
+	}
+
+	Rml::CompiledGeometryHandle RmlUiRenderer::CompileGeometry(Rml::Vertex* vertices, int num_vertices, int* indices, int num_indices, Rml::TextureHandle texture)
+	{
+		std::unique_ptr<CompiledGeometry>& cg = geometries.emplace_back(std::make_unique<CompiledGeometry>());
+		cg->vbo.Define(USAGE_DEFAULT, num_vertices, VertexElementArray, std::size(VertexElementArray), vertices);
+		cg->ibo.Define(USAGE_DEFAULT, num_indices, sizeof(unsigned), indices);
+		cg->texture = reinterpret_cast<Texture*>(texture);
+
+		return reinterpret_cast<Rml::CompiledGeometryHandle>(cg.get());
+	}
+
+	void RmlUiRenderer::RenderCompiledGeometry(Rml::CompiledGeometryHandle handle, const Rml::Vector2f& translation)
+	{
+		CompiledGeometry* cg = reinterpret_cast<CompiledGeometry*>(handle);
+
+		cg->program->Bind();
+		cg->vbo.Bind(cg->program->Attributes());
+		cg->ibo.Bind();
+
+		glUniform2f(cg->uTranslate, translation.x, translation.y);
+		glUniformMatrix4fv(cg->uTransform, 1, GL_FALSE, transform.data());
+
+		if (cg->texture) {
+			cg->texture->Bind(0);
+		}
+
+		graphics->DrawIndexed(PT_TRIANGLE_LIST, 0, cg->ibo.NumIndices());
+	}
+
+	void RmlUiRenderer::ReleaseCompiledGeometry(Rml::CompiledGeometryHandle handle)
+	{
+		CompiledGeometry* cg = reinterpret_cast<CompiledGeometry*>(handle);
+		for (size_t i = 0; i < geometries.size(); ++i) {
+			if (geometries[i].get() == cg) {
+				geometries[i].swap(geometries.back());
+				geometries.pop_back();
+				return;
+			}
+		}
+	}
+
+	void RmlUiRenderer::EnableScissorRegion(bool enable)
+	{
+		ScissorState new_state = ScissorState::None;
+
+		if (enable) {
+			new_state = (usingTransform ? ScissorState::Stencil : ScissorState::Scissor);
+		}
+
+		if (new_state != scissorState) {
+			// Disable old
+			if (scissorState == ScissorState::Scissor) {
+				glDisable(GL_SCISSOR_TEST);
+			} else if (scissorState == ScissorState::Stencil) {
+				glStencilFunc(GL_ALWAYS, 1, GLuint(-1));
+			}
+
+			// Enable new
+			if (new_state == ScissorState::Scissor) {
+				glEnable(GL_SCISSOR_TEST);
+			} else if (new_state == ScissorState::Stencil) {
+				glStencilFunc(GL_EQUAL, 1, GLuint(-1));
+			}
+
+			scissorState = new_state;
+		}
+	}
+
+	void RmlUiRenderer::SetScissorRegion(int x, int y, int width, int height)
+	{
+		if (usingTransform) {
+			const float left = float(x);
+			const float right = float(x + width);
+			const float top = float(y);
+			const float bottom = float(y + height);
+
+			Rml::Vertex vertices[4];
+			vertices[0].position = {left, top};
+			vertices[1].position = {right, top};
+			vertices[2].position = {right, bottom};
+			vertices[3].position = {left, bottom};
+
+			int indices[6] = {0, 2, 1, 0, 3, 2};
+
+			glClear(GL_STENCIL_BUFFER_BIT);
+			glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+			glStencilFunc(GL_ALWAYS, 1, GLuint(-1));
+			glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
+
+			RenderGeometry(vertices, 4, indices, 6, 0, Rml::Vector2f(0, 0));
+
+			glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
+			glStencilFunc(GL_EQUAL, 1, GLuint(-1));
+			glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+
+		} else {
+			glScissor(x, viewSize.y - (y + height), width, height);
+		}
+	}
+
+	bool RmlUiRenderer::LoadTexture(Rml::TextureHandle& texture_handle, Rml::Vector2i& texture_dimensions, const Rml::String& source)
+	{
+		ResourceCache* cache = ResourceCache::Instance();
+		std::shared_ptr<Texture> tex = cache->LoadResource<Texture>(source, true);
+		if (tex) {
+			//tex->DefineSampler(FILTER_BILINEAR, ADDRESS_CLAMP, ADDRESS_CLAMP, ADDRESS_CLAMP);
+
+			texture_dimensions.x = tex->Width();
+			texture_dimensions.y = tex->Height();
+
+			texture_handle = reinterpret_cast<Rml::TextureHandle>(tex.get());
+			textures.emplace_back().swap(tex);
+			return true;
+		}
+		return false;
+	}
+
+	bool RmlUiRenderer::GenerateTexture(Rml::TextureHandle& texture_handle, const Rml::byte* source, const Rml::Vector2i& source_dimensions)
+	{
+		Log::Scope ls {"RmlUiRenderer::GenerateTexture"};
+
+		std::shared_ptr<Texture> tex = std::make_shared<Texture>();
+		if (tex) {
+			IntVector2 sz {source_dimensions.x, source_dimensions.y};
+			ImageLevel il {sz, FMT_RGBA8, source};
+
+			bool defined = tex->Define(TEX_2D, sz, FMT_RGBA8, true, 1, 1, &il);
+			if (!defined) {
+				LOG_ERROR("Failed to define texture.");
+				return false;
+			}
+			tex->DefineSampler(FILTER_BILINEAR, ADDRESS_CLAMP, ADDRESS_CLAMP, ADDRESS_CLAMP);
+
+			texture_handle = reinterpret_cast<Rml::TextureHandle>(tex.get());
+			textures.push_back(tex);
+			return true;
+		}
+		return false;
+	}
+
+	void RmlUiRenderer::ReleaseTexture(Rml::TextureHandle texture_handle)
+	{
+		Texture* tex = reinterpret_cast<Texture*>(texture_handle);
+		for (size_t i = 0; i < textures.size(); ++i) {
+			if (textures[i].get() == tex) {
+				textures[i].swap(textures.back());
+				textures.pop_back();
+				return;
+			}
+		}
+	}
+
+	void RmlUiRenderer::SetTransform(const Rml::Matrix4f* new_transform)
+	{
+		transform = projection * (new_transform ? *new_transform : Rml::Matrix4f::Identity());
+		usingTransform = (new_transform != nullptr);
+	}
+
+	void RmlUiRenderer::UpdateBuffers(const IntVector2& size, int multisample_)
+	{
+		Log::Scope ls {"RmlUiRenderer::UpdateBuffers"};
+
+		viewSize = size;
+		multisample = multisample_;
+
+		for (int i = 0; i < 2; ++i) {
+			buffer[i]->Define(TEX_2D, size, FMT_RGBA8, true, multisample_ * i);
+			buffer[i]->DefineSampler(FILTER_BILINEAR, ADDRESS_CLAMP, ADDRESS_CLAMP, ADDRESS_CLAMP);
+			fbo[i]->Define(buffer[i].get(), nullptr);
+
+			if (multisample_ <= 1) {
+				multisample = 1;
+				break;
+			}
+		}
+
+		projection = Rml::Matrix4f::ProjectOrtho(0, (float)viewSize.x, (float)viewSize.y, 0, -10000, 10000);
+		SetTransform(nullptr);
+	}
+
+	void RmlUiRenderer::BeginRender()
+	{
+		if (multisample > 1) {
+			graphics->SetFrameBuffer(fbo[1].get());
+		} else {
+			graphics->SetFrameBuffer(fbo[0].get());
+		}
+
+		// IMPROVE: better organize this
+
+		glClearStencil(0);
+		glClearColor(0, 0, 0, 1);
+
+		glDisable(GL_CULL_FACE);
+
+		glEnable(GL_STENCIL_TEST);
+		glStencilFunc(GL_ALWAYS, 1, GLuint(-1));
+		glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
+
+		glEnable(GL_BLEND);
+		glBlendEquation(GL_FUNC_ADD);
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	}
+
+	void RmlUiRenderer::EndRender()
+	{
+		glDisable(GL_STENCIL_TEST);
+		glDisable(GL_BLEND);
+
+		// Resolve multisampled buffer
+		if (multisample > 1) {
+			IntRect rc {0, 0, viewSize.x, viewSize.y};
+			graphics->Blit(fbo[0].get(), rc, fbo[1].get(), rc, true, false, FILTER_BILINEAR);
+		}
+	}
+}

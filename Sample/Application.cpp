@@ -43,7 +43,7 @@ Application::Application() :
 	timestamp(0),
 	deltaTime(0),
 	deltaTimeAccumulator(0),
-	frameLimit(0),
+	frameLimit(60),
 	cursorInside(false),
 	camYaw(0),
 	camPitch(0),
@@ -550,8 +550,9 @@ void Application::Update(double dt)
 		if (mouseMode != GLFW_CURSOR_DISABLED) {
 			glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 			captureMouse = false;
-		} else {
+		} else if (!captureMouse) {
 			captureMouse = true;
+			cursorSpeed = Vector2::ZERO;
 		}
 
 		if (captureMouse) {
