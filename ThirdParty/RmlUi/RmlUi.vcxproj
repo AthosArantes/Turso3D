@@ -1,0 +1,409 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="15.0"
+	xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+	<ItemGroup Label="ProjectConfigurations">
+		<ProjectConfiguration Include="Debug|x64">
+			<Configuration>Debug</Configuration>
+			<Platform>x64</Platform>
+		</ProjectConfiguration>
+		<ProjectConfiguration Include="Release|x64">
+			<Configuration>Release</Configuration>
+			<Platform>x64</Platform>
+		</ProjectConfiguration>
+	</ItemGroup>
+	<PropertyGroup Label="Globals">
+		<ProjectGuid>{029FEA18-D976-4A17-86B0-70533F7F68B0}</ProjectGuid>
+		<Keyword>Win32Proj</Keyword>
+		<Platform>x64</Platform>
+		<ProjectName>RmlUi</ProjectName>
+		<VCProjectUpgraderObjectName>NoUpgrade</VCProjectUpgraderObjectName>
+		<WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+	</PropertyGroup>
+	<Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+
+	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+		<ConfigurationType>StaticLibrary</ConfigurationType>
+		<CharacterSet>MultiByte</CharacterSet>
+		<PlatformToolset>v143</PlatformToolset>
+	</PropertyGroup>
+	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+		<ConfigurationType>StaticLibrary</ConfigurationType>
+		<CharacterSet>MultiByte</CharacterSet>
+		<PlatformToolset>v143</PlatformToolset>
+	</PropertyGroup>
+
+	<Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+	<ImportGroup Label="ExtensionSettings">
+		<Import Project="$(VCTargetsPath)\BuildCustomizations\masm.props" />
+	</ImportGroup>
+	<ImportGroup Label="PropertySheets">
+		<Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+	</ImportGroup>
+	<PropertyGroup Label="UserMacros" />
+
+	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+		<LinkIncremental>true</LinkIncremental>
+		<OutDir>$(SolutionDir)lib\$(Platform)$(Configuration)\</OutDir>
+		<IntDir>$(SolutionDir)obj\$(Platform)$(Configuration)\$(ProjectName)\</IntDir>
+		<PublicIncludeDirectories>$(ProjectDir)include\</PublicIncludeDirectories>
+	</PropertyGroup>
+	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+		<LinkIncremental>false</LinkIncremental>
+		<OutDir>$(SolutionDir)lib\$(Platform)$(Configuration)\</OutDir>
+		<IntDir>$(SolutionDir)obj\$(Platform)$(Configuration)\$(ProjectName)\</IntDir>
+		<PublicIncludeDirectories>$(ProjectDir)include\</PublicIncludeDirectories>
+	</PropertyGroup>
+
+	<ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+		<ClCompile>
+			<AdditionalIncludeDirectories>$(ProjectDir)include\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+			<PreprocessorDefinitions>_DEBUG;_WIN32;LIB;HAVE_LIBC=1;RMLUI_STATIC_LIB;RMLUI_USE_CUSTOM_RTTI;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+			<AssemblerListingLocation>Debug/</AssemblerListingLocation>
+			<BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
+			<LanguageStandard>stdcpp17</LanguageStandard>
+			<DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+			<FloatingPointModel>Fast</FloatingPointModel>
+			<InlineFunctionExpansion>Disabled</InlineFunctionExpansion>
+			<MultiProcessorCompilation>true</MultiProcessorCompilation>
+			<Optimization>Disabled</Optimization>
+			<RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+			<WarningLevel>Level3</WarningLevel>
+			<RuntimeTypeInfo>false</RuntimeTypeInfo>
+			<EnableModules>false</EnableModules>
+		</ClCompile>
+		<Lib>
+			<TargetMachine>MachineX64</TargetMachine>
+		</Lib>
+	</ItemDefinitionGroup>
+	<ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+		<ClCompile>
+			<AdditionalIncludeDirectories>$(ProjectDir)include\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+			<PreprocessorDefinitions>NDEBUG;_WIN32;LIB;HAVE_LIBC=1;RMLUI_STATIC_LIB;RMLUI_USE_CUSTOM_RTTI;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+			<AssemblerListingLocation>Release/</AssemblerListingLocation>
+			<BufferSecurityCheck>false</BufferSecurityCheck>
+			<LanguageStandard>stdcpp17</LanguageStandard>
+			<DebugInformationFormat>None</DebugInformationFormat>
+			<FloatingPointModel>Fast</FloatingPointModel>
+			<InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
+			<MultiProcessorCompilation>true</MultiProcessorCompilation>
+			<Optimization>MaxSpeed</Optimization>
+			<RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+			<WarningLevel>Level3</WarningLevel>
+			<RuntimeTypeInfo>false</RuntimeTypeInfo>
+			<EnableModules>false</EnableModules>
+		</ClCompile>
+		<Lib>
+			<TargetMachine>MachineX64</TargetMachine>
+		</Lib>
+	</ItemDefinitionGroup>
+
+	<ItemGroup>
+		<ClInclude Include="source\Core\Clock.h" />
+		<ClInclude Include="source\Core\ComputeProperty.h" />
+		<ClInclude Include="source\Core\ContextInstancerDefault.h" />
+		<ClInclude Include="source\Core\DataController.h" />
+		<ClInclude Include="source\Core\DataControllerDefault.h" />
+		<ClInclude Include="source\Core\DataExpression.h" />
+		<ClInclude Include="source\Core\DataModel.h" />
+		<ClInclude Include="source\Core\DataView.h" />
+		<ClInclude Include="source\Core\DataViewDefault.h" />
+		<ClInclude Include="source\Core\DecoratorGradient.h" />
+		<ClInclude Include="source\Core\DecoratorNinePatch.h" />
+		<ClInclude Include="source\Core\DecoratorTiled.h" />
+		<ClInclude Include="source\Core\DecoratorTiledBox.h" />
+		<ClInclude Include="source\Core\DecoratorTiledBoxInstancer.h" />
+		<ClInclude Include="source\Core\DecoratorTiledHorizontal.h" />
+		<ClInclude Include="source\Core\DecoratorTiledHorizontalInstancer.h" />
+		<ClInclude Include="source\Core\DecoratorTiledImage.h" />
+		<ClInclude Include="source\Core\DecoratorTiledImageInstancer.h" />
+		<ClInclude Include="source\Core\DecoratorTiledInstancer.h" />
+		<ClInclude Include="source\Core\DecoratorTiledVertical.h" />
+		<ClInclude Include="source\Core\DecoratorTiledVerticalInstancer.h" />
+		<ClInclude Include="source\Core\DocumentHeader.h" />
+		<ClInclude Include="source\Core\ElementAnimation.h" />
+		<ClInclude Include="source\Core\ElementBackgroundBorder.h" />
+		<ClInclude Include="source\Core\ElementDecoration.h" />
+		<ClInclude Include="source\Core\ElementDefinition.h" />
+		<ClInclude Include="source\Core\ElementHandle.h" />
+		<ClInclude Include="source\Core\ElementStyle.h" />
+		<ClInclude Include="source\Core\EventDispatcher.h" />
+		<ClInclude Include="source\Core\EventInstancerDefault.h" />
+		<ClInclude Include="source\Core\EventSpecification.h" />
+		<ClInclude Include="source\Core\FileInterfaceDefault.h" />
+		<ClInclude Include="source\Core\FontEffectBlur.h" />
+		<ClInclude Include="source\Core\FontEffectGlow.h" />
+		<ClInclude Include="source\Core\FontEffectOutline.h" />
+		<ClInclude Include="source\Core\FontEffectShadow.h" />
+		<ClInclude Include="source\Core\GeometryBackgroundBorder.h" />
+		<ClInclude Include="source\Core\GeometryDatabase.h" />
+		<ClInclude Include="source\Core\IdNameMap.h" />
+		<ClInclude Include="source\Core\LayoutBlockBox.h" />
+		<ClInclude Include="source\Core\LayoutBlockBoxSpace.h" />
+		<ClInclude Include="source\Core\LayoutDetails.h" />
+		<ClInclude Include="source\Core\LayoutEngine.h" />
+		<ClInclude Include="source\Core\LayoutFlex.h" />
+		<ClInclude Include="source\Core\LayoutInlineBox.h" />
+		<ClInclude Include="source\Core\LayoutInlineBoxText.h" />
+		<ClInclude Include="source\Core\LayoutLineBox.h" />
+		<ClInclude Include="source\Core\LayoutTable.h" />
+		<ClInclude Include="source\Core\LayoutTableDetails.h" />
+		<ClInclude Include="source\Core\Memory.h" />
+		<ClInclude Include="source\Core\PluginRegistry.h" />
+		<ClInclude Include="source\Core\Pool.h" />
+		<ClInclude Include="source\Core\precompiled.h" />
+		<ClInclude Include="source\Core\PropertiesIterator.h" />
+		<ClInclude Include="source\Core\PropertyParserAnimation.h" />
+		<ClInclude Include="source\Core\PropertyParserColour.h" />
+		<ClInclude Include="source\Core\PropertyParserDecorator.h" />
+		<ClInclude Include="source\Core\PropertyParserFontEffect.h" />
+		<ClInclude Include="source\Core\PropertyParserKeyword.h" />
+		<ClInclude Include="source\Core\PropertyParserNumber.h" />
+		<ClInclude Include="source\Core\PropertyParserRatio.h" />
+		<ClInclude Include="source\Core\PropertyParserString.h" />
+		<ClInclude Include="source\Core\PropertyParserTransform.h" />
+		<ClInclude Include="source\Core\PropertyShorthandDefinition.h" />
+		<ClInclude Include="source\Core\ScrollController.h" />
+		<ClInclude Include="source\Core\StreamFile.h" />
+		<ClInclude Include="source\Core\StyleSheetFactory.h" />
+		<ClInclude Include="source\Core\StyleSheetNode.h" />
+		<ClInclude Include="source\Core\StyleSheetParser.h" />
+		<ClInclude Include="source\Core\StyleSheetSelector.h" />
+		<ClInclude Include="source\Core\Template.h" />
+		<ClInclude Include="source\Core\TemplateCache.h" />
+		<ClInclude Include="source\Core\TextureDatabase.h" />
+		<ClInclude Include="source\Core\TextureLayout.h" />
+		<ClInclude Include="source\Core\TextureLayoutRectangle.h" />
+		<ClInclude Include="source\Core\TextureLayoutRow.h" />
+		<ClInclude Include="source\Core\TextureLayoutTexture.h" />
+		<ClInclude Include="source\Core\TextureResource.h" />
+		<ClInclude Include="source\Core\TransformState.h" />
+		<ClInclude Include="source\Core\TransformUtilities.h" />
+		<ClInclude Include="source\Core\WidgetScroll.h" />
+		<ClInclude Include="source\Core\XMLNodeHandlerBody.h" />
+		<ClInclude Include="source\Core\XMLNodeHandlerDefault.h" />
+		<ClInclude Include="source\Core\XMLNodeHandlerHead.h" />
+		<ClInclude Include="source\Core\XMLNodeHandlerTemplate.h" />
+		<ClInclude Include="source\Core\XMLParseTools.h" />
+		<ClInclude Include="source\Core\Pool.inl" />
+		<ClInclude Include="source\Core\Elements\ElementImage.h" />
+		<ClInclude Include="source\Core\Elements\ElementLabel.h" />
+		<ClInclude Include="source\Core\Elements\ElementTextSelection.h" />
+		<ClInclude Include="source\Core\Elements\InputType.h" />
+		<ClInclude Include="source\Core\Elements\InputTypeButton.h" />
+		<ClInclude Include="source\Core\Elements\InputTypeCheckbox.h" />
+		<ClInclude Include="source\Core\Elements\InputTypeRadio.h" />
+		<ClInclude Include="source\Core\Elements\InputTypeRange.h" />
+		<ClInclude Include="source\Core\Elements\InputTypeSubmit.h" />
+		<ClInclude Include="source\Core\Elements\InputTypeText.h" />
+		<ClInclude Include="source\Core\Elements\WidgetDropDown.h" />
+		<ClInclude Include="source\Core\Elements\WidgetSlider.h" />
+		<ClInclude Include="source\Core\Elements\WidgetTextInput.h" />
+		<ClInclude Include="source\Core\Elements\WidgetTextInputMultiLine.h" />
+		<ClInclude Include="source\Core\Elements\WidgetTextInputSingleLine.h" />
+		<ClInclude Include="source\Core\Elements\WidgetTextInputSingleLinePassword.h" />
+		<ClInclude Include="source\Core\Elements\XMLNodeHandlerDataGrid.h" />
+		<ClInclude Include="source\Core\Elements\XMLNodeHandlerSelect.h" />
+		<ClInclude Include="source\Core\Elements\XMLNodeHandlerTabSet.h" />
+		<ClInclude Include="source\Core\Elements\XMLNodeHandlerTextArea.h" />
+		<ClInclude Include="source\Core\FontEngineDefault\FontEngineInterfaceDefault.h" />
+		<ClInclude Include="source\Core\FontEngineDefault\FontFace.h" />
+		<ClInclude Include="source\Core\FontEngineDefault\FontFaceHandleDefault.h" />
+		<ClInclude Include="source\Core\FontEngineDefault\FontFaceLayer.h" />
+		<ClInclude Include="source\Core\FontEngineDefault\FontFamily.h" />
+		<ClInclude Include="source\Core\FontEngineDefault\FontProvider.h" />
+		<ClInclude Include="source\Core\FontEngineDefault\FontTypes.h" />
+		<ClInclude Include="source\Core\FontEngineDefault\FreeTypeInterface.h" />
+	</ItemGroup>
+	<ItemGroup>
+		<ClCompile Include="source\Core\BaseXMLParser.cpp" />
+		<ClCompile Include="source\Core\Box.cpp" />
+		<ClCompile Include="source\Core\Clock.cpp" />
+		<ClCompile Include="source\Core\ComputedValues.cpp" />
+		<ClCompile Include="source\Core\ComputeProperty.cpp" />
+		<ClCompile Include="source\Core\Context.cpp" />
+		<ClCompile Include="source\Core\ContextInstancer.cpp" />
+		<ClCompile Include="source\Core\ContextInstancerDefault.cpp" />
+		<ClCompile Include="source\Core\ConvolutionFilter.cpp" />
+		<ClCompile Include="source\Core\Core.cpp" />
+		<ClCompile Include="source\Core\DataController.cpp" />
+		<ClCompile Include="source\Core\DataControllerDefault.cpp" />
+		<ClCompile Include="source\Core\DataExpression.cpp" />
+		<ClCompile Include="source\Core\DataModel.cpp" />
+		<ClCompile Include="source\Core\DataModelHandle.cpp" />
+		<ClCompile Include="source\Core\DataTypeRegister.cpp" />
+		<ClCompile Include="source\Core\DataVariable.cpp" />
+		<ClCompile Include="source\Core\DataView.cpp" />
+		<ClCompile Include="source\Core\DataViewDefault.cpp" />
+		<ClCompile Include="source\Core\Decorator.cpp" />
+		<ClCompile Include="source\Core\DecoratorGradient.cpp" />
+		<ClCompile Include="source\Core\DecoratorInstancer.cpp" />
+		<ClCompile Include="source\Core\DecoratorNinePatch.cpp" />
+		<ClCompile Include="source\Core\DecoratorTiled.cpp" />
+		<ClCompile Include="source\Core\DecoratorTiledBox.cpp" />
+		<ClCompile Include="source\Core\DecoratorTiledBoxInstancer.cpp" />
+		<ClCompile Include="source\Core\DecoratorTiledHorizontal.cpp" />
+		<ClCompile Include="source\Core\DecoratorTiledHorizontalInstancer.cpp" />
+		<ClCompile Include="source\Core\DecoratorTiledImage.cpp" />
+		<ClCompile Include="source\Core\DecoratorTiledImageInstancer.cpp" />
+		<ClCompile Include="source\Core\DecoratorTiledInstancer.cpp" />
+		<ClCompile Include="source\Core\DecoratorTiledVertical.cpp" />
+		<ClCompile Include="source\Core\DecoratorTiledVerticalInstancer.cpp" />
+		<ClCompile Include="source\Core\DocumentHeader.cpp" />
+		<ClCompile Include="source\Core\Element.cpp" />
+		<ClCompile Include="source\Core\ElementAnimation.cpp" />
+		<ClCompile Include="source\Core\ElementBackgroundBorder.cpp" />
+		<ClCompile Include="source\Core\ElementDecoration.cpp" />
+		<ClCompile Include="source\Core\ElementDefinition.cpp" />
+		<ClCompile Include="source\Core\ElementDocument.cpp" />
+		<ClCompile Include="source\Core\ElementHandle.cpp" />
+		<ClCompile Include="source\Core\ElementInstancer.cpp" />
+		<ClCompile Include="source\Core\ElementScroll.cpp" />
+		<ClCompile Include="source\Core\ElementStyle.cpp" />
+		<ClCompile Include="source\Core\ElementText.cpp" />
+		<ClCompile Include="source\Core\ElementUtilities.cpp" />
+		<ClCompile Include="source\Core\Event.cpp" />
+		<ClCompile Include="source\Core\EventDispatcher.cpp" />
+		<ClCompile Include="source\Core\EventInstancer.cpp" />
+		<ClCompile Include="source\Core\EventInstancerDefault.cpp" />
+		<ClCompile Include="source\Core\EventListenerInstancer.cpp" />
+		<ClCompile Include="source\Core\EventSpecification.cpp" />
+		<ClCompile Include="source\Core\Factory.cpp" />
+		<ClCompile Include="source\Core\FileInterface.cpp" />
+		<ClCompile Include="source\Core\FileInterfaceDefault.cpp" />
+		<ClCompile Include="source\Core\FontEffect.cpp" />
+		<ClCompile Include="source\Core\FontEffectBlur.cpp" />
+		<ClCompile Include="source\Core\FontEffectGlow.cpp" />
+		<ClCompile Include="source\Core\FontEffectInstancer.cpp" />
+		<ClCompile Include="source\Core\FontEffectOutline.cpp" />
+		<ClCompile Include="source\Core\FontEffectShadow.cpp" />
+		<ClCompile Include="source\Core\FontEngineInterface.cpp" />
+		<ClCompile Include="source\Core\Geometry.cpp" />
+		<ClCompile Include="source\Core\GeometryBackgroundBorder.cpp" />
+		<ClCompile Include="source\Core\GeometryDatabase.cpp" />
+		<ClCompile Include="source\Core\GeometryUtilities.cpp" />
+		<ClCompile Include="source\Core\LayoutBlockBox.cpp" />
+		<ClCompile Include="source\Core\LayoutBlockBoxSpace.cpp" />
+		<ClCompile Include="source\Core\LayoutDetails.cpp" />
+		<ClCompile Include="source\Core\LayoutEngine.cpp" />
+		<ClCompile Include="source\Core\LayoutFlex.cpp" />
+		<ClCompile Include="source\Core\LayoutInlineBox.cpp" />
+		<ClCompile Include="source\Core\LayoutInlineBoxText.cpp" />
+		<ClCompile Include="source\Core\LayoutLineBox.cpp" />
+		<ClCompile Include="source\Core\LayoutTable.cpp" />
+		<ClCompile Include="source\Core\LayoutTableDetails.cpp" />
+		<ClCompile Include="source\Core\Log.cpp" />
+		<ClCompile Include="source\Core\Math.cpp" />
+		<ClCompile Include="source\Core\Memory.cpp" />
+		<ClCompile Include="source\Core\ObserverPtr.cpp" />
+		<ClCompile Include="source\Core\Plugin.cpp" />
+		<ClCompile Include="source\Core\PluginRegistry.cpp" />
+		<ClCompile Include="source\Core\Profiling.cpp" />
+		<ClCompile Include="source\Core\PropertiesIteratorView.cpp" />
+		<ClCompile Include="source\Core\Property.cpp" />
+		<ClCompile Include="source\Core\PropertyDefinition.cpp" />
+		<ClCompile Include="source\Core\PropertyDictionary.cpp" />
+		<ClCompile Include="source\Core\PropertyParserAnimation.cpp" />
+		<ClCompile Include="source\Core\PropertyParserColour.cpp" />
+		<ClCompile Include="source\Core\PropertyParserDecorator.cpp" />
+		<ClCompile Include="source\Core\PropertyParserFontEffect.cpp" />
+		<ClCompile Include="source\Core\PropertyParserKeyword.cpp" />
+		<ClCompile Include="source\Core\PropertyParserNumber.cpp" />
+		<ClCompile Include="source\Core\PropertyParserRatio.cpp" />
+		<ClCompile Include="source\Core\PropertyParserString.cpp" />
+		<ClCompile Include="source\Core\PropertyParserTransform.cpp" />
+		<ClCompile Include="source\Core\PropertySpecification.cpp" />
+		<ClCompile Include="source\Core\RenderInterface.cpp" />
+		<ClCompile Include="source\Core\ScrollController.cpp" />
+		<ClCompile Include="source\Core\Spritesheet.cpp" />
+		<ClCompile Include="source\Core\Stream.cpp" />
+		<ClCompile Include="source\Core\StreamFile.cpp" />
+		<ClCompile Include="source\Core\StreamMemory.cpp" />
+		<ClCompile Include="source\Core\StringUtilities.cpp" />
+		<ClCompile Include="source\Core\StyleSheet.cpp" />
+		<ClCompile Include="source\Core\StyleSheetContainer.cpp" />
+		<ClCompile Include="source\Core\StyleSheetFactory.cpp" />
+		<ClCompile Include="source\Core\StyleSheetNode.cpp" />
+		<ClCompile Include="source\Core\StyleSheetParser.cpp" />
+		<ClCompile Include="source\Core\StyleSheetSelector.cpp" />
+		<ClCompile Include="source\Core\StyleSheetSpecification.cpp" />
+		<ClCompile Include="source\Core\SystemInterface.cpp" />
+		<ClCompile Include="source\Core\Template.cpp" />
+		<ClCompile Include="source\Core\TemplateCache.cpp" />
+		<ClCompile Include="source\Core\Texture.cpp" />
+		<ClCompile Include="source\Core\TextureDatabase.cpp" />
+		<ClCompile Include="source\Core\TextureLayout.cpp" />
+		<ClCompile Include="source\Core\TextureLayoutRectangle.cpp" />
+		<ClCompile Include="source\Core\TextureLayoutRow.cpp" />
+		<ClCompile Include="source\Core\TextureLayoutTexture.cpp" />
+		<ClCompile Include="source\Core\TextureResource.cpp" />
+		<ClCompile Include="source\Core\Transform.cpp" />
+		<ClCompile Include="source\Core\TransformPrimitive.cpp" />
+		<ClCompile Include="source\Core\TransformState.cpp" />
+		<ClCompile Include="source\Core\TransformUtilities.cpp" />
+		<ClCompile Include="source\Core\Tween.cpp" />
+		<ClCompile Include="source\Core\TypeConverter.cpp" />
+		<ClCompile Include="source\Core\URL.cpp" />
+		<ClCompile Include="source\Core\Variant.cpp" />
+		<ClCompile Include="source\Core\WidgetScroll.cpp" />
+		<ClCompile Include="source\Core\XMLNodeHandler.cpp" />
+		<ClCompile Include="source\Core\XMLNodeHandlerBody.cpp" />
+		<ClCompile Include="source\Core\XMLNodeHandlerDefault.cpp" />
+		<ClCompile Include="source\Core\XMLNodeHandlerHead.cpp" />
+		<ClCompile Include="source\Core\XMLNodeHandlerTemplate.cpp" />
+		<ClCompile Include="source\Core\XMLParser.cpp" />
+		<ClCompile Include="source\Core\XMLParseTools.cpp" />
+		<ClCompile Include="source\Core\Elements\DataFormatter.cpp" />
+		<ClCompile Include="source\Core\Elements\DataQuery.cpp" />
+		<ClCompile Include="source\Core\Elements\DataSource.cpp" />
+		<ClCompile Include="source\Core\Elements\DataSourceListener.cpp" />
+		<ClCompile Include="source\Core\Elements\ElementDataGrid.cpp" />
+		<ClCompile Include="source\Core\Elements\ElementDataGridCell.cpp" />
+		<ClCompile Include="source\Core\Elements\ElementDataGridExpandButton.cpp" />
+		<ClCompile Include="source\Core\Elements\ElementDataGridRow.cpp" />
+		<ClCompile Include="source\Core\Elements\ElementForm.cpp" />
+		<ClCompile Include="source\Core\Elements\ElementFormControl.cpp" />
+		<ClCompile Include="source\Core\Elements\ElementFormControlDataSelect.cpp" />
+		<ClCompile Include="source\Core\Elements\ElementFormControlInput.cpp" />
+		<ClCompile Include="source\Core\Elements\ElementFormControlSelect.cpp" />
+		<ClCompile Include="source\Core\Elements\ElementFormControlTextArea.cpp" />
+		<ClCompile Include="source\Core\Elements\ElementImage.cpp" />
+		<ClCompile Include="source\Core\Elements\ElementLabel.cpp" />
+		<ClCompile Include="source\Core\Elements\ElementProgress.cpp" />
+		<ClCompile Include="source\Core\Elements\ElementTabSet.cpp" />
+		<ClCompile Include="source\Core\Elements\ElementTextSelection.cpp" />
+		<ClCompile Include="source\Core\Elements\InputType.cpp" />
+		<ClCompile Include="source\Core\Elements\InputTypeButton.cpp" />
+		<ClCompile Include="source\Core\Elements\InputTypeCheckbox.cpp" />
+		<ClCompile Include="source\Core\Elements\InputTypeRadio.cpp" />
+		<ClCompile Include="source\Core\Elements\InputTypeRange.cpp" />
+		<ClCompile Include="source\Core\Elements\InputTypeSubmit.cpp" />
+		<ClCompile Include="source\Core\Elements\InputTypeText.cpp" />
+		<ClCompile Include="source\Core\Elements\WidgetDropDown.cpp" />
+		<ClCompile Include="source\Core\Elements\WidgetSlider.cpp" />
+		<ClCompile Include="source\Core\Elements\WidgetTextInput.cpp" />
+		<ClCompile Include="source\Core\Elements\WidgetTextInputMultiLine.cpp" />
+		<ClCompile Include="source\Core\Elements\WidgetTextInputSingleLine.cpp" />
+		<ClCompile Include="source\Core\Elements\WidgetTextInputSingleLinePassword.cpp" />
+		<ClCompile Include="source\Core\Elements\XMLNodeHandlerDataGrid.cpp" />
+		<ClCompile Include="source\Core\Elements\XMLNodeHandlerSelect.cpp" />
+		<ClCompile Include="source\Core\Elements\XMLNodeHandlerTabSet.cpp" />
+		<ClCompile Include="source\Core\Elements\XMLNodeHandlerTextArea.cpp" />
+		<ClCompile Include="source\Core\FontEngineDefault\FontEngineInterfaceDefault.cpp" />
+		<ClCompile Include="source\Core\FontEngineDefault\FontFace.cpp" />
+		<ClCompile Include="source\Core\FontEngineDefault\FontFaceHandleDefault.cpp" />
+		<ClCompile Include="source\Core\FontEngineDefault\FontFaceLayer.cpp" />
+		<ClCompile Include="source\Core\FontEngineDefault\FontFamily.cpp" />
+		<ClCompile Include="source\Core\FontEngineDefault\FontProvider.cpp" />
+		<ClCompile Include="source\Core\FontEngineDefault\FreeTypeInterface.cpp" />
+	</ItemGroup>
+	<ItemGroup>
+		<ProjectReference Include="..\..\ThirdParty\freetype\freetype.vcxproj">
+			<Project>{9811EF16-02B9-43B4-9406-07722EFB3C35}</Project>
+		</ProjectReference>
+	</ItemGroup>
+
+	<Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+	<ImportGroup Label="ExtensionTargets">
+		<Import Project="$(VCTargetsPath)\BuildCustomizations\masm.targets" />
+	</ImportGroup>
+</Project>
