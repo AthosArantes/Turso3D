@@ -1,4 +1,4 @@
-#include "RmlUiRenderer.h"
+#include "RmlRenderer.h"
 #include <Turso3D/Graphics/Graphics.h>
 #include <Turso3D/Graphics/FrameBuffer.h>
 #include <Turso3D/Graphics/Shader.h>
@@ -7,7 +7,6 @@
 #include <Turso3D/IO/Log.h>
 #include <Turso3D/Resource/ResourceCache.h>
 #include <GLEW/glew.h>
-#include <RmlUi/Core.h>
 #include <cassert>
 
 namespace Turso3D
@@ -22,7 +21,7 @@ namespace Turso3D
 	};
 
 	// ==========================================================================================
-	RmlUiRenderer::RmlUiRenderer(Graphics* graphics) :
+	RmlRenderer::RmlRenderer(Graphics* graphics) :
 		graphics(graphics)
 	{
 		for (int i = 0; i < 2; ++i) {
@@ -34,11 +33,11 @@ namespace Turso3D
 		colorProgram = graphics->CreateProgram("RmlUi.glsl", "", "");
 	}
 
-	RmlUiRenderer::~RmlUiRenderer()
+	RmlRenderer::~RmlRenderer()
 	{
 	}
 
-	void RmlUiRenderer::RenderGeometry(Rml::Vertex* vertices, int num_vertices, int* indices, int num_indices, const Rml::TextureHandle texture, const Rml::Vector2f& translation)
+	void RmlRenderer::RenderGeometry(Rml::Vertex* vertices, int num_vertices, int* indices, int num_indices, const Rml::TextureHandle texture, const Rml::Vector2f& translation)
 	{
 		CompiledGeometry cg;
 		cg.vbo.Define(USAGE_DEFAULT, num_vertices, VertexElementArray, std::size(VertexElementArray), vertices);
@@ -51,7 +50,7 @@ namespace Turso3D
 		RenderCompiledGeometry(reinterpret_cast<Rml::CompiledGeometryHandle>(&cg), translation);
 	}
 
-	Rml::CompiledGeometryHandle RmlUiRenderer::CompileGeometry(Rml::Vertex* vertices, int num_vertices, int* indices, int num_indices, Rml::TextureHandle texture)
+	Rml::CompiledGeometryHandle RmlRenderer::CompileGeometry(Rml::Vertex* vertices, int num_vertices, int* indices, int num_indices, Rml::TextureHandle texture)
 	{
 		std::unique_ptr<CompiledGeometry>& cg = geometries.emplace_back(std::make_unique<CompiledGeometry>());
 		cg->vbo.Define(USAGE_DEFAULT, num_vertices, VertexElementArray, std::size(VertexElementArray), vertices);
@@ -61,7 +60,7 @@ namespace Turso3D
 		return reinterpret_cast<Rml::CompiledGeometryHandle>(cg.get());
 	}
 
-	void RmlUiRenderer::RenderCompiledGeometry(Rml::CompiledGeometryHandle handle, const Rml::Vector2f& translation)
+	void RmlRenderer::RenderCompiledGeometry(Rml::CompiledGeometryHandle handle, const Rml::Vector2f& translation)
 	{
 		CompiledGeometry* cg = reinterpret_cast<CompiledGeometry*>(handle);
 
@@ -79,7 +78,7 @@ namespace Turso3D
 		graphics->DrawIndexed(PT_TRIANGLE_LIST, 0, cg->ibo.NumIndices());
 	}
 
-	void RmlUiRenderer::ReleaseCompiledGeometry(Rml::CompiledGeometryHandle handle)
+	void RmlRenderer::ReleaseCompiledGeometry(Rml::CompiledGeometryHandle handle)
 	{
 		CompiledGeometry* cg = reinterpret_cast<CompiledGeometry*>(handle);
 		for (size_t i = 0; i < geometries.size(); ++i) {
@@ -91,7 +90,7 @@ namespace Turso3D
 		}
 	}
 
-	void RmlUiRenderer::EnableScissorRegion(bool enable)
+	void RmlRenderer::EnableScissorRegion(bool enable)
 	{
 		ScissorState new_state = ScissorState::None;
 
@@ -118,7 +117,7 @@ namespace Turso3D
 		}
 	}
 
-	void RmlUiRenderer::SetScissorRegion(int x, int y, int width, int height)
+	void RmlRenderer::SetScissorRegion(int x, int y, int width, int height)
 	{
 		if (usingTransform) {
 			const float left = float(x);
@@ -150,7 +149,7 @@ namespace Turso3D
 		}
 	}
 
-	bool RmlUiRenderer::LoadTexture(Rml::TextureHandle& texture_handle, Rml::Vector2i& texture_dimensions, const Rml::String& source)
+	bool RmlRenderer::LoadTexture(Rml::TextureHandle& texture_handle, Rml::Vector2i& texture_dimensions, const Rml::String& source)
 	{
 		ResourceCache* cache = ResourceCache::Instance();
 		std::shared_ptr<Texture> tex = cache->LoadResource<Texture>(source, true);
@@ -167,9 +166,9 @@ namespace Turso3D
 		return false;
 	}
 
-	bool RmlUiRenderer::GenerateTexture(Rml::TextureHandle& texture_handle, const Rml::byte* source, const Rml::Vector2i& source_dimensions)
+	bool RmlRenderer::GenerateTexture(Rml::TextureHandle& texture_handle, const Rml::byte* source, const Rml::Vector2i& source_dimensions)
 	{
-		Log::Scope ls {"RmlUiRenderer::GenerateTexture"};
+		Log::Scope ls {"RmlRenderer::GenerateTexture"};
 
 		std::shared_ptr<Texture> tex = std::make_shared<Texture>();
 		if (tex) {
@@ -190,7 +189,7 @@ namespace Turso3D
 		return false;
 	}
 
-	void RmlUiRenderer::ReleaseTexture(Rml::TextureHandle texture_handle)
+	void RmlRenderer::ReleaseTexture(Rml::TextureHandle texture_handle)
 	{
 		Texture* tex = reinterpret_cast<Texture*>(texture_handle);
 		for (size_t i = 0; i < textures.size(); ++i) {
@@ -202,15 +201,15 @@ namespace Turso3D
 		}
 	}
 
-	void RmlUiRenderer::SetTransform(const Rml::Matrix4f* new_transform)
+	void RmlRenderer::SetTransform(const Rml::Matrix4f* new_transform)
 	{
 		transform = projection * (new_transform ? *new_transform : Rml::Matrix4f::Identity());
 		usingTransform = (new_transform != nullptr);
 	}
 
-	void RmlUiRenderer::UpdateBuffers(const IntVector2& size, int multisample_)
+	void RmlRenderer::UpdateBuffers(const IntVector2& size, int multisample_)
 	{
-		Log::Scope ls {"RmlUiRenderer::UpdateBuffers"};
+		Log::Scope ls {"RmlRenderer::UpdateBuffers"};
 
 		viewSize = size;
 		multisample = multisample_;
@@ -230,7 +229,7 @@ namespace Turso3D
 		SetTransform(nullptr);
 	}
 
-	void RmlUiRenderer::BeginRender()
+	void RmlRenderer::BeginRender()
 	{
 		if (multisample > 1) {
 			graphics->SetFrameBuffer(fbo[1].get());
@@ -254,7 +253,7 @@ namespace Turso3D
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	}
 
-	void RmlUiRenderer::EndRender()
+	void RmlRenderer::EndRender()
 	{
 		glDisable(GL_STENCIL_TEST);
 		glDisable(GL_BLEND);

@@ -13,7 +13,7 @@ namespace Turso3D
 	class Texture;
 	class IntVector2;
 
-	class RmlUiRenderer : public Rml::RenderInterface
+	class RmlRenderer : public Rml::RenderInterface
 	{
 		enum class ScissorState
 		{
@@ -34,8 +34,11 @@ namespace Turso3D
 		};
 
 	public:
-		RmlUiRenderer(Graphics* graphics);
-		~RmlUiRenderer();
+		// Constructor
+		// Graphics subsystem must have been initialized.
+		RmlRenderer(Graphics* graphics);
+		// Destructor
+		~RmlRenderer();
 
 		void RenderGeometry(Rml::Vertex* vertices, int num_vertices, int* indices, int num_indices, const Rml::TextureHandle texture, const Rml::Vector2f& translation) override;
 		Rml::CompiledGeometryHandle CompileGeometry(Rml::Vertex* vertices, int num_vertices, int* indices, int num_indices, Rml::TextureHandle texture) override;

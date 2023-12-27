@@ -110,15 +110,21 @@
 	<ItemGroup>
 		<ClInclude Include="Application.h" />
 		<ClInclude Include="BloomRenderer.h" />
+		<ClInclude Include="SSAORenderer.h" />
 		<ClInclude Include="ModelConverter.h" />
-		<ClInclude Include="RmlUi\RmlUiRenderer.h" />
+		<ClInclude Include="RmlUi\RmlFile.h" />
+		<ClInclude Include="RmlUi\RmlRenderer.h" />
+		<ClInclude Include="RmlUi\RmlSystem.h" />
 	</ItemGroup>
 	<ItemGroup>
 		<ClCompile Include="Application.cpp" />
 		<ClCompile Include="BloomRenderer.cpp" />
+		<ClCompile Include="SSAORenderer.cpp" />
 		<ClCompile Include="main.cpp" />
 		<ClCompile Include="ModelConverter.cpp" />
-		<ClCompile Include="RmlUi\RmlUiRenderer.cpp" />
+		<ClCompile Include="RmlUi\RmlFile.cpp" />
+		<ClCompile Include="RmlUi\RmlRenderer.cpp" />
+		<ClCompile Include="RmlUi\RmlSystem.cpp" />
 	</ItemGroup>
 	<ItemGroup>
 		<ProjectReference Include="..\Turso3D\Turso3D.vcxproj">

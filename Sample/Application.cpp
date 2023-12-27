@@ -1,6 +1,10 @@
 #include "Application.h"
 #include "BloomRenderer.h"
+#include "SSAORenderer.h"
 #include "ModelConverter.h"
+#include "RmlUi/RmlSystem.h"
+#include "RmlUi/RmlRenderer.h"
+#include "RmlUi/RmlFile.h"
 #include <Turso3D/Core/WorkQueue.h>
 #include <Turso3D/Graphics/FrameBuffer.h>
 #include <Turso3D/Graphics/Graphics.h>
@@ -23,7 +27,9 @@
 #include <Turso3D/Renderer/StaticModel.h>
 #include <Turso3D/Resource/ResourceCache.h>
 #include <Turso3D/Scene/Scene.h>
+#include <glew/glew.h>
 #include <GLFW/glfw3.h>
+#include <RmlUi/Core.h>
 #include <filesystem>
 #include <chrono>
 
@@ -102,6 +108,11 @@ Application::Application() :
 
 Application::~Application()
 {
+	// Shutdown RmlUi
+	Rml::Shutdown();
+	rmlFile.reset();
+	rmlRenderer.reset();
+	rmlSystem.reset();
 }
 
 bool Application::Initialize()
@@ -109,7 +120,7 @@ bool Application::Initialize()
 	if (!graphics) {
 		return false;
 	}
-	graphics->SetVSync(false);
+	graphics->SetVSync(true);
 
 	// Create subsystems that depend on the application window / OpenGL
 	renderer = std::make_unique<Renderer>(workQueue.get(), graphics.get());
@@ -117,6 +128,19 @@ bool Application::Initialize()
 
 	debugRenderer = std::make_unique<DebugRenderer>(graphics.get());
 	bloomRenderer = std::make_unique<BloomRenderer>(graphics.get());
+	//ssaoRenderer = std::make_unique<SSAORenderer>(graphics.get());
+
+	tonemapProgram = graphics->CreateProgram("PostProcess/Tonemap.glsl", "", "");
+	uTonemapExposure = tonemapProgram->Uniform(StringHash {"exposure"});
+
+	// Initialize RmlUi
+	rmlSystem = std::make_unique<RmlSystem>();
+	rmlRenderer = std::make_unique<RmlRenderer>(graphics.get());
+	rmlFile = std::make_unique<RmlFile>();
+	Rml::SetSystemInterface(rmlSystem.get());
+	Rml::SetRenderInterface(rmlRenderer.get());
+	Rml::SetFileInterface(rmlFile.get());
+	Rml::Initialise();
 
 	// Create the scene and camera.
 	// Camera is created outside scene so it's not disturbed by scene clears
@@ -212,26 +236,6 @@ void Application::CreateTextures()
 
 	ldrFbo = std::make_unique<FrameBuffer>();
 	ldrBuffer = std::make_unique<Texture>();
-
-	// Random noise texture for SSAO
-	unsigned char noiseData[4 * 4 * 4];
-	for (int i = 0; i < 4 * 4; ++i) {
-		Vector3 noiseVec(Random() * 2.0f - 1.0f, Random() * 2.0f - 1.0f, Random() * 2.0f - 1.0f);
-		noiseVec.Normalize();
-
-		noiseData[i * 4 + 0] = (unsigned char)(noiseVec.x * 127.0f + 128.0f);
-		noiseData[i * 4 + 1] = (unsigned char)(noiseVec.y * 127.0f + 128.0f);
-		noiseData[i * 4 + 2] = (unsigned char)(noiseVec.z * 127.0f + 128.0f);
-		noiseData[i * 4 + 3] = 0;
-	}
-
-	ssaoFbo = std::make_unique<FrameBuffer>();
-	ssaoTexture = std::make_unique<Texture>();
-
-	ImageLevel noiseDataLevel(IntVector2(4, 4), FMT_RGBA8, &noiseData[0]);
-	ssaoNoiseTexture = std::make_unique<Texture>();
-	ssaoNoiseTexture->Define(TEX_2D, IntVector2(4, 4), FMT_RGBA8, false, 1, 1, &noiseDataLevel);
-	ssaoNoiseTexture->DefineSampler(FILTER_POINT);
 }
 
 void Application::CreateDefaultScene()
@@ -489,6 +493,8 @@ void Application::OnFramebufferSize(int width, int height)
 		return;
 	}
 
+	camera->SetAspectRatio((float)width / (float)height);
+
 	// Define the base rendertargets
 	for (int i = 0; i < 2; ++i) {
 		hdrBuffer[i]->Define(TEX_2D, sz, FMT_R11_G11_B10F, false, multiSample * i);
@@ -513,13 +519,12 @@ void Application::OnFramebufferSize(int width, int height)
 	if (bloomRenderer) {
 		bloomRenderer->UpdateBuffers(sz);
 	}
-
 	// SSAO resources
-	ssaoTexture->Define(TEX_2D, IntVector2(width / 2, height / 2), FMT_RGBA8);
-	ssaoTexture->DefineSampler(FILTER_BILINEAR, ADDRESS_CLAMP, ADDRESS_CLAMP, ADDRESS_CLAMP);
-	ssaoFbo->Define(ssaoTexture.get(), nullptr);
+	if (ssaoRenderer) {
+		ssaoRenderer->UpdateBuffers(sz);
+	}
 
-	camera->SetAspectRatio((float)width / (float)height);
+	rmlRenderer->UpdateBuffers(sz, multiSample);
 
 	LOG_INFO("Framebuffer sized to: {:d}x{:d}", width, height);
 }
@@ -652,11 +657,11 @@ void Application::Render(double dt)
 		renderer->RenderOpaque();
 	}
 
-	Texture* color = hdrBuffer[0].get(); // Non-multisample HDR color texture
-	Texture* normal = normalBuffer[0].get(); // Non-multisample normal texture
-	Texture* depth = depthStencilBuffer[0].get(); // Non-multisample Depth texture
+	Texture* color = hdrBuffer[0].get(); // Resolved HDR color texture
+	Texture* normal = normalBuffer[0].get(); // Resolved normal texture
+	Texture* depth = depthStencilBuffer[0].get(); // Resolved Depth texture
 
-	// Apply bloom
+	// Apply hdr bloom
 	if (bloomRenderer) {
 		bloomRenderer->Render(color);
 		color = bloomRenderer->GetComposedTexture();
@@ -665,50 +670,11 @@ void Application::Render(double dt)
 	// Apply tonemap
 	{
 		graphics->SetFrameBuffer(ldrFbo.get());
-		ShaderProgram* program = graphics->SetProgram("PostProcess/Tonemap.glsl", "", "");
-		graphics->SetUniform(program, "exposure", 0.75f);
-		graphics->SetTexture(0, color);
+		tonemapProgram->Bind();
+		glUniform1f(uTonemapExposure, 1.0f);
+		color->Bind(0);
 		graphics->DrawQuad();
 	}
-
-	// SSAO effect.
-	// First sample the normals and depth buffer, then apply a blurred SSAO result that darkens the opaque geometry
-#if 0
-	{
-		float farClip = camera->FarClip();
-		float nearClip = camera->NearClip();
-		Vector3 nearVec, farVec;
-		camera->FrustumSize(nearVec, farVec);
-
-		float width = viewRect.Width();
-		float height = viewRect.Height();
-
-		ShaderProgram* program = graphics->SetProgram("PostProcess/SSAO.glsl", "", "");
-		graphics->SetFrameBuffer(ssaoFbo.get());
-		graphics->SetViewport(IntRect(0, 0, ssaoTexture->Width(), ssaoTexture->Height()));
-		graphics->SetUniform(program, "noiseInvSize", Vector2(ssaoTexture->Width() / 4.0f, ssaoTexture->Height() / 4.0f));
-		graphics->SetUniform(program, "screenInvSize", Vector2(1.0f / width, 1.0f / height));
-		graphics->SetUniform(program, "frustumSize", Vector4(farVec, height / width));
-		graphics->SetUniform(program, "aoParameters", Vector4(0.15f, 1.0f, 0.025f, 0.15f));
-		graphics->SetUniform(program, "depthReconstruct", Vector2(farClip / (farClip - nearClip), -nearClip / (farClip - nearClip)));
-		graphics->SetTexture(0, depth);
-		graphics->SetTexture(1, normal);
-		graphics->SetTexture(2, ssaoNoiseTexture.get());
-		graphics->SetRenderState(BLEND_REPLACE, CULL_NONE, CMP_ALWAYS, true, false);
-		graphics->DrawQuad();
-		graphics->SetTexture(1, nullptr);
-		graphics->SetTexture(2, nullptr);
-
-		program = graphics->SetProgram("PostProcess/SSAOBlur.glsl", "", "");
-		graphics->SetFrameBuffer(ldrFbo.get());
-		graphics->SetViewport(IntRect(0, 0, width, height));
-		graphics->SetUniform(program, "blurInvSize", Vector2(1.0f / ssaoTexture->Width(), 1.0f / ssaoTexture->Height()));
-		graphics->SetTexture(0, ssaoTexture.get());
-		graphics->SetRenderState(BLEND_SUBTRACT, CULL_NONE, CMP_ALWAYS, true, false);
-		graphics->DrawQuad();
-		graphics->SetTexture(0, nullptr);
-	}
-#endif
 
 	// Render alpha geometry.
 	// Now only the color rendertarget is needed

@@ -7,20 +7,26 @@
 
 namespace Turso3D
 {
+	class DebugRenderer;
+	class FrameBuffer;
 	class Graphics;
 	class Renderer;
-	class DebugRenderer;
-	class WorkQueue;
-	class FrameBuffer;
+	class ShaderProgram;
 	class Texture;
+	class WorkQueue;
 
-	class Scene;
-	class Camera;
-	class StaticModel;
 	class AnimatedModel;
+	class Camera;
+	class Scene;
 	class SpatialNode;
+	class StaticModel;
 
 	class BloomRenderer;
+	class SSAORenderer;
+
+	class RmlSystem;
+	class RmlRenderer;
+	class RmlFile;
 }
 
 class Application
@@ -77,14 +83,20 @@ private:
 	std::unique_ptr<Turso3D::FrameBuffer> ldrFbo;
 	std::unique_ptr<Turso3D::Texture> ldrBuffer;
 
-	std::unique_ptr<Turso3D::BloomRenderer> bloomRenderer;
+	// Tonemap shader program
+	std::shared_ptr<Turso3D::ShaderProgram> tonemapProgram;
+	// Tonemap exposure shader uniform
+	int uTonemapExposure;
 
-	std::unique_ptr<Turso3D::FrameBuffer> ssaoFbo;
-	std::unique_ptr<Turso3D::Texture> ssaoTexture;
-	std::unique_ptr<Turso3D::Texture> ssaoNoiseTexture;
+	std::unique_ptr<Turso3D::BloomRenderer> bloomRenderer;
+	std::unique_ptr<Turso3D::SSAORenderer> ssaoRenderer;
 
 	std::shared_ptr<Turso3D::Camera> camera;
 	std::shared_ptr<Turso3D::Scene> scene;
+
+	std::unique_ptr<Turso3D::RmlSystem> rmlSystem;
+	std::unique_ptr<Turso3D::RmlRenderer> rmlRenderer;
+	std::unique_ptr<Turso3D::RmlFile> rmlFile;
 
 	int multiSample;
 
@@ -100,7 +112,7 @@ private:
 	Turso3D::Vector2 prevCursorPos;
 	// The cursor speed (in pixels) calculated from current cursor position and previous one.
 	Turso3D::Vector2 cursorSpeed;
-	// Determimnes whether the cursor is inside the client area.
+	// Determines whether the cursor is inside the client area.
 	bool cursorInside;
 	// Variable used to delay mouse movement capturing.
 	// Prevents sudden changes that happens in the same frame the mouse changed mode.
