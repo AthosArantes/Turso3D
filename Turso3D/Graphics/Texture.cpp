@@ -241,7 +241,8 @@ namespace Turso3D
 		Image* image = loadImages[0].get();
 		bool success = Define(TEX_2D, image->Size(), image->Format(), loadSRGB, 1, initialData.size(), &initialData[0]);
 		// TODO: Read a parameter file for the sampling parameters (Values retrieved in BeginLoad)
-		success &= DefineSampler(FILTER_TRILINEAR, ADDRESS_WRAP, ADDRESS_WRAP, ADDRESS_WRAP);
+		// TODO: Create a default setting
+		success &= DefineSampler(FILTER_ANISOTROPIC, ADDRESS_WRAP, ADDRESS_WRAP, ADDRESS_WRAP);
 
 		std::vector<std::unique_ptr<Image>> {}.swap(loadImages);
 

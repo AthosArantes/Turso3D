@@ -80,10 +80,12 @@ namespace Turso3D
 
 			auto mm = std::mismatch(base_path.begin(), base_path.end(), filepath.begin());
 			if (mm.first == base_path.end() && stream->Open(filepath.string())) {
+				LOG_TRACE("Opened resource data \"{:s}\".", name_);
 				return std::unique_ptr<Stream> {stream.release()};
 			}
 		}
 
+		LOG_ERROR("Failed to open resource data \"{:s}\".", name_);
 		return {};
 	}
 
@@ -92,6 +94,7 @@ namespace Turso3D
 		for (auto it = resources.begin(); it != resources.end(); ) {
 			// use_count of 1 means only the cache is keeping it alive.
 			if (it->second.use_count() == 1) {
+				LOG_TRACE("Removing resource from cache \"{:s}\".", it->second->Name());
 				it = resources.erase(it);
 			} else {
 				++it;

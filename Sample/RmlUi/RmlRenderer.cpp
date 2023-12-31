@@ -11,7 +11,7 @@
 
 namespace Turso3D
 {
-	constexpr StringHash UniformTranslation = {"uTranslation"};
+	constexpr StringHash UniformTranslate = {"uTranslate"};
 	constexpr StringHash UniformTransform = {"uTransform"};
 
 	static VertexElement VertexElementArray[] = {
@@ -44,7 +44,7 @@ namespace Turso3D
 		cg.ibo.Define(USAGE_DEFAULT, num_indices, sizeof(unsigned), indices);
 		cg.texture = reinterpret_cast<Texture*>(texture);
 		cg.program = texture ? texProgram.get() : colorProgram.get();
-		cg.uTranslate = cg.program->Uniform(UniformTranslation);
+		cg.uTranslate = cg.program->Uniform(UniformTranslate);
 		cg.uTransform = cg.program->Uniform(UniformTransform);
 
 		RenderCompiledGeometry(reinterpret_cast<Rml::CompiledGeometryHandle>(&cg), translation);
@@ -52,10 +52,15 @@ namespace Turso3D
 
 	Rml::CompiledGeometryHandle RmlRenderer::CompileGeometry(Rml::Vertex* vertices, int num_vertices, int* indices, int num_indices, Rml::TextureHandle texture)
 	{
+		Log::Scope ls {"RmlRenderer::CompileGeometry"};
+
 		std::unique_ptr<CompiledGeometry>& cg = geometries.emplace_back(std::make_unique<CompiledGeometry>());
 		cg->vbo.Define(USAGE_DEFAULT, num_vertices, VertexElementArray, std::size(VertexElementArray), vertices);
 		cg->ibo.Define(USAGE_DEFAULT, num_indices, sizeof(unsigned), indices);
 		cg->texture = reinterpret_cast<Texture*>(texture);
+		cg->program = texture ? texProgram.get() : colorProgram.get();
+		cg->uTranslate = cg->program->Uniform(UniformTranslate);
+		cg->uTransform = cg->program->Uniform(UniformTransform);
 
 		return reinterpret_cast<Rml::CompiledGeometryHandle>(cg.get());
 	}
@@ -215,11 +220,11 @@ namespace Turso3D
 		multisample = multisample_;
 
 		for (int i = 0; i < 2; ++i) {
-			buffer[i]->Define(TEX_2D, size, FMT_RGBA8, true, multisample_ * i);
+			buffer[i]->Define(TEX_2D, size, FMT_RGBA8, true, multisample * i);
 			buffer[i]->DefineSampler(FILTER_BILINEAR, ADDRESS_CLAMP, ADDRESS_CLAMP, ADDRESS_CLAMP);
 			fbo[i]->Define(buffer[i].get(), nullptr);
 
-			if (multisample_ <= 1) {
+			if (multisample <= 1) {
 				multisample = 1;
 				break;
 			}

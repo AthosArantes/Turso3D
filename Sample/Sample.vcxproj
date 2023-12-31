@@ -110,6 +110,7 @@
 	<ItemGroup>
 		<ClInclude Include="Application.h" />
 		<ClInclude Include="BloomRenderer.h" />
+		<ClInclude Include="BlurRenderer.h" />
 		<ClInclude Include="SSAORenderer.h" />
 		<ClInclude Include="ModelConverter.h" />
 		<ClInclude Include="RmlUi\RmlFile.h" />
@@ -119,6 +120,7 @@
 	<ItemGroup>
 		<ClCompile Include="Application.cpp" />
 		<ClCompile Include="BloomRenderer.cpp" />
+		<ClCompile Include="BlurRenderer.cpp" />
 		<ClCompile Include="SSAORenderer.cpp" />
 		<ClCompile Include="main.cpp" />
 		<ClCompile Include="ModelConverter.cpp" />

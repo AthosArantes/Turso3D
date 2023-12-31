@@ -1,4 +1,5 @@
 #include <Turso3D/Math/IntVector2.h>
+#include <Turso3D/Math/IntRect.h>
 #include <Turso3D/Math/Vector2.h>
 #include <memory>
 #include <vector>
@@ -14,16 +15,16 @@ namespace Turso3D
 	class SSAORenderer
 	{
 	public:
-		// Constructor
-		// Graphics subsystem must have been initialized.
-		SSAORenderer(Graphics* graphics);
-		// Destructor
+		SSAORenderer();
 		~SSAORenderer();
 
-		void UpdateBuffers(const IntVector2& size);
-		void Render(Camera* camera, Texture* normal, Texture* depth, FrameBuffer* dst);
+		void Initialize(Graphics* graphics);
 
-		Texture* GetTexture() const { return texBuffer.get(); }
+		void UpdateBuffers(const IntVector2& size);
+		void Render(Camera* camera, Texture* normal, Texture* depth, FrameBuffer* dst, const IntRect& viewRect);
+
+		FrameBuffer* GetResultFramebuffer() const { return resultFbo.get(); }
+		Texture* GetResultTexture() const { return resultTexture.get(); }
 
 	private:
 		void GenerateNoiseTexture();
@@ -39,16 +40,11 @@ namespace Turso3D
 		int uFrustumSize;
 		int uDepthReconstruct;
 
-		std::shared_ptr<ShaderProgram> blurProgram;
+		std::shared_ptr<ShaderProgram> programBlur;
 		int uBlurInvSize;
 
-		std::unique_ptr<Texture> texNoise;
-		std::unique_ptr<Texture> texBuffer;
-		std::unique_ptr<FrameBuffer> fbo;
-
-		IntVector2 screenSize;
-		Vector2 invScreenSize;
-
-		Vector2 invTexSize;
+		std::unique_ptr<Texture> noiseTexture;
+		std::unique_ptr<Texture> resultTexture;
+		std::unique_ptr<FrameBuffer> resultFbo;
 	};
 }

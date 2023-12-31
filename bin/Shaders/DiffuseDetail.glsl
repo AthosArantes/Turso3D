@@ -66,14 +66,14 @@ void main()
 	vec4 sDiffuse = texture(diffuseTex0, vTexCoord);
 	vec4 sDetailDiffuse = texture(detailDiffuseTex1, vTexCoord * detailParams.x);
 
-	vec3 albedo = sDiffuse.rgb * matDiffColor.rgb;
+	vec3 albedo = mix(sDiffuse.rgb * matDiffColor.rgb, sDiffuse.rgb * matDiffColor.rgb * sDetailDiffuse.rgb, detailParams.y);
 	vec3 normal = normalize(vNormal);
 	vec3 f0 = matSpecColor.rgb;
 	float metallic = matSpecColor.a;
 	float roughness = matDiffColor.a;
 
 	// BRDF Shading
-	vec3 color = albedo * ambientColor.rgb + albedo * sDetailDiffuse.rgb * detailParams.y;
+	vec3 color = albedo * ambientColor.rgb;
 	color += CalculateLighting(vWorldPos, vScreenPos, normal, albedo, f0, metallic, roughness);
 
 	// Add environment fog

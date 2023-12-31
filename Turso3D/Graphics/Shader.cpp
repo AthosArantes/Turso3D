@@ -15,6 +15,7 @@ namespace Turso3D
 			SetShaderCode(source.Read<std::string>());
 			return true;
 		}
+		LOG_ERROR("Failed to load shader \"{:s}\".", source.Name());
 		return false;
 	}
 

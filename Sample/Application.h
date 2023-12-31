@@ -5,6 +5,11 @@
 #include <memory>
 #include <vector>
 
+namespace Rml
+{
+	class Context;
+}
+
 namespace Turso3D
 {
 	class DebugRenderer;
@@ -24,9 +29,9 @@ namespace Turso3D
 	class BloomRenderer;
 	class SSAORenderer;
 
+	class RmlFile;
 	class RmlSystem;
 	class RmlRenderer;
-	class RmlFile;
 }
 
 class Application
@@ -94,9 +99,10 @@ private:
 	std::shared_ptr<Turso3D::Camera> camera;
 	std::shared_ptr<Turso3D::Scene> scene;
 
+	std::unique_ptr<Turso3D::RmlFile> rmlFile;
 	std::unique_ptr<Turso3D::RmlSystem> rmlSystem;
 	std::unique_ptr<Turso3D::RmlRenderer> rmlRenderer;
-	std::unique_ptr<Turso3D::RmlFile> rmlFile;
+	Rml::Context* mainContext;
 
 	int multiSample;
 

@@ -1,0 +1,20 @@
+<rml>
+	<head>
+		<title>Demo</title>
+		<link type="text/rcss" href="default.rcss"/>
+		<style>
+			body {
+				font-size: 16px;
+				color: #ffffff;
+
+				text-align: left;
+
+				width: 100%;
+				height: 100%;
+			}
+		</style>
+	</head>
+	<body>
+		<p style="background-color: #ff000090; border-radius: 8px; margin: 10px; padding: 8px">This is a sample text.</p>
+	</body>
+</rml>

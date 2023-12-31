@@ -49,7 +49,7 @@ Application::Application() :
 	timestamp(0),
 	deltaTime(0),
 	deltaTimeAccumulator(0),
-	frameLimit(60),
+	frameLimit(0),
 	cursorInside(false),
 	camYaw(0),
 	camPitch(0),
@@ -101,6 +101,9 @@ Application::Application() :
 		graphics.reset();
 	}
 
+	bloomRenderer = std::make_unique<BloomRenderer>();
+	ssaoRenderer = std::make_unique<SSAORenderer>();
+
 	//Turso3DUtils::ConvertModel("Data/Jack.mdl", "Data/jack.tmf");
 	//Turso3DUtils::ConvertModel("Data/Box.mdl", "Data/box.tmf");
 	//Turso3DUtils::ConvertModel("Data/Mushroom.mdl", "Data/mushroom.tmf");
@@ -110,9 +113,9 @@ Application::~Application()
 {
 	// Shutdown RmlUi
 	Rml::Shutdown();
-	rmlFile.reset();
 	rmlRenderer.reset();
 	rmlSystem.reset();
+	rmlFile.reset();
 }
 
 bool Application::Initialize()
@@ -125,22 +128,50 @@ bool Application::Initialize()
 	// Create subsystems that depend on the application window / OpenGL
 	renderer = std::make_unique<Renderer>(workQueue.get(), graphics.get());
 	renderer->SetupShadowMaps(DIRECTIONAL_LIGHT_SIZE, LIGHT_ATLAS_SIZE, FMT_D16);
-
 	debugRenderer = std::make_unique<DebugRenderer>(graphics.get());
-	bloomRenderer = std::make_unique<BloomRenderer>(graphics.get());
-	//ssaoRenderer = std::make_unique<SSAORenderer>(graphics.get());
+
+	bloomRenderer->Initialize(graphics.get());
+	ssaoRenderer->Initialize(graphics.get());
 
 	tonemapProgram = graphics->CreateProgram("PostProcess/Tonemap.glsl", "", "");
 	uTonemapExposure = tonemapProgram->Uniform(StringHash {"exposure"});
 
 	// Initialize RmlUi
+	rmlFile = std::make_unique<RmlFile>();
 	rmlSystem = std::make_unique<RmlSystem>();
 	rmlRenderer = std::make_unique<RmlRenderer>(graphics.get());
-	rmlFile = std::make_unique<RmlFile>();
+	Rml::SetFileInterface(rmlFile.get());
 	Rml::SetSystemInterface(rmlSystem.get());
 	Rml::SetRenderInterface(rmlRenderer.get());
-	Rml::SetFileInterface(rmlFile.get());
 	Rml::Initialise();
+
+	// Load base fonts
+	constexpr const char* fonts[] = {
+		"ui/fonts/FiraGO-Bold.ttf",
+		"ui/fonts/FiraGO-BoldItalic.ttf",
+		"ui/fonts/FiraGO-Book.ttf",
+		"ui/fonts/FiraGO-BookItalic.ttf",
+		"ui/fonts/FiraGO-ExtraBold.ttf",
+		"ui/fonts/FiraGO-ExtraBoldItalic.ttf",
+		"ui/fonts/FiraGO-Heavy.ttf",
+		"ui/fonts/FiraGO-HeavyItalic.ttf",
+		"ui/fonts/FiraGO-Italic.ttf",
+		"ui/fonts/FiraGO-Light.ttf",
+		"ui/fonts/FiraGO-LightItalic.ttf",
+		"ui/fonts/FiraGO-Medium.ttf",
+		"ui/fonts/FiraGO-MediumItalic.ttf",
+		"ui/fonts/FiraGO-Regular.ttf",
+		"ui/fonts/FiraGO-SemiBold.ttf",
+		"ui/fonts/FiraGO-SemiBoldItalic.ttf"
+	};
+	for (int i = 0; i < std::size(fonts); ++i) {
+		Rml::LoadFontFace(fonts[i]);
+	}
+
+	// Create main rml context
+	mainContext = Rml::CreateContext("main", Rml::Vector2i {graphics->RenderWidth(), graphics->RenderHeight()});
+	auto doc = mainContext->LoadDocument("ui/demo.rml");
+	doc->Show();
 
 	// Create the scene and camera.
 	// Camera is created outside scene so it's not disturbed by scene clears
@@ -524,7 +555,9 @@ void Application::OnFramebufferSize(int width, int height)
 		ssaoRenderer->UpdateBuffers(sz);
 	}
 
-	rmlRenderer->UpdateBuffers(sz, multiSample);
+	if (rmlRenderer) {
+		rmlRenderer->UpdateBuffers(sz, multiSample);
+	}
 
 	LOG_INFO("Framebuffer sized to: {:d}x{:d}", width, height);
 }
@@ -537,6 +570,11 @@ void Application::OnWindowFocusChanged(int focused)
 // ==========================================================================================
 void Application::Update(double dt)
 {
+	double delay = mainContext->GetNextUpdateDelay();
+	if (delay <= dt) {
+		mainContext->Update();
+	}
+
 	// ==================================
 	// Only for sample purposes
 #if 1
@@ -664,22 +702,23 @@ void Application::Render(double dt)
 	// Apply hdr bloom
 	if (bloomRenderer) {
 		bloomRenderer->Render(color);
-		color = bloomRenderer->GetComposedTexture();
+		color = bloomRenderer->GetResultTexture();
 	}
 
 	// Apply tonemap
 	{
 		graphics->SetFrameBuffer(ldrFbo.get());
+		graphics->SetViewport(viewRect);
 		tonemapProgram->Bind();
 		glUniform1f(uTonemapExposure, 1.0f);
 		color->Bind(0);
+		graphics->SetRenderState(BLEND_REPLACE, CULL_NONE, CMP_ALWAYS, true, false);
 		graphics->DrawQuad();
 	}
 
 	// Render alpha geometry.
 	// Now only the color rendertarget is needed
 	graphics->SetFrameBuffer(ldrFbo.get());
-	graphics->SetViewport(viewRect);
 	renderer->RenderAlpha();
 
 	// Optional render of debug geometry
@@ -700,6 +739,15 @@ void Application::Render(double dt)
 		renderer->RenderDebug(debugRenderer.get());
 		debugRenderer->Render();
 	}
+
+	if (ssaoRenderer) {
+		//ssaoRenderer->Render(camera.get(), normal, depth, ldrFbo.get(), viewRect);
+	}
+
+	graphics->SetViewport(viewRect);
+	rmlRenderer->BeginRender();
+	mainContext->Render();
+	rmlRenderer->EndRender();
 
 	// Blit rendered contents to backbuffer now before presenting
 	graphics->Blit(nullptr, viewRect, ldrFbo.get(), viewRect, true, false, FILTER_POINT);

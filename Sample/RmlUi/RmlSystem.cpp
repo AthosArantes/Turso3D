@@ -21,7 +21,7 @@ namespace Turso3D
 
 	bool RmlSystem::LogMessage(Rml::Log::Type type, const Rml::String& message)
 	{
-		LOG_RAW("[{:s}] {:s}", RmlLogLevels[type], message);
+		LOG_RAW("[RmlUi] [{:s}] {:s}", RmlLogLevels[type], message);
 		if (type == Rml::Log::Type::LT_ASSERT) {
 			assert(false);
 		}
