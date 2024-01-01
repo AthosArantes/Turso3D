@@ -32,7 +32,7 @@ uniform sampler2D srcTex0;
 uniform float filterRadius;
 
 in vec2 texCoord;
-layout (location = 0) out vec3 upsample;
+layout (location = 0) out vec4 upsample;
 
 void main()
 {
@@ -46,17 +46,17 @@ void main()
 	// d - e - f
 	// g - h - i
 	// === ('e' is the current texel) ===
-	vec3 a = texture(srcTex0, vec2(texCoord.x - x, texCoord.y + y)).rgb;
-	vec3 b = texture(srcTex0, vec2(texCoord.x,     texCoord.y + y)).rgb;
-	vec3 c = texture(srcTex0, vec2(texCoord.x + x, texCoord.y + y)).rgb;
+	vec4 a = texture(srcTex0, vec2(texCoord.x - x, texCoord.y + y));
+	vec4 b = texture(srcTex0, vec2(texCoord.x,     texCoord.y + y));
+	vec4 c = texture(srcTex0, vec2(texCoord.x + x, texCoord.y + y));
 
-	vec3 d = texture(srcTex0, vec2(texCoord.x - x, texCoord.y)).rgb;
-	vec3 e = texture(srcTex0, vec2(texCoord.x,     texCoord.y)).rgb;
-	vec3 f = texture(srcTex0, vec2(texCoord.x + x, texCoord.y)).rgb;
+	vec4 d = texture(srcTex0, vec2(texCoord.x - x, texCoord.y));
+	vec4 e = texture(srcTex0, vec2(texCoord.x,     texCoord.y));
+	vec4 f = texture(srcTex0, vec2(texCoord.x + x, texCoord.y));
 
-	vec3 g = texture(srcTex0, vec2(texCoord.x - x, texCoord.y - y)).rgb;
-	vec3 h = texture(srcTex0, vec2(texCoord.x,     texCoord.y - y)).rgb;
-	vec3 i = texture(srcTex0, vec2(texCoord.x + x, texCoord.y - y)).rgb;
+	vec4 g = texture(srcTex0, vec2(texCoord.x - x, texCoord.y - y));
+	vec4 h = texture(srcTex0, vec2(texCoord.x,     texCoord.y - y));
+	vec4 i = texture(srcTex0, vec2(texCoord.x + x, texCoord.y - y));
 
 	// Apply weighted distribution, by using a 3x3 tent filter:
 	//  1   | 1 2 1 |

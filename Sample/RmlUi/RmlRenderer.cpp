@@ -248,9 +248,9 @@ namespace Turso3D
 
 		// IMPROVE: better organize this
 
-		glClear(GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 		glClearStencil(0);
-		glClearColor(0, 0, 0, 1);
+		glClearColor(0, 0, 0, 0);
+		glClear(GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
 		glDisable(GL_CULL_FACE);
 
@@ -260,7 +260,7 @@ namespace Turso3D
 
 		glEnable(GL_BLEND);
 		glBlendEquation(GL_FUNC_ADD);
-		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE);
 	}
 
 	void RmlRenderer::EndRender()

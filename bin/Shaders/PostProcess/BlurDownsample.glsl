@@ -34,7 +34,7 @@ uniform sampler2D srcTex0;
 uniform vec2 invSrcSize;
 
 in vec2 texCoord;
-layout (location = 0) out vec3 downsample;
+layout (location = 0) out vec4 downsample;
 
 void main()
 {
@@ -48,22 +48,22 @@ void main()
 	// - l - m -
 	// g - h - i
 	// === ('e' is the current texel) ===
-	vec3 a = texture(srcTex0, vec2(texCoord.x - 2*x, texCoord.y + 2*y)).rgb;
-	vec3 b = texture(srcTex0, vec2(texCoord.x,       texCoord.y + 2*y)).rgb;
-	vec3 c = texture(srcTex0, vec2(texCoord.x + 2*x, texCoord.y + 2*y)).rgb;
+	vec4 a = texture(srcTex0, vec2(texCoord.x - 2*x, texCoord.y + 2*y));
+	vec4 b = texture(srcTex0, vec2(texCoord.x,       texCoord.y + 2*y));
+	vec4 c = texture(srcTex0, vec2(texCoord.x + 2*x, texCoord.y + 2*y));
 
-	vec3 d = texture(srcTex0, vec2(texCoord.x - 2*x, texCoord.y)).rgb;
-	vec3 e = texture(srcTex0, vec2(texCoord.x,       texCoord.y)).rgb;
-	vec3 f = texture(srcTex0, vec2(texCoord.x + 2*x, texCoord.y)).rgb;
+	vec4 d = texture(srcTex0, vec2(texCoord.x - 2*x, texCoord.y));
+	vec4 e = texture(srcTex0, vec2(texCoord.x,       texCoord.y));
+	vec4 f = texture(srcTex0, vec2(texCoord.x + 2*x, texCoord.y));
 
-	vec3 g = texture(srcTex0, vec2(texCoord.x - 2*x, texCoord.y - 2*y)).rgb;
-	vec3 h = texture(srcTex0, vec2(texCoord.x,       texCoord.y - 2*y)).rgb;
-	vec3 i = texture(srcTex0, vec2(texCoord.x + 2*x, texCoord.y - 2*y)).rgb;
+	vec4 g = texture(srcTex0, vec2(texCoord.x - 2*x, texCoord.y - 2*y));
+	vec4 h = texture(srcTex0, vec2(texCoord.x,       texCoord.y - 2*y));
+	vec4 i = texture(srcTex0, vec2(texCoord.x + 2*x, texCoord.y - 2*y));
 
-	vec3 j = texture(srcTex0, vec2(texCoord.x - x, texCoord.y + y)).rgb;
-	vec3 k = texture(srcTex0, vec2(texCoord.x + x, texCoord.y + y)).rgb;
-	vec3 l = texture(srcTex0, vec2(texCoord.x - x, texCoord.y - y)).rgb;
-	vec3 m = texture(srcTex0, vec2(texCoord.x + x, texCoord.y - y)).rgb;
+	vec4 j = texture(srcTex0, vec2(texCoord.x - x, texCoord.y + y));
+	vec4 k = texture(srcTex0, vec2(texCoord.x + x, texCoord.y + y));
+	vec4 l = texture(srcTex0, vec2(texCoord.x - x, texCoord.y - y));
+	vec4 m = texture(srcTex0, vec2(texCoord.x + x, texCoord.y - y));
 
 	// Apply weighted distribution:
 	// 0.5 + 0.125 + 0.125 + 0.125 + 0.125 = 1

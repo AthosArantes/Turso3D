@@ -35,11 +35,11 @@ void main()
 	vec4 samplerSceneBlur = texture(sceneBlurTex2, texCoord);
 
 	float alpha = samplerUi.a;
+	float mask = 1.0 - step(0.0, -alpha);
 
-	fragColor = samplerScene;
-	if (alpha > 0.0) {
-		fragColor = mix(samplerSceneBlur, samplerUi, alpha);
-	}
+	vec4 gui = mix(samplerSceneBlur, samplerUi, alpha);
+	fragColor = mix(samplerScene, gui, mask);
+	fragColor.a = clamp((samplerScene.a + gui.a), 0.0, 1.0);
 }
 
 #endif

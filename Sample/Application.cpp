@@ -777,6 +777,7 @@ void Application::Render(double dt)
 
 		guiProgram->Bind();
 		graphics->SetFrameBuffer(guiFbo.get());
+		graphics->Clear();
 
 		rmlRenderer->GetTexture()->Bind(0);
 		ldrBuffer->Bind(1);
