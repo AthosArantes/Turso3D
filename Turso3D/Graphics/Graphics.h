@@ -33,6 +33,14 @@ namespace Turso3D
 	class Graphics
 	{
 	public:
+		class Marker
+		{
+		public:
+			Marker(const char* name);
+			~Marker();
+		};
+
+	public:
 		// Construct.
 		Graphics();
 		// Destruct. Closes the application window.
@@ -214,3 +222,9 @@ namespace Turso3D
 		IntVector2 lastWindowSize;
 	};
 }
+
+#ifdef _DEBUG
+	#define TURSO3D_GL_MARKER(name) Turso3D::Graphics::Marker glscope__ {name}
+#else
+	#define TURSO3D_GL_MARKER(name)
+#endif

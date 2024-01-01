@@ -371,6 +371,8 @@ namespace Turso3D
 			return;
 		}
 
+		TURSO3D_GL_MARKER("Render Shadow Maps");
+
 		// Unbind shadow textures before rendering to
 		Texture::Unbind(TU_DIRLIGHTSHADOW);
 		Texture::Unbind(TU_SHADOWATLAS);
@@ -446,6 +448,8 @@ namespace Turso3D
 
 	void Renderer::RenderOpaque(bool clear)
 	{
+		TURSO3D_GL_MARKER("Render Opaque");
+
 		// Update main batches' instance transforms & light data
 		UpdateInstanceTransforms(instanceTransforms);
 		UpdateLightData();
@@ -474,6 +478,8 @@ namespace Turso3D
 
 	void Renderer::RenderAlpha()
 	{
+		TURSO3D_GL_MARKER("Render Alpha");
+
 		if (shadowMaps) {
 			shadowMaps[0].texture->Bind(TU_DIRLIGHTSHADOW);
 			shadowMaps[1].texture->Bind(TU_SHADOWATLAS);

@@ -83,6 +83,23 @@ namespace Turso3D
 
 	unsigned occlusionQueryType = GL_SAMPLES_PASSED;
 
+#ifdef _DEBUG
+	void GLDebugCallback(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar* message, const void* userParam)
+	{
+		LOG_RAW("[GL DEBUG] [source: {:d}] [type: {:d}] [id: {:d}] [severity: {:d}] {:s}", source, type, id, severity, std::string(message, length));
+	}
+#endif
+
+	// ==========================================================================================
+	Graphics::Marker::Marker(const char* name)
+	{
+		glPushDebugGroup(GL_DEBUG_SOURCE_APPLICATION, 0, -1, name);
+	}
+	Graphics::Marker::~Marker()
+	{
+		glPopDebugGroup();
+	}
+
 	// ==========================================================================================
 	Graphics::Graphics() :
 		window(nullptr),
@@ -158,6 +175,31 @@ namespace Turso3D
 		if (GLEW_VERSION_3_3) {
 			occlusionQueryType = GL_ANY_SAMPLES_PASSED;
 		}
+
+#if 0 //def _DEBUG
+		glEnable(GL_DEBUG_OUTPUT);
+
+		if (GLEW_KHR_debug)
+		{
+			LOG_DEBUG("KHR_debug extension found");
+			GLDEBUGPROC p = &(GLDebugCallback);
+			glDebugMessageCallback(p, nullptr);
+			glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
+			LOG_DEBUG("debug callback enabled.");
+		}
+		else if (GL_ARB_debug_output)
+		{
+			LOG_DEBUG("GL_ARB_debug_output extension found.");
+			GLDEBUGPROC p = &(GLDebugCallback);
+			glDebugMessageCallbackARB(p, nullptr);
+			LOG_DEBUG("debug callback enabled.");
+			glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS_ARB);
+		}
+		else
+		{
+			LOG_DEBUG("KHR_debug extension NOT found.");
+		}
+#endif
 
 		glPixelStorei(GL_PACK_ALIGNMENT, 1);
 		glPixelStorei(GL_UNPACK_ALIGNMENT, 1);

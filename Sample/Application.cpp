@@ -1,5 +1,6 @@
 #include "Application.h"
 #include "BloomRenderer.h"
+#include "BlurRenderer.h"
 #include "SSAORenderer.h"
 #include "ModelConverter.h"
 #include "RmlUi/RmlSystem.h"
@@ -103,6 +104,7 @@ Application::Application() :
 
 	bloomRenderer = std::make_unique<BloomRenderer>();
 	ssaoRenderer = std::make_unique<SSAORenderer>();
+	blurRenderer = std::make_unique<BlurRenderer>();
 
 	//Turso3DUtils::ConvertModel("Data/Jack.mdl", "Data/jack.tmf");
 	//Turso3DUtils::ConvertModel("Data/Box.mdl", "Data/box.tmf");
@@ -132,9 +134,12 @@ bool Application::Initialize()
 
 	bloomRenderer->Initialize(graphics.get());
 	ssaoRenderer->Initialize(graphics.get());
+	blurRenderer->Initialize(graphics.get());
 
 	tonemapProgram = graphics->CreateProgram("PostProcess/Tonemap.glsl", "", "");
 	uTonemapExposure = tonemapProgram->Uniform(StringHash {"exposure"});
+
+	guiProgram = graphics->CreateProgram("PostProcess/GuiCompose.glsl", "", "");
 
 	// Initialize RmlUi
 	rmlFile = std::make_unique<RmlFile>();
@@ -267,6 +272,9 @@ void Application::CreateTextures()
 
 	ldrFbo = std::make_unique<FrameBuffer>();
 	ldrBuffer = std::make_unique<Texture>();
+
+	guiFbo = std::make_unique<FrameBuffer>();
+	guiTexture = std::make_unique<Texture>();
 }
 
 void Application::CreateDefaultScene()
@@ -546,17 +554,27 @@ void Application::OnFramebufferSize(int width, int height)
 	ldrBuffer->DefineSampler(FILTER_BILINEAR, ADDRESS_CLAMP, ADDRESS_CLAMP, ADDRESS_CLAMP);
 	ldrFbo->Define(ldrBuffer.get(), depthStencilBuffer[0].get());
 
+	guiTexture->Define(TEX_2D, sz, FMT_RGBA8, true);
+	guiTexture->DefineSampler(FILTER_BILINEAR, ADDRESS_CLAMP, ADDRESS_CLAMP, ADDRESS_CLAMP);
+	guiFbo->Define(guiTexture.get(), nullptr);
+
 	// Bloom resources
 	if (bloomRenderer) {
 		bloomRenderer->UpdateBuffers(sz);
 	}
+
 	// SSAO resources
 	if (ssaoRenderer) {
 		ssaoRenderer->UpdateBuffers(sz);
 	}
 
+	blurRenderer->UpdateBuffers(sz, 3, FMT_RGBA8, true);
+
 	if (rmlRenderer) {
 		rmlRenderer->UpdateBuffers(sz, multiSample);
+
+		mainContext->SetDimensions(Rml::Vector2i(sz.x, sz.y));
+		mainContext->Update();
 	}
 
 	LOG_INFO("Framebuffer sized to: {:d}x{:d}", width, height);
@@ -707,6 +725,8 @@ void Application::Render(double dt)
 
 	// Apply tonemap
 	{
+		TURSO3D_GL_MARKER("Tonemap");
+
 		graphics->SetFrameBuffer(ldrFbo.get());
 		graphics->SetViewport(viewRect);
 		tonemapProgram->Bind();
@@ -744,12 +764,29 @@ void Application::Render(double dt)
 		//ssaoRenderer->Render(camera.get(), normal, depth, ldrFbo.get(), viewRect);
 	}
 
+	blurRenderer->Render(ldrBuffer.get());
+
 	graphics->SetViewport(viewRect);
 	rmlRenderer->BeginRender();
 	mainContext->Render();
 	rmlRenderer->EndRender();
 
-	// Blit rendered contents to backbuffer now before presenting
-	graphics->Blit(nullptr, viewRect, ldrFbo.get(), viewRect, true, false, FILTER_POINT);
+	// Compose GUI
+	{
+		TURSO3D_GL_MARKER("GUI Compose");
+
+		guiProgram->Bind();
+		graphics->SetFrameBuffer(guiFbo.get());
+
+		rmlRenderer->GetTexture()->Bind(0);
+		ldrBuffer->Bind(1);
+		blurRenderer->GetResultTexture()->Bind(2);
+
+		graphics->SetRenderState(BLEND_REPLACE, CULL_NONE, CMP_ALWAYS, true, false);
+		graphics->DrawQuad();
+
+		graphics->Blit(nullptr, viewRect, guiFbo.get(), viewRect, true, false, FILTER_POINT);
+	}
+
 	graphics->Present();
 }

@@ -28,6 +28,7 @@ namespace Turso3D
 
 	class BloomRenderer;
 	class SSAORenderer;
+	class BlurRenderer;
 
 	class RmlFile;
 	class RmlSystem;
@@ -88,13 +89,19 @@ private:
 	std::unique_ptr<Turso3D::FrameBuffer> ldrFbo;
 	std::unique_ptr<Turso3D::Texture> ldrBuffer;
 
+	std::unique_ptr<Turso3D::FrameBuffer> guiFbo;
+	std::unique_ptr<Turso3D::Texture> guiTexture;
+
 	// Tonemap shader program
 	std::shared_ptr<Turso3D::ShaderProgram> tonemapProgram;
 	// Tonemap exposure shader uniform
 	int uTonemapExposure;
 
+	std::shared_ptr<Turso3D::ShaderProgram> guiProgram;
+
 	std::unique_ptr<Turso3D::BloomRenderer> bloomRenderer;
 	std::unique_ptr<Turso3D::SSAORenderer> ssaoRenderer;
+	std::unique_ptr<Turso3D::BlurRenderer> blurRenderer;
 
 	std::shared_ptr<Turso3D::Camera> camera;
 	std::shared_ptr<Turso3D::Scene> scene;

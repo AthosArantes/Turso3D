@@ -236,6 +236,10 @@ namespace Turso3D
 
 	void RmlRenderer::BeginRender()
 	{
+#ifdef _DEBUG
+		glPushDebugGroup(GL_DEBUG_SOURCE_APPLICATION, 0, -1, "RmlUi Render");
+#endif
+
 		if (multisample > 1) {
 			graphics->SetFrameBuffer(fbo[1].get());
 		} else {
@@ -244,6 +248,7 @@ namespace Turso3D
 
 		// IMPROVE: better organize this
 
+		glClear(GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 		glClearStencil(0);
 		glClearColor(0, 0, 0, 1);
 
@@ -268,5 +273,9 @@ namespace Turso3D
 			IntRect rc {0, 0, viewSize.x, viewSize.y};
 			graphics->Blit(fbo[0].get(), rc, fbo[1].get(), rc, true, false, FILTER_BILINEAR);
 		}
+
+#ifdef _DEBUG
+		glPopDebugGroup();
+#endif
 	}
 }
