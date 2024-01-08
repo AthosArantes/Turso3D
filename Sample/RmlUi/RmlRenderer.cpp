@@ -11,9 +11,6 @@
 
 namespace Turso3D
 {
-	constexpr StringHash UniformTranslate = {"uTranslate"};
-	constexpr StringHash UniformTransform = {"uTransform"};
-
 	static VertexElement VertexElementArray[] = {
 		VertexElement {ELEM_VECTOR2, SEM_POSITION},
 		VertexElement {ELEM_UBYTE4, SEM_COLOR},
@@ -29,8 +26,16 @@ namespace Turso3D
 			fbo[i] = std::make_unique<FrameBuffer>();
 		}
 
+		constexpr StringHash uniformTranslate {"uTranslate"};
+		constexpr StringHash uniformTransform {"uTransform"};
+
 		texProgram = graphics->CreateProgram("RmlUi.glsl", "TEXTURED", "TEXTURED");
+		uTexTranslate = texProgram->Uniform(uniformTranslate);
+		uTexTransform = texProgram->Uniform(uniformTransform);
+
 		colorProgram = graphics->CreateProgram("RmlUi.glsl", "", "");
+		uTranslate = colorProgram->Uniform(uniformTranslate);
+		uTransform = colorProgram->Uniform(uniformTransform);
 	}
 
 	RmlRenderer::~RmlRenderer()
@@ -43,9 +48,6 @@ namespace Turso3D
 		cg.vbo.Define(USAGE_DEFAULT, num_vertices, VertexElementArray, std::size(VertexElementArray), vertices);
 		cg.ibo.Define(USAGE_DEFAULT, num_indices, sizeof(unsigned), indices);
 		cg.texture = reinterpret_cast<Texture*>(texture);
-		cg.program = texture ? texProgram.get() : colorProgram.get();
-		cg.uTranslate = cg.program->Uniform(UniformTranslate);
-		cg.uTransform = cg.program->Uniform(UniformTransform);
 
 		RenderCompiledGeometry(reinterpret_cast<Rml::CompiledGeometryHandle>(&cg), translation);
 	}
@@ -58,9 +60,6 @@ namespace Turso3D
 		cg->vbo.Define(USAGE_DEFAULT, num_vertices, VertexElementArray, std::size(VertexElementArray), vertices);
 		cg->ibo.Define(USAGE_DEFAULT, num_indices, sizeof(unsigned), indices);
 		cg->texture = reinterpret_cast<Texture*>(texture);
-		cg->program = texture ? texProgram.get() : colorProgram.get();
-		cg->uTranslate = cg->program->Uniform(UniformTranslate);
-		cg->uTransform = cg->program->Uniform(UniformTransform);
 
 		return reinterpret_cast<Rml::CompiledGeometryHandle>(cg.get());
 	}
@@ -69,15 +68,20 @@ namespace Turso3D
 	{
 		CompiledGeometry* cg = reinterpret_cast<CompiledGeometry*>(handle);
 
-		cg->program->Bind();
-		cg->vbo.Bind(cg->program->Attributes());
-		cg->ibo.Bind();
-
-		glUniform2f(cg->uTranslate, translation.x, translation.y);
-		glUniformMatrix4fv(cg->uTransform, 1, GL_FALSE, transform.data());
-
 		if (cg->texture) {
+			texProgram->Bind();
+			glUniform2f(uTexTranslate, translation.x, translation.y);
+			glUniformMatrix4fv(uTexTransform, 1, GL_FALSE, transform.data());
+			cg->vbo.Bind(texProgram->Attributes());
+			cg->ibo.Bind();
 			cg->texture->Bind(0);
+
+		} else {
+			colorProgram->Bind();
+			glUniform2f(uTranslate, translation.x, translation.y);
+			glUniformMatrix4fv(uTransform, 1, GL_FALSE, transform.data());
+			cg->vbo.Bind(colorProgram->Attributes());
+			cg->ibo.Bind();
 		}
 
 		graphics->DrawIndexed(PT_TRIANGLE_LIST, 0, cg->ibo.NumIndices());

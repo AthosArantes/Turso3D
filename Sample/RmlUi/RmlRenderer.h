@@ -27,10 +27,6 @@ namespace Turso3D
 			VertexBuffer vbo;
 			IndexBuffer ibo;
 			Texture* texture;
-
-			ShaderProgram* program;
-			int uTranslate; // uniform translate location
-			int uTransform; // uniform transform location
 		};
 
 	public:
@@ -66,7 +62,12 @@ namespace Turso3D
 		Graphics* graphics;
 
 		std::shared_ptr<ShaderProgram> texProgram;
+		int uTexTranslate; // Translation uniform for textured program.
+		int uTexTransform; // Transform uniform for textured program.
+
 		std::shared_ptr<ShaderProgram> colorProgram;
+		int uTranslate; // Translation uniform for color program.
+		int uTransform; // Transform uniform for color program.
 
 		// Multisampled/Resolved buffers
 		std::unique_ptr<Texture> buffer[2];
