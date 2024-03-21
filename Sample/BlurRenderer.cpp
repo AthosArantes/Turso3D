@@ -35,7 +35,7 @@ namespace Turso3D
 
 	void BlurRenderer::UpdateBuffers(const IntVector2& size, size_t maxMips, ImageFormat format, bool srgb)
 	{
-		Log::Scope logScope {"BlurRenderer"};
+		Log::Scope logScope {"BlurRenderer::UpdateBuffers"};
 
 		resultTexture->Define(TEX_2D, size, format, srgb);
 		resultTexture->DefineSampler(FILTER_POINT, ADDRESS_CLAMP, ADDRESS_CLAMP, ADDRESS_CLAMP);

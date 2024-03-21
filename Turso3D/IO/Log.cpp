@@ -3,7 +3,7 @@
 #include <ctime>
 #include <mutex>
 #include <fstream>
-#include <deque>
+#include <vector>
 
 #ifdef _WIN32
 	#ifndef WIN32_LEAN_AND_MEAN
@@ -29,26 +29,53 @@ namespace
 		"[ERROR] "
 	};
 
+	class ScopeManager
+	{
+	public:
+		// Return the combined scopes as a string.
+		static const std::string FormattedString()
+		{
+			std::vector<std::string>& scopes = Scopes();
+
+			std::string output = "[";
+			for (int i = 0; i < scopes.size(); ++i) {
+				if (i != 0) {
+					output.append("::");
+				}
+				output.append(scopes.at(i));
+			}
+			output.append("] ");
+
+			return output;
+		}
+
+		static std::vector<std::string>& Scopes()
+		{
+			thread_local std::vector<std::string> scopes;
+			return scopes;
+		}
+	};
+
 	static std::mutex logMutex {};
 	static std::fstream logFile {};
-
-	static thread_local std::deque<std::string> scopes {};
 }
 
 namespace Turso3D
 {
 	Log::Scope::Scope(const std::string& name)
 	{
-		scopes.push_back(name);
+		ScopeManager::Scopes().push_back(name);
 	}
+
 	Log::Scope::Scope(const char* name)
 	{
-		scopes.push_back(std::string {name});
+		ScopeManager::Scopes().push_back(std::string {name});
 	}
+
 	Log::Scope::~Scope()
 	{
-		assert(scopes.size());
-		scopes.pop_back();
+		assert(ScopeManager::Scopes().size());
+		ScopeManager::Scopes().pop_back();
 	}
 
 	// ==========================================================================================
@@ -97,10 +124,8 @@ namespace Turso3D
 		}
 #endif
 
-		if (scopes.size()) {
-			output.append("[");
-			output.append(scopes.back());
-			output.append("] ");
+		if (!ScopeManager::Scopes().empty()) {
+			output.append(ScopeManager::FormattedString());
 		}
 
 		size_t intLevel = static_cast<size_t>(level);

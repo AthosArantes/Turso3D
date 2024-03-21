@@ -36,7 +36,7 @@ namespace Turso3D
 
 	void BloomRenderer::UpdateBuffers(const IntVector2& size)
 	{
-		Log::Scope logScope {"BloomRenderer"};
+		Log::Scope logScope {"BloomRenderer::UpdateBuffers"};
 		blurRenderer->UpdateBuffers(size, 0, FMT_R11_G11_B10F, false);
 
 		resultTexture->Define(TEX_2D, size, FMT_R11_G11_B10F);

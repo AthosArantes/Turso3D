@@ -24,6 +24,13 @@ namespace Turso3D
 	{
 		class Scope
 		{
+			Scope() = delete;
+			Scope(const Scope&) = delete;
+			Scope(Scope&&) = delete;
+
+			Scope& operator=(const Scope&) = delete;
+			Scope& operator=(Scope&&) = delete;
+
 		public:
 			Scope(const std::string& name);
 			Scope(const char* name);
