@@ -36,6 +36,9 @@ namespace Turso3D
 		colorProgram = graphics->CreateProgram("RmlUi.glsl", "", "");
 		uTranslate = colorProgram->Uniform(uniformTranslate);
 		uTransform = colorProgram->Uniform(uniformTransform);
+
+		maxDiscardedGeometryMem = 8 * 1000 * 1000; // 8 MB
+		discardedGeometryMem = 0;
 	}
 
 	RmlRenderer::~RmlRenderer()
@@ -55,6 +58,29 @@ namespace Turso3D
 	Rml::CompiledGeometryHandle RmlRenderer::CompileGeometry(Rml::Vertex* vertices, int num_vertices, int* indices, int num_indices, Rml::TextureHandle texture)
 	{
 		Log::Scope ls {"RmlRenderer::CompileGeometry"};
+
+		// Try to find a previously discarded geometry
+		for (std::unique_ptr<CompiledGeometry>& dg : discardedGeometries) {
+			if (dg->vbo.NumVertices() == num_vertices && dg->ibo.NumIndices() == num_indices) {
+				dg->vbo.SetData(0, num_vertices, vertices);
+				dg->ibo.SetData(0, num_indices, indices);
+				dg->texture = reinterpret_cast<Texture*>(texture);
+
+				// Update the current discarded mem
+				discardedGeometryMem -= dg->vbo.VertexSize() * num_vertices;
+				discardedGeometryMem -= dg->ibo.IndexSize() * num_indices;
+
+				Rml::CompiledGeometryHandle handle = reinterpret_cast<Rml::CompiledGeometryHandle>(dg.get());
+
+				// Move to the back of the discarded vector, then move it to the current geometries and
+				// finally pop the empty unique_ptr from the discarded vector.
+				discardedGeometries.back().swap(dg);
+				geometries.emplace_back().swap(discardedGeometries.back());
+				discardedGeometries.pop_back();
+
+				return handle;
+			}
+		}
 
 		std::unique_ptr<CompiledGeometry>& cg = geometries.emplace_back(std::make_unique<CompiledGeometry>());
 		cg->vbo.Define(USAGE_DEFAULT, num_vertices, VertexElementArray, std::size(VertexElementArray), vertices);
@@ -93,7 +119,26 @@ namespace Turso3D
 		for (size_t i = 0; i < geometries.size(); ++i) {
 			if (geometries[i].get() == cg) {
 				geometries[i].swap(geometries.back());
-				geometries.pop_back();
+
+				// Keep the released geometry alive
+				{
+					std::unique_ptr<CompiledGeometry>& dg = discardedGeometries.emplace_back();
+					dg.swap(geometries.back());
+					geometries.pop_back();
+
+					discardedGeometryMem += dg->vbo.VertexSize() * dg->vbo.NumVertices();
+					discardedGeometryMem += dg->ibo.IndexSize() * dg->ibo.NumIndices();
+				}
+
+				// Free some geometries if exceeded the memory limit
+				while (discardedGeometryMem > maxDiscardedGeometryMem && !discardedGeometries.empty()) {
+					std::unique_ptr<CompiledGeometry>& dg = discardedGeometries[0];
+					discardedGeometryMem -= dg->vbo.VertexSize() * dg->vbo.NumVertices();
+					discardedGeometryMem -= dg->ibo.IndexSize() * dg->ibo.NumIndices();
+
+					discardedGeometries.back().swap(dg);
+					discardedGeometries.pop_back();
+				}
 				return;
 			}
 		}
@@ -182,9 +227,9 @@ namespace Turso3D
 		std::shared_ptr<Texture> tex = std::make_shared<Texture>();
 		if (tex) {
 			IntVector2 sz {source_dimensions.x, source_dimensions.y};
-			ImageLevel il {sz, FMT_RGBA8, source};
+			ImageLevel il {sz, FORMAT_RGBA8_SRGB_PACK32, source};
 
-			bool defined = tex->Define(TEX_2D, sz, FMT_RGBA8, true, 1, 1, &il);
+			bool defined = tex->Define(TEX_2D, sz, FORMAT_RGBA8_SRGB_PACK32, 1, 1, &il);
 			if (!defined) {
 				LOG_ERROR("Failed to define texture.");
 				return false;
@@ -224,7 +269,7 @@ namespace Turso3D
 		multisample = multisample_;
 
 		for (int i = 0; i < 2; ++i) {
-			buffer[i]->Define(TEX_2D, size, FMT_RGBA8, true, multisample * i);
+			buffer[i]->Define(TEX_2D, size, FORMAT_RGBA8_SRGB_PACK32, multisample * i);
 			buffer[i]->DefineSampler(FILTER_BILINEAR, ADDRESS_CLAMP, ADDRESS_CLAMP, ADDRESS_CLAMP);
 			fbo[i]->Define(buffer[i].get(), nullptr);
 

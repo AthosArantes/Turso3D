@@ -172,7 +172,7 @@ namespace Turso3D
 		}
 
 		clusterTexture = std::make_unique<Texture>();
-		clusterTexture->Define(TEX_3D, IntVector3(NUM_CLUSTER_X, NUM_CLUSTER_Y, NUM_CLUSTER_Z), FMT_RGBA32U);
+		clusterTexture->Define(TEX_3D, IntVector3 {NUM_CLUSTER_X, NUM_CLUSTER_Y, NUM_CLUSTER_Z}, FORMAT_RGBA32_UINT_PACK32);
 		clusterTexture->DefineSampler(FILTER_POINT, ADDRESS_CLAMP, ADDRESS_CLAMP, ADDRESS_CLAMP);
 
 		clusterCullData = std::make_unique<ClusterCullData[]>(NUM_CLUSTER_X * NUM_CLUSTER_Y * NUM_CLUSTER_Z);
@@ -218,7 +218,7 @@ namespace Turso3D
 		for (size_t i = 0; i < NUM_SHADOW_MAPS; ++i) {
 			ShadowMap& shadowMap = shadowMaps[i];
 
-			shadowMap.texture->Define(TEX_2D, i == 0 ? IntVector2(dirLightSize * 2, dirLightSize) : IntVector2(lightAtlasSize, lightAtlasSize), format);
+			shadowMap.texture->Define(TEX_2D, i == 0 ? IntVector2 {dirLightSize * 2, dirLightSize} : IntVector2 {lightAtlasSize, lightAtlasSize}, format);
 			shadowMap.texture->DefineSampler(COMPARE_BILINEAR, ADDRESS_CLAMP, ADDRESS_CLAMP, ADDRESS_CLAMP, 1);
 			shadowMap.fbo->Define(nullptr, shadowMap.texture.get());
 		}
@@ -230,7 +230,7 @@ namespace Turso3D
 			staticObjectShadowFbo = std::make_unique<FrameBuffer>();
 		}
 
-		staticObjectShadowBuffer->Define(IntVector2(lightAtlasSize, lightAtlasSize), format);
+		staticObjectShadowBuffer->Define(IntVector2 {lightAtlasSize, lightAtlasSize}, format);
 		staticObjectShadowFbo->Define(nullptr, staticObjectShadowBuffer.get());
 
 		DefineFaceSelectionTextures();
@@ -468,6 +468,16 @@ namespace Turso3D
 			graphics->Clear(true, true, IntRect::ZERO, lightEnvironment->FogColor());
 		}
 
+		if (Texture* tex = lightEnvironment->GetIEMTexture(); tex) {
+			tex->Bind(TU_IBL_IEM);
+		}
+		if (Texture* tex = lightEnvironment->GetPMREMTexture(); tex) {
+			tex->Bind(TU_IBL_PMREM);
+		}
+		if (Texture* tex = lightEnvironment->GetBRDFTexture(); tex) {
+			tex->Bind(TU_IBL_BRDFLUT);
+		}
+
 		RenderBatches(camera, opaqueBatches);
 
 		// Render occlusion now after opaques
@@ -489,6 +499,16 @@ namespace Turso3D
 
 		clusterTexture->Bind(TU_LIGHTCLUSTERDATA);
 		lightDataBuffer->Bind(UB_LIGHTDATA);
+
+		if (Texture* tex = lightEnvironment->GetIEMTexture(); tex) {
+			tex->Bind(TU_IBL_IEM);
+		}
+		if (Texture* tex = lightEnvironment->GetPMREMTexture(); tex) {
+			tex->Bind(TU_IBL_PMREM);
+		}
+		if (Texture* tex = lightEnvironment->GetBRDFTexture(); tex) {
+			tex->Bind(TU_IBL_BRDFLUT);
+		}
 
 		RenderBatches(camera, alphaBatches);
 	}
@@ -744,7 +764,7 @@ namespace Turso3D
 
 	void Renderer::UpdateLightData()
 	{
-		ImageLevel clusterLevel(IntVector3(NUM_CLUSTER_X, NUM_CLUSTER_Y, NUM_CLUSTER_Z), FMT_RG32U, clusterData.get());
+		ImageLevel clusterLevel(IntVector3 {NUM_CLUSTER_X, NUM_CLUSTER_Y, NUM_CLUSTER_Z}, FORMAT_RGBA32_UINT_PACK32, clusterData.get());
 		clusterTexture->SetData(0, IntBox(0, 0, 0, NUM_CLUSTER_X, NUM_CLUSTER_Y, NUM_CLUSTER_Z), clusterLevel);
 		lightDataBuffer->SetData(0, (lights.size() + 1) * sizeof(LightData), lightData.get());
 	}
@@ -775,6 +795,11 @@ namespace Turso3D
 				float fogEnd = lightEnvironment->FogEnd();
 				float fogRange = std::max(fogEnd - fogStart, M_EPSILON);
 				perViewData.fogParameters = Vector4(fogEnd / farClip, farClip / fogRange, 0.0f, 0.0f);
+
+				if (Texture* tex = lightEnvironment->GetPMREMTexture(); tex && tex->NumLevels()) {
+					float maxMip = std::max(static_cast<float>(tex->NumLevels()) - 1.0f, 0.0f);
+					perViewData.iblParameters = Vector4 {maxMip, 0.0f, 0.0f, 0.0f};
+				}
 			}
 
 			// Set directional light data if exists and is the main view
@@ -985,14 +1010,14 @@ namespace Turso3D
 		std::vector<ImageLevel> faces2;
 
 		for (size_t i = 0; i < MAX_CUBE_FACES; ++i) {
-			faces1.push_back(ImageLevel(IntVector2(1, 1), FMT_RGBA32F, &faceSelectionData1[4 * i]));
-			faces2.push_back(ImageLevel(IntVector2(1, 1), FMT_RGBA32F, &faceSelectionData2[4 * i]));
+			faces1.push_back(ImageLevel(IntVector2 {1, 1}, FORMAT_RGBA32_SFLOAT_PACK32, &faceSelectionData1[4 * i]));
+			faces2.push_back(ImageLevel(IntVector2 {1, 1}, FORMAT_RGBA32_SFLOAT_PACK32, &faceSelectionData2[4 * i]));
 		}
 
-		faceSelectionTexture1->Define(TEX_CUBE, IntVector3(1, 1, MAX_CUBE_FACES), FMT_RGBA32F, false, 1, 1, &faces1[0]);
+		faceSelectionTexture1->Define(TEX_CUBE, IntVector3 {1, 1, MAX_CUBE_FACES}, FORMAT_RGBA32_SFLOAT_PACK32, 1, 1, &faces1[0]);
 		faceSelectionTexture1->DefineSampler(FILTER_POINT, ADDRESS_CLAMP, ADDRESS_CLAMP, ADDRESS_CLAMP);
 
-		faceSelectionTexture2->Define(TEX_CUBE, IntVector3(1, 1, MAX_CUBE_FACES), FMT_RGBA32F, false, 1, 1, &faces2[0]);
+		faceSelectionTexture2->Define(TEX_CUBE, IntVector3 {1, 1, MAX_CUBE_FACES}, FORMAT_RGBA32_SFLOAT_PACK32, 1, 1, &faces2[0]);
 		faceSelectionTexture2->DefineSampler(FILTER_POINT, ADDRESS_CLAMP, ADDRESS_CLAMP, ADDRESS_CLAMP);
 	}
 

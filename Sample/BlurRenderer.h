@@ -1,6 +1,6 @@
+#include <Turso3D/Graphics/GraphicsDefs.h>
 #include <Turso3D/Math/IntVector2.h>
 #include <Turso3D/Math/Vector2.h>
-#include <Turso3D/Resource/Image.h>
 #include <memory>
 #include <vector>
 
@@ -19,7 +19,10 @@ namespace Turso3D
 
 		void Initialize(Graphics* graphics);
 
-		void UpdateBuffers(const IntVector2& size, size_t maxMips = 0, ImageFormat format = FMT_RGBA8, bool srgb = false);
+		// Update the texture buffers.
+		// mipCount: Limits how many mips will be used (from highest to lowest).
+		// A value of zero means all mips will used.
+		void UpdateBuffers(const IntVector2& size, ImageFormat format, size_t mipCount = 0);
 		void Render(Texture* color, float filterRadius = 0.005f);
 
 		FrameBuffer* GetResultFramebuffer() const { return resultFbo.get(); }

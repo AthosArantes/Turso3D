@@ -1,22 +1,19 @@
 #pragma once
 
 #include <Turso3D/Graphics/GraphicsDefs.h>
-#include <Turso3D/Graphics/Shader.h>
-#include <Turso3D/Graphics/ShaderProgram.h>
 #include <Turso3D/Math/Vector4.h>
 #include <Turso3D/Resource/Resource.h>
+#include <Turso3D/Utils/StringHash.h>
 #include <memory>
-
-namespace pugi
-{
-	class xml_node;
-}
+#include <vector>
 
 namespace Turso3D
 {
 	class Material;
 	class Texture;
 	class UniformBuffer;
+	class Shader;
+	class ShaderProgram;
 
 	enum PassType
 	{
@@ -27,10 +24,6 @@ namespace Turso3D
 	};
 	extern const char* PassTypeNames[];
 
-	extern const char* GeometryDefines[];
-	//extern const char* lightDefines[];
-	//extern const char* dirLightDefines[];
-
 	// Shader program bits
 	constexpr unsigned SP_STATIC = 0x0;
 	constexpr unsigned SP_SKINNED = 0x1;
@@ -38,7 +31,7 @@ namespace Turso3D
 	constexpr unsigned SP_CUSTOMGEOM = 0x3;
 	constexpr unsigned SP_GEOMETRYBITS = 0x3;
 
-	static const size_t MAX_SHADER_VARIATIONS = 4;
+	constexpr size_t MAX_SHADER_VARIATIONS = 4;
 
 	// ==========================================================================================
 	// Render pass, which defines render state and shaders.
@@ -52,12 +45,26 @@ namespace Turso3D
 		// Set shader and shader defines.
 		// Existing shader programs will be cleared.
 		void SetShader(const std::shared_ptr<Shader>& shader, const std::string& vsDefines, const std::string& fsDefines);
-		// Reset existing shader programs.
-		void ResetShaderPrograms();
 		// Set render state.
 		void SetRenderState(BlendMode blendMode, CompareMode depthTest = CMP_LESS, bool colorWrite = true, bool depthWrite = true);
+
 		// Get a shader program and cache for later use.
-		ShaderProgram* GetShaderProgram(unsigned char programBits);
+		ShaderProgram* GetShaderProgram(uint8_t programBits)
+		{
+			if (shaderPrograms[programBits]) {
+				return shaderPrograms[programBits].get();
+			}
+
+			if (!shader) {
+				return nullptr;
+			}
+
+			CreateShaderProgram(programBits);
+			return shaderPrograms[programBits].get();
+		}
+
+		// Reset existing shader programs.
+		void ResetShaderPrograms();
 
 		// Return parent material.
 		Material* Parent() const { return parent; }
@@ -75,6 +82,9 @@ namespace Turso3D
 		bool GetColorWrite() const { return colorWrite; }
 		// Return depth write flag.
 		bool GetDepthWrite() const { return depthWrite; }
+
+	private:
+		void CreateShaderProgram(uint8_t programBits);
 
 	public:
 		// Last sort key for combined distance and state sorting. Used by Renderer.
@@ -105,6 +115,8 @@ namespace Turso3D
 	// A material can contain several passes (for example normal rendering, and depth only.)
 	class Material : public Resource
 	{
+		struct LoadBuffer;
+
 	public:
 		// Construct.
 		Material();
@@ -117,9 +129,6 @@ namespace Turso3D
 		// Finalize material loading in the main thread.
 		// Return true on success.
 		bool EndLoad() override;
-
-		// Load from an xml node.
-		bool LoadXML(pugi::xml_node& root);
 
 		// Return a clone of the material.
 		std::shared_ptr<Material> Clone() const;
@@ -191,9 +200,9 @@ namespace Turso3D
 		// Resets all loaded pass shaders.
 		static void SetGlobalShaderDefines(const std::string& vsDefines, const std::string& fsDefines);
 		// Return global vertex shader defines.
-		static const std::string& GlobalVSDefines() { return globalVSDefines; }
+		static const std::string& GlobalVSDefines();
 		// Return global fragment shader defines.
-		static const std::string& GlobalFSDefines() { return globalFSDefines; }
+		static const std::string& GlobalFSDefines();
 
 	private:
 		// Culling mode.
@@ -216,58 +225,6 @@ namespace Turso3D
 		// Fragment shader defines for all passes.
 		std::string fsDefines;
 
-		// Represents material data that was read from file.
-		struct MaterialLoadBuffer
-		{
-			struct PassBuffer
-			{
-				PassType type;
-				BlendMode blendMode;
-				CompareMode depthTest;
-				bool colorWrite;
-				bool depthWrite;
-				std::string shader;
-				std::string vsDefines;
-				std::string fsDefines;
-			};
-			std::vector<PassBuffer> passes;
-
-			struct TextureBuffer
-			{
-				unsigned slot;
-				std::shared_ptr<Texture> texture;
-			};
-			std::vector<TextureBuffer> textures;
-
-			std::string vsDefines;
-			std::string fsDefines;
-		};
-		std::unique_ptr<MaterialLoadBuffer> loadBuffer;
-
-		// Global vertex shader defines.
-		static std::string globalVSDefines;
-		// Global fragment shader defines.
-		static std::string globalFSDefines;
+		std::unique_ptr<LoadBuffer> loadBuffer;
 	};
-
-	// ==========================================================================================
-	inline ShaderProgram* Pass::GetShaderProgram(unsigned char programBits)
-	{
-		if (shaderPrograms[programBits]) {
-			return shaderPrograms[programBits].get();
-		}
-
-		if (!shader) {
-			return nullptr;
-		}
-
-		unsigned char geomBits = programBits & SP_GEOMETRYBITS;
-		std::shared_ptr<ShaderProgram> newShaderProgram = shader->CreateProgram(
-			Material::GlobalVSDefines() + parent->VSDefines() + vsDefines + GeometryDefines[geomBits],
-			Material::GlobalFSDefines() + parent->FSDefines() + fsDefines
-		);
-		shaderPrograms[programBits] = newShaderProgram;
-
-		return newShaderProgram.get();
-	}
 }

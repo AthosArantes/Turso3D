@@ -57,6 +57,9 @@ private:
 
 	void CreateTextures();
 	void CreateDefaultScene();
+	// IBL sphere samples
+	void CreateSpheresScene();
+	void CreateThousandMushroomScene();
 
 	bool IsKeyDown(int key);
 	bool IsKeyPressed(int key);
@@ -133,7 +136,4 @@ private:
 
 	float camYaw;
 	float camPitch;
-
-	Turso3D::AnimatedModel* characterModel;
-	Turso3D::SpatialNode* model;
 };

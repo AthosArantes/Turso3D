@@ -24,11 +24,11 @@ void main()
 
 const float GAMMA = 2.2f;
 
-in vec2 vTexCoord;
-out vec4 fragColor;
-
 uniform sampler2D diffuseTex0;
 uniform float exposure;
+
+in vec2 vTexCoord;
+out vec4 fragColor;
 
 float ColorToLuminance(vec3 color)
 {

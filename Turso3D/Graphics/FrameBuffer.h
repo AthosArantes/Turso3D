@@ -1,7 +1,6 @@
 #pragma once
 
 #include <Turso3D/Graphics/GraphicsDefs.h>
-#include <Turso3D/Math/IntRect.h>
 
 namespace Turso3D
 {
@@ -28,7 +27,7 @@ namespace Turso3D
 		void Define(Texture* colorTexture, size_t cubeMapFace, Texture* depthStencilTexture);
 		// Define MRT textures to render to.
 		void Define(Texture** colorTextures, size_t countColorTextures, Texture* depthStencilTexture);
-		
+
 		// Bind as draw framebuffer.
 		// No-op if already bound.
 		// Used also when defining.

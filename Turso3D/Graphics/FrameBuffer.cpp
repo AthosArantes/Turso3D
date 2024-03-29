@@ -46,8 +46,9 @@ namespace Turso3D
 			} else {
 				size = depthStencilBuffer->Size();
 			}
+			unsigned stencil = Texture::IsStencil(depthStencilBuffer->Format()) ? depthStencilBuffer->GLBuffer() : 0;
 			glFramebufferRenderbuffer(GL_DRAW_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, depthStencilBuffer->GLBuffer());
-			glFramebufferRenderbuffer(GL_DRAW_FRAMEBUFFER, GL_STENCIL_ATTACHMENT, GL_RENDERBUFFER, depthStencilBuffer->Format() == FMT_D24S8 ? depthStencilBuffer->GLBuffer() : 0);
+			glFramebufferRenderbuffer(GL_DRAW_FRAMEBUFFER, GL_STENCIL_ATTACHMENT, GL_RENDERBUFFER, stencil);
 		} else {
 			glFramebufferRenderbuffer(GL_DRAW_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, 0);
 			glFramebufferRenderbuffer(GL_DRAW_FRAMEBUFFER, GL_STENCIL_ATTACHMENT, GL_RENDERBUFFER, 0);
@@ -81,8 +82,9 @@ namespace Turso3D
 			} else {
 				size = depthStencilTexture->Size2D();
 			}
+			unsigned stencil = Texture::IsStencil(depthStencilTexture->Format()) ? depthStencilTexture->GLTexture() : 0;
 			glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, depthStencilTexture->GLTarget(), depthStencilTexture->GLTexture(), 0);
-			glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_STENCIL_ATTACHMENT, depthStencilTexture->GLTarget(), depthStencilTexture->Format() == FMT_D24S8 ? depthStencilTexture->GLTexture() : 0, 0);
+			glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_STENCIL_ATTACHMENT, depthStencilTexture->GLTarget(), stencil, 0);
 		} else {
 			glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, 0, 0);
 			glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_STENCIL_ATTACHMENT, GL_TEXTURE_2D, 0, 0);
@@ -116,8 +118,9 @@ namespace Turso3D
 			} else {
 				size = depthStencilTexture->Size2D();
 			}
+			unsigned stencil = Texture::IsStencil(depthStencilTexture->Format()) ? depthStencilTexture->GLTexture() : 0;
 			glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, depthStencilTexture->GLTarget(), depthStencilTexture->GLTexture(), 0);
-			glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_STENCIL_ATTACHMENT, depthStencilTexture->GLTarget(), depthStencilTexture->Format() == FMT_D24S8 ? depthStencilTexture->GLTexture() : 0, 0);
+			glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_STENCIL_ATTACHMENT, depthStencilTexture->GLTarget(), stencil, 0);
 		} else {
 			glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, 0, 0);
 			glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_STENCIL_ATTACHMENT, GL_TEXTURE_2D, 0, 0);
@@ -163,8 +166,9 @@ namespace Turso3D
 			} else {
 				size = depthStencilTexture->Size2D();
 			}
+			unsigned stencil = Texture::IsStencil(depthStencilTexture->Format()) ? depthStencilTexture->GLTexture() : 0;
 			glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, depthStencilTexture->GLTarget(), depthStencilTexture->GLTexture(), 0);
-			glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_STENCIL_ATTACHMENT, depthStencilTexture->GLTarget(), depthStencilTexture->Format() == FMT_D24S8 ? depthStencilTexture->GLTexture() : 0, 0);
+			glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_STENCIL_ATTACHMENT, depthStencilTexture->GLTarget(), stencil, 0);
 		} else {
 			glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, 0, 0);
 			glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_STENCIL_ATTACHMENT, GL_TEXTURE_2D, 0, 0);

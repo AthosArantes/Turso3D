@@ -1,6 +1,8 @@
 #include "Material.h"
 #include <Turso3D/Graphics/Texture.h>
 #include <Turso3D/Graphics/UniformBuffer.h>
+#include <Turso3D/Graphics/Shader.h>
+#include <Turso3D/Graphics/ShaderProgram.h>
 #include <Turso3D/IO/Log.h>
 #include <Turso3D/IO/MemoryStream.h>
 #include <Turso3D/Resource/ResourceCache.h>
@@ -28,9 +30,158 @@ namespace Turso3D
 
 	// ==========================================================================================
 	static std::set<Material*> allMaterials;
+	static std::string GlobalDefines[MAX_SHADER_TYPES];
 
-	std::string Material::globalVSDefines;
-	std::string Material::globalFSDefines;
+	// ==========================================================================================
+	struct Material::LoadBuffer
+	{
+		// Load from an xml node.
+		// basePath is the directory used to search for textures, usually
+		// the material name (which usually is also it's path).
+		bool LoadXML(pugi::xml_node& root, const std::string& basePath)
+		{
+			using namespace pugi;
+
+			if (xml_attribute attribute = root.attribute("vsDefines"); attribute) {
+				defines[SHADER_VS] = attribute.value();
+			}
+			if (xml_attribute attribute = root.attribute("fsDefines"); attribute) {
+				defines[SHADER_FS] = attribute.value();
+			}
+
+			// Cull mode
+			cullMode = CULL_BACK;
+			if (xml_attribute attribute = root.attribute("cullMode"); attribute) {
+				for (int i = 0; i < MAX_CULL_MODES; ++i) {
+					std::string value {attribute.value()};
+					if (value == CullModeNames[i]) {
+						cullMode = (CullMode)i;
+						break;
+					}
+				}
+			}
+
+			if (xml_node node = root.child("passes"); node) {
+				for (xml_node pass : node.children()) {
+					for (int t = 0; t < MAX_PASS_TYPES; ++t) {
+						std::string passName {pass.name()};
+						if (passName != PassTypeNames[t]) {
+							continue;
+						}
+
+						PassData& data = passes.emplace_back();
+						data.type = (PassType)t;
+						data.blendMode = BLEND_REPLACE;
+						data.depthTest = CMP_LESS_EQUAL;
+						data.colorWrite = pass.attribute("colorWrite").as_bool(true);
+						data.depthWrite = pass.attribute("depthWrite").as_bool(true);
+						data.shader = pass.attribute("shader").value();
+						data.vsDefines = pass.attribute("vsDefines").value();
+						data.fsDefines = pass.attribute("fsDefines").value();
+
+						if (xml_attribute attribute = pass.attribute("blendMode"); attribute) {
+							for (int i = 0; i < MAX_BLEND_MODES; ++i) {
+								std::string value {attribute.value()};
+								if (value == BlendModeNames[i]) {
+									data.blendMode = (BlendMode)i;
+									break;
+								}
+							}
+						}
+
+						if (xml_attribute attribute = pass.attribute("depthTest"); attribute) {
+							for (int i = 0; i < MAX_COMPARE_MODES; ++i) {
+								std::string value {attribute.value()};
+								if (value == CompareModeNames[i]) {
+									data.depthTest = (CompareMode)i;
+									break;
+								}
+							}
+						}
+
+						break;
+					}
+				}
+			}
+
+			if (xml_node node = root.child("textures"); node) {
+				ResourceCache* cache = ResourceCache::Instance();
+
+				for (xml_node texture : node.children("texture")) {
+					std::unique_ptr<Stream> image;
+
+					std::string texname {texture.attribute("name").value()};
+
+					// Force absolute if it begins with a forward slash
+					if (texname.front() == '/') {
+						image = cache->OpenData(texname.substr(1));
+					} else if (basePath.find_first_of("/\\") != std::string::npos) {
+						image = cache->OpenData(std::filesystem::path {basePath}.replace_filename(texname).string());
+					} else {
+						image = cache->OpenData(texname);
+					}
+
+					if (!image) {
+						continue;
+					}
+
+					TextureData& data = textures.emplace_back();
+					data.slot = texture.attribute("slot").as_uint();
+					bool srgb = texture.attribute("srgb").as_bool();
+
+					data.texture = std::make_shared<Texture>();
+					data.texture->SetName(texname);
+					data.texture->SetLoadSRGB(srgb);
+					if (!data.texture->BeginLoad(*image)) {
+						data.texture.reset();
+					}
+				}
+			}
+
+			if (xml_node node = root.child("uniforms"); node) {
+				for (xml_node uniform : node.children("uniform")) {
+					std::string value {uniform.attribute("value").value()};
+
+					char* ptr = value.data();
+					float x = (float)strtof(ptr, &ptr);
+					float y = (float)strtof(ptr, &ptr);
+					float z = (float)strtof(ptr, &ptr);
+					float w = (float)strtof(ptr, nullptr);
+
+					uniforms.emplace_back(
+						std::make_pair(std::string {uniform.attribute("name").value()}, Vector4 {x, y, z, w})
+					);
+				}
+			}
+
+			return true;
+		}
+
+		CullMode cullMode;
+		std::string defines[MAX_SHADER_TYPES];
+
+		struct PassData
+		{
+			PassType type;
+			BlendMode blendMode;
+			CompareMode depthTest;
+			bool colorWrite;
+			bool depthWrite;
+			std::string shader;
+			std::string vsDefines;
+			std::string fsDefines;
+		};
+		std::vector<PassData> passes;
+
+		struct TextureData
+		{
+			unsigned slot;
+			std::shared_ptr<Texture> texture;
+		};
+		std::vector<TextureData> textures;
+
+		std::vector<std::pair<std::string, Vector4>> uniforms;
+	};
 
 	// ==========================================================================================
 	Pass::Pass(Material* parent) :
@@ -73,6 +224,16 @@ namespace Turso3D
 		}
 	}
 
+	void Pass::CreateShaderProgram(uint8_t programBits)
+	{
+		uint8_t geomBits = programBits & SP_GEOMETRYBITS;
+		std::shared_ptr<ShaderProgram> newShaderProgram = shader->CreateProgram(
+			GlobalDefines[SHADER_VS] + parent->VSDefines() + vsDefines + GeometryDefines[geomBits],
+			GlobalDefines[SHADER_FS] + parent->FSDefines() + fsDefines
+		);
+		shaderPrograms[programBits] = newShaderProgram;
+	}
+
 	// ==========================================================================================
 	Material::Material() :
 		cullMode(CULL_BACK),
@@ -100,7 +261,10 @@ namespace Turso3D
 				return false;
 			}
 			pugi::xml_node root = document.root().child("material");
-			return LoadXML(root);
+
+			loadBuffer = std::make_unique<LoadBuffer>();
+
+			return loadBuffer->LoadXML(root, Name());
 		}
 		return false;
 	}
@@ -127,132 +291,10 @@ namespace Turso3D
 			}
 		}
 
-		SetShaderDefines(loadBuffer->vsDefines, loadBuffer->fsDefines);
+		SetShaderDefines(loadBuffer->defines[SHADER_VS], loadBuffer->defines[SHADER_FS]);
+		DefineUniforms(loadBuffer->uniforms);
 
 		loadBuffer.reset();
-		return true;
-	}
-
-	bool Material::LoadXML(pugi::xml_node& root)
-	{
-		using namespace pugi;
-
-		loadBuffer = std::make_unique<MaterialLoadBuffer>();
-
-		if (xml_attribute attribute = root.attribute("vsDefines"); attribute) {
-			loadBuffer->vsDefines = attribute.value();
-		}
-		if (xml_attribute attribute = root.attribute("fsDefines"); attribute) {
-			loadBuffer->fsDefines = attribute.value();
-		}
-
-		// Cull mode
-		cullMode = CULL_BACK;
-		if (xml_attribute attribute = root.attribute("cullMode"); attribute) {
-			for (int i = 0; i < MAX_CULL_MODES; ++i) {
-				std::string value {attribute.value()};
-				if (value == CullModeNames[i]) {
-					cullMode = (CullMode)i;
-					break;
-				}
-			}
-		}
-
-		if (xml_node node = root.child("passes"); node) {
-			for (xml_node pass : node.children()) {
-				for (int t = 0; t < MAX_PASS_TYPES; ++t) {
-					std::string passName {pass.name()};
-					if (passName != PassTypeNames[t]) {
-						continue;
-					}
-
-					auto& data = loadBuffer->passes.emplace_back();
-					data.type = (PassType)t;
-					data.blendMode = BLEND_REPLACE;
-					data.depthTest = CMP_LESS_EQUAL;
-					data.colorWrite = pass.attribute("colorWrite").as_bool(true);
-					data.depthWrite = pass.attribute("depthWrite").as_bool(true);
-					data.shader = pass.attribute("shader").value();
-					data.vsDefines = pass.attribute("vsDefines").value();
-					data.fsDefines = pass.attribute("fsDefines").value();
-
-					if (xml_attribute attribute = pass.attribute("blendMode"); attribute) {
-						for (int i = 0; i < MAX_BLEND_MODES; ++i) {
-							std::string value {attribute.value()};
-							if (value == BlendModeNames[i]) {
-								data.blendMode = (BlendMode)i;
-								break;
-							}
-						}
-					}
-
-					if (xml_attribute attribute = pass.attribute("depthTest"); attribute) {
-						for (int i = 0; i < MAX_COMPARE_MODES; ++i) {
-							std::string value {attribute.value()};
-							if (value == CompareModeNames[i]) {
-								data.depthTest = (CompareMode)i;
-								break;
-							}
-						}
-					}
-
-					break;
-				}
-			}
-		}
-
-		if (xml_node node = root.child("textures"); node) {
-			ResourceCache* cache = ResourceCache::Instance();
-
-			// Material names containing a directory separator will be used as base path for texture loading.
-			bool nameIsPath = Name().find_first_of("/\\") != std::string::npos;
-
-			for (xml_node texture : node.children("texture")) {
-				std::unique_ptr<Stream> image;
-
-				std::string texname {texture.attribute("name").value()};
-
-				// Force absolute if it begins with a forward slash
-				if (texname.front() == '/') {
-					image = cache->OpenData(texname.substr(1));
-
-				} else if (nameIsPath) {
-					image = cache->OpenData(std::filesystem::path {Name()}.replace_filename(texname).string());
-					if (!image) {
-						// Try again with texture name being absolute.
-						image = cache->OpenData(texname);
-					}
-
-				} else {
-					image = cache->OpenData(texname);
-				}
-
-				if (!image) {
-					continue;
-				}
-
-				auto& data = loadBuffer->textures.emplace_back();
-				data.slot = texture.attribute("slot").as_uint();
-				bool srgb = texture.attribute("srgb").as_bool();
-
-				data.texture = std::make_shared<Texture>();
-				data.texture->SetLoadSRGB(srgb);
-				if (!data.texture->BeginLoad(*image)) {
-					data.texture.reset();
-				}
-			}
-		}
-
-		if (xml_node node = root.child("uniforms"); node) {
-			std::vector<std::pair<std::string, Vector4>> newUniforms;
-			for (xml_node uniform : node.children("uniform")) {
-				newUniforms.emplace_back(
-					std::make_pair(std::string(uniform.attribute("name").value()), Vector4(uniform.attribute("value").value()))
-				);
-			}
-			DefineUniforms(newUniforms);
-		}
-
 		return true;
 	}
 
@@ -391,26 +433,6 @@ namespace Turso3D
 		}
 	}
 
-	void Material::SetGlobalShaderDefines(const std::string& vsDefines_, const std::string& fsDefines_)
-	{
-		globalVSDefines = vsDefines_;
-		globalFSDefines = fsDefines_;
-		if (globalVSDefines.length()) {
-			globalVSDefines += ' ';
-		}
-		if (globalFSDefines.length()) {
-			globalFSDefines += ' ';
-		}
-
-		for (Material* material : allMaterials) {
-			for (size_t i = 0; i < MAX_PASS_TYPES; ++i) {
-				if (material->passes[i]) {
-					material->passes[i]->ResetShaderPrograms();
-				}
-			}
-		}
-	}
-
 	void Material::SetCullMode(CullMode mode)
 	{
 		cullMode = mode;
@@ -457,6 +479,7 @@ namespace Turso3D
 		return Vector4::ZERO;
 	}
 
+	// ==========================================================================================
 	std::shared_ptr<Material> Material::GetDefault()
 	{
 		constexpr const char* mtlName = "__defaultMaterial";
@@ -470,8 +493,8 @@ namespace Turso3D
 			mtl->SetName(mtlName);
 
 			std::vector<std::pair<std::string, Vector4>> defaultUniforms;
-			defaultUniforms.push_back(std::make_pair("matDiffColor", Vector4::ONE));
-			defaultUniforms.push_back(std::make_pair("matSpecColor", Vector4 {0.04f, 0.04f, 0.04f, 0.0f}));
+			defaultUniforms.push_back(std::make_pair("BaseColor", Vector4::ONE));
+			defaultUniforms.push_back(std::make_pair("AoRoughMetal", Vector4 {1.0f, 0.3f, 0.0f, 1.0f}));
 			mtl->DefineUniforms(defaultUniforms);
 
 			Pass* pass = mtl->CreatePass(PASS_SHADOW);
@@ -485,5 +508,36 @@ namespace Turso3D
 			cache->StoreResource(mtl);
 		}
 		return mtl;
+	}
+
+	void Material::SetGlobalShaderDefines(const std::string& vsDefines, const std::string& fsDefines)
+	{
+		GlobalDefines[SHADER_VS] = vsDefines;
+		GlobalDefines[SHADER_FS] = fsDefines;
+
+		for (size_t i = 0; i < MAX_SHADER_TYPES; ++i) {
+			std::string& defines = GlobalDefines[i];
+			if (defines.length()) {
+				defines += ' ';
+			}
+		}
+
+		for (Material* material : allMaterials) {
+			for (size_t i = 0; i < MAX_PASS_TYPES; ++i) {
+				if (material->passes[i]) {
+					material->passes[i]->ResetShaderPrograms();
+				}
+			}
+		}
+	}
+
+	const std::string& Material::GlobalVSDefines()
+	{
+		return GlobalDefines[SHADER_VS];
+	}
+
+	const std::string& Material::GlobalFSDefines()
+	{
+		return GlobalDefines[SHADER_FS];
 	}
 }

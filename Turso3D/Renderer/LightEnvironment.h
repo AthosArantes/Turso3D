@@ -2,14 +2,11 @@
 
 #include <Turso3D/Math/Color.h>
 #include <Turso3D/Scene/Node.h>
+#include <memory>
 
 namespace Turso3D
 {
-	constexpr float DEFAULT_FOG_START = 500.0f;
-	constexpr float DEFAULT_FOG_END = 1000.0f;
-
-	static const Color DEFAULT_AMBIENT_COLOR(0.1f, 0.1f, 0.1f);
-	static const Color DEFAULT_FOG_COLOR(Color::BLACK);
+	class Texture;
 
 	// Global lighting settings.
 	// Should be created as a child of the scene root.
@@ -20,6 +17,9 @@ namespace Turso3D
 		LightEnvironment();
 		// Destruct.
 		~LightEnvironment();
+
+		// Set the textures for IBL lighting.
+		void SetIBLMaps(std::shared_ptr<Texture> iem, std::shared_ptr<Texture> pmrem, std::shared_ptr<Texture> brdf);
 
 		// Set ambient light color.
 		void SetAmbientColor(const Color& color);
@@ -39,6 +39,10 @@ namespace Turso3D
 		// Return fog end distance.
 		float FogEnd() const { return fogEnd; }
 
+		Texture* GetIEMTexture() const { return iemTex.get(); }
+		Texture* GetPMREMTexture() const { return pmremTex.get(); }
+		Texture* GetBRDFTexture() const { return brdfTex.get(); }
+
 	private:
 		// Ambient light color.
 		Color ambientColor;
@@ -48,5 +52,12 @@ namespace Turso3D
 		float fogStart;
 		// Fog end distance.
 		float fogEnd;
+
+		// Irradiance Environment Map
+		std::shared_ptr<Texture> iemTex;
+		// Prefiltered Mipmaped Radiance Environment Map
+		std::shared_ptr<Texture> pmremTex;
+		// BRDF LUT map
+		std::shared_ptr<Texture> brdfTex;
 	};
 }

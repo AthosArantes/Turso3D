@@ -34,12 +34,12 @@ namespace Turso3D
 		blurRenderer->Initialize(graphics);
 	}
 
-	void BloomRenderer::UpdateBuffers(const IntVector2& size)
+	void BloomRenderer::UpdateBuffers(const IntVector2& size, ImageFormat format)
 	{
 		Log::Scope logScope {"BloomRenderer::UpdateBuffers"};
-		blurRenderer->UpdateBuffers(size, 0, FMT_R11_G11_B10F, false);
+		blurRenderer->UpdateBuffers(size, format);
 
-		resultTexture->Define(TEX_2D, size, FMT_R11_G11_B10F);
+		resultTexture->Define(TEX_2D, size, format);
 		resultTexture->DefineSampler(FILTER_POINT, ADDRESS_CLAMP, ADDRESS_CLAMP, ADDRESS_CLAMP);
 		resultFbo->Define(resultTexture.get(), nullptr);
 	}

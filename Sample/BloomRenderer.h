@@ -1,7 +1,7 @@
+#include <Turso3D/Graphics/GraphicsDefs.h>
 #include <Turso3D/Math/IntVector2.h>
 #include <Turso3D/Math/Vector2.h>
 #include <memory>
-#include <vector>
 
 namespace Turso3D
 {
@@ -20,7 +20,7 @@ namespace Turso3D
 
 		void Initialize(Graphics* graphics);
 
-		void UpdateBuffers(const IntVector2& size);
+		void UpdateBuffers(const IntVector2& size, ImageFormat format);
 		void Render(Texture* hdrColor, float brightThreshold = 3.0f, float intensity = 0.05f);
 
 		FrameBuffer* GetResultFramebuffer() const { return resultFbo.get(); }

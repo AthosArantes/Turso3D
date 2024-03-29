@@ -5,7 +5,6 @@
 #include <Turso3D/Math/Color.h>
 #include <Turso3D/Math/Frustum.h>
 #include <Turso3D/Renderer/Batch.h>
-#include <Turso3D/Resource/Image.h>
 #include <atomic>
 #include <memory>
 
@@ -53,6 +52,9 @@ namespace Turso3D
 	constexpr size_t TU_FACESELECTION1 = 10;
 	constexpr size_t TU_FACESELECTION2 = 11;
 	constexpr size_t TU_LIGHTCLUSTERDATA = 12;
+	constexpr size_t TU_IBL_IEM = 13;
+	constexpr size_t TU_IBL_PMREM = 14;
+	constexpr size_t TU_IBL_BRDFLUT = 15;
 
 	// Per-thread results for octant collection.
 	struct ThreadOctantResult
@@ -144,6 +146,8 @@ namespace Turso3D
 		Color fogColor;
 		// Current scene's fog start and end parameters.
 		Vector4 fogParameters;
+		// IBL parameters.
+		Vector4 iblParameters;
 		// Directional light direction.
 		Vector4 dirLightDirection;
 		// Directional light color.

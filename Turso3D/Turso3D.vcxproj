@@ -159,8 +159,6 @@
 		<ClInclude Include="Renderer\OctreeNode.h" />
 		<ClInclude Include="Renderer\Renderer.h" />
 		<ClInclude Include="Renderer\StaticModel.h" />
-		<ClInclude Include="Resource\Decompress.h" />
-		<ClInclude Include="Resource\Image.h" />
 		<ClInclude Include="Resource\Resource.h" />
 		<ClInclude Include="Resource\ResourceCache.h" />
 		<ClInclude Include="Scene\Node.h" />
@@ -221,8 +219,6 @@
 		<ClCompile Include="Renderer\OctreeNode.cpp" />
 		<ClCompile Include="Renderer\Renderer.cpp" />
 		<ClCompile Include="Renderer\StaticModel.cpp" />
-		<ClCompile Include="Resource\Decompress.cpp" />
-		<ClCompile Include="Resource\Image.cpp" />
 		<ClCompile Include="Resource\Resource.cpp" />
 		<ClCompile Include="Resource\ResourceCache.cpp" />
 		<ClCompile Include="Scene\Node.cpp" />

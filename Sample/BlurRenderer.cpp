@@ -33,21 +33,21 @@ namespace Turso3D
 		uFilterRadius = programUpsample->Uniform(StringHash {"filterRadius"});
 	}
 
-	void BlurRenderer::UpdateBuffers(const IntVector2& size, size_t maxMips, ImageFormat format, bool srgb)
+	void BlurRenderer::UpdateBuffers(const IntVector2& size, ImageFormat format, size_t maxMips)
 	{
 		Log::Scope logScope {"BlurRenderer::UpdateBuffers"};
 
-		resultTexture->Define(TEX_2D, size, format, srgb);
+		resultTexture->Define(TEX_2D, size, format);
 		resultTexture->DefineSampler(FILTER_POINT, ADDRESS_CLAMP, ADDRESS_CLAMP, ADDRESS_CLAMP);
 		resultFbo->Define(resultTexture.get(), nullptr);
 
 		// (Re)create mip passes
 		mipPasses.clear();
-		for (size_t i = 0, hw = size.x / 2, hh = size.y / 2; hw >= MIN_MIP_SIZE && hh >= MIN_MIP_SIZE; ++i, hw /= 2, hh /= 2) {
+		for (int i = 0, hw = size.x / 2, hh = size.y / 2; hw >= MIN_MIP_SIZE && hh >= MIN_MIP_SIZE; ++i, hw /= 2, hh /= 2) {
 			MipPass& mip = mipPasses.emplace_back();
 
 			mip.texture = std::make_unique<Texture>();
-			mip.texture->Define(TEX_2D, IntVector2(hw, hh), format, srgb);
+			mip.texture->Define(TEX_2D, IntVector2 {hw, hh}, format);
 			mip.texture->DefineSampler(FILTER_BILINEAR, ADDRESS_CLAMP, ADDRESS_CLAMP, ADDRESS_CLAMP);
 
 			mip.fbo = std::make_unique<FrameBuffer>();

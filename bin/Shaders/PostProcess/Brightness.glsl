@@ -31,11 +31,7 @@ void main()
 {
 	vec3 color = texture(srcTex0, texCoord).rgb;
 	float lum = dot(color, vec3(0.2126, 0.7152, 0.0722));
-	if (lum >= threshold) {
-		fragColor = color;
-	} else {
-		fragColor = vec3(0.0);
-	}
+	fragColor = color * step(threshold, lum);
 }
 
 #endif

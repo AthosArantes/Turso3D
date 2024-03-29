@@ -81,6 +81,13 @@ namespace Turso3D
 		// Geometries in use by RmlUi
 		std::vector<std::unique_ptr<CompiledGeometry>> geometries;
 
+		// Discarded geometries, kept alive to avoid possible reallocation.
+		std::vector<std::unique_ptr<CompiledGeometry>> discardedGeometries;
+		// Maximum amount of memory to be used for discarded geometries.
+		size_t maxDiscardedGeometryMem;
+		// Current memory of discarded geometries
+		size_t discardedGeometryMem;
+
 		ScissorState scissorState;
 
 		Rml::Matrix4f projection;

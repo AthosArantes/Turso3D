@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<material>
+	<passes>
+		<shadow shader="Shadow.glsl" colorWrite="false" />
+		<opaque shader="Diffuse.glsl" />
+	</passes>
+	<textures>
+		<texture slot="0" name="bricks075a_albedo.dds" srgb="true" />
+		<texture slot="1" name="bricks075a_orm.dds" />
+		<texture slot="2" name="bricks075a_normal.dds" />
+	</textures>
+	<uniforms>
+		<uniform name="BaseColor" value="1 1 1 1" />
+		<uniform name="AoRoughMetal" value="1 1 1 1" />
+	</uniforms>
+</material>

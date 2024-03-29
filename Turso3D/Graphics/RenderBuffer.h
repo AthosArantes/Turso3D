@@ -1,9 +1,7 @@
 #pragma once
 
 #include <Turso3D/Graphics/GraphicsDefs.h>
-#include <Turso3D/Math/Color.h>
-#include <Turso3D/Math/IntRect.h>
-#include <Turso3D/Resource/Image.h>
+#include <Turso3D/Math/IntVector2.h>
 
 namespace Turso3D
 {

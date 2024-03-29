@@ -1,14 +1,11 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
-<material cullMode="none" vsDefines="ALPHAMASK" fsDefines="ALPHAMASK">
+<material>
 	<passes>
 		<shadow shader="Shadow.glsl" colorWrite="false" />
-		<alpha shader="Diffuse.glsl" />
+		<opaque shader="NoTexture.glsl" />
 	</passes>
-	<textures>
-		<texture slot="0" name="leaves.png" srgb="true" />
-	</textures>
 	<uniforms>
-		<uniform name="matDiffColor" value="1 1 1 0.5" />
-		<uniform name="matSpecColor" value="0.04 0.04 0.04 0" />
+		<uniform name="BaseColor" value="1 1 1 1" />
+		<uniform name="AoRoughMetal" value="1 0.3 0 0" />
 	</uniforms>
 </material>

@@ -6,9 +6,11 @@
 	</passes>
 	<textures>
 		<texture slot="0" name="mushroom.dds" srgb="true" />
+		<texture slot="1" name="/default/white.dds" />
+		<texture slot="2" name="/default/normal.dds" />
 	</textures>
 	<uniforms>
-		<uniform name="matDiffColor" value="1 1 1 0.2" />
-		<uniform name="matSpecColor" value="0.04 0.04 0.04 0" />
+		<uniform name="BaseColor" value="1 1 1 1" />
+		<uniform name="AoRoughMetal" value="1 1 1 1" />
 	</uniforms>
 </material>

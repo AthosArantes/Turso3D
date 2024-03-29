@@ -11,6 +11,7 @@
 #include <Turso3D/Graphics/Graphics.h>
 #include <Turso3D/Graphics/Texture.h>
 #include <Turso3D/Graphics/VertexBuffer.h>
+#include <Turso3D/Graphics/ShaderProgram.h>
 #include <Turso3D/IO/Log.h>
 #include <Turso3D/Math/Math.h>
 #include <Turso3D/Math/Random.h>
@@ -46,16 +47,14 @@ inline Application* GetAppFromWindow(GLFWwindow* window)
 
 // ==========================================================================================
 Application::Application() :
-	multiSample(1),
+	multiSample(8),
 	timestamp(0),
 	deltaTime(0),
 	deltaTimeAccumulator(0),
-	frameLimit(0),
+	frameLimit(60),
 	cursorInside(false),
 	camYaw(0),
-	camPitch(0),
-	characterModel(nullptr),
-	model(nullptr)
+	camPitch(0)
 {
 	// Create subsystems that don't depend on the application window / OpenGL context
 	workQueue = std::make_unique<WorkQueue>();
@@ -68,7 +67,7 @@ Application::Application() :
 	// Initialize graphics
 	graphics = std::make_unique<Graphics>();
 
-	if (graphics->Initialize("Turso3D renderer test", IntVector2(1600, 900))) {
+	if (graphics->Initialize("Turso3D renderer test", 1600, 900)) {
 		GLFWwindow* window = graphics->Window();
 		glfwSetWindowUserPointer(window, this);
 
@@ -105,10 +104,6 @@ Application::Application() :
 	bloomRenderer = std::make_unique<BloomRenderer>();
 	ssaoRenderer = std::make_unique<SSAORenderer>();
 	blurRenderer = std::make_unique<BlurRenderer>();
-
-	//Turso3DUtils::ConvertModel("Data/Jack.mdl", "Data/jack.tmf");
-	//Turso3DUtils::ConvertModel("Data/Box.mdl", "Data/box.tmf");
-	//Turso3DUtils::ConvertModel("Data/Mushroom.mdl", "Data/mushroom.tmf");
 }
 
 Application::~Application()
@@ -125,11 +120,11 @@ bool Application::Initialize()
 	if (!graphics) {
 		return false;
 	}
-	graphics->SetVSync(true);
+	graphics->SetVSync(false);
 
 	// Create subsystems that depend on the application window / OpenGL
 	renderer = std::make_unique<Renderer>(workQueue.get(), graphics.get());
-	renderer->SetupShadowMaps(DIRECTIONAL_LIGHT_SIZE, LIGHT_ATLAS_SIZE, FMT_D16);
+	renderer->SetupShadowMaps(DIRECTIONAL_LIGHT_SIZE, LIGHT_ATLAS_SIZE, FORMAT_D32_SFLOAT_PACK32);
 	debugRenderer = std::make_unique<DebugRenderer>(graphics.get());
 
 	bloomRenderer->Initialize(graphics.get());
@@ -189,6 +184,8 @@ bool Application::Initialize()
 
 	// Create scene
 	CreateDefaultScene();
+	CreateSpheresScene();
+	//CreateThousandMushroomScene();
 
 	return true;
 }
@@ -279,6 +276,8 @@ void Application::CreateTextures()
 
 void Application::CreateDefaultScene()
 {
+	ResourceCache* cache = ResourceCache::Instance();
+
 	scene->Clear();
 	Node* root = scene->GetRoot();
 
@@ -286,7 +285,18 @@ void Application::CreateDefaultScene()
 	//octree->Resize(BoundingBox(-1000.0f, 1000.0f), 0);
 
 	LightEnvironment* lightEnvironment = scene->GetEnvironmentLighting();
-	lightEnvironment->SetAmbientColor(Color(0.2f, 0.2f, 0.2f));
+	{
+		std::shared_ptr<Texture> iemTex = cache->LoadResource<Texture>("ibl/daysky_iem.dds");
+		iemTex->DefineSampler(FILTER_BILINEAR, ADDRESS_CLAMP, ADDRESS_CLAMP, ADDRESS_CLAMP);
+
+		std::shared_ptr<Texture> pmremTex = cache->LoadResource<Texture>("ibl/daysky_pmrem.dds");
+		pmremTex->DefineSampler(FILTER_TRILINEAR, ADDRESS_CLAMP, ADDRESS_CLAMP, ADDRESS_CLAMP);
+
+		std::shared_ptr<Texture> brdfTex = cache->LoadResource<Texture>("ibl/brdf.dds");
+		brdfTex->DefineSampler(FILTER_BILINEAR, ADDRESS_CLAMP, ADDRESS_CLAMP, ADDRESS_CLAMP);
+
+		lightEnvironment->SetIBLMaps(iemTex, pmremTex, brdfTex);
+	}
 
 	camera->SetFarClip(1000.0f);
 	camera->SetPosition(Vector3(-10.0f, 20.0f, 0.0f));
@@ -296,157 +306,137 @@ void Application::CreateDefaultScene()
 	Material::SetGlobalShaderDefines("", "HQSHADOW");
 	renderer->SetShadowDepthBiasMul(biasMul, biasMul);
 
-	// =================================
-	// Only for sample purposes
+#if 0
+	// Sun
+	Light* light = root->CreateChild<Light>();
+	//light->SetStatic(true);
+	light->SetLightType(LIGHT_DIRECTIONAL);
+	light->SetCastShadows(true);
 
+	Vector3 color = 100.0f * Vector3(1.0f, 1.0f, 0.6f);
+	light->SetColor(Color(color.x, color.y, color.z, 1.0f));
+	light->SetDirection(Vector3(0.45f, -0.45f, 0.30f));
+	//light->SetRange(600.0f);
+	light->SetShadowMapSize(DIRECTIONAL_LIGHT_SIZE);
+	light->SetShadowMaxDistance(50.0f);
+	light->SetMaxDistance(0.0f);
+	light->SetEnabled(true);
+
+	//static_cast<LightDrawable*>(light->GetDrawable())->SetAutoFocus(true);
+
+#elif 0
+
+	// Moon
+	Light* light = root->CreateChild<Light>();
+	//light->SetStatic(true);
+	light->SetLightType(LIGHT_DIRECTIONAL);
+	light->SetCastShadows(true);
+
+	Vector3 color = 100.0f * Vector3(0.4f, 0.4f, 1.0f);
+	light->SetColor(Color(color.x, color.y, color.z, 1.0f));
+	light->SetDirection(Vector3(0.15f, -0.15f, 0.30f));
+	//light->SetRange(600.0f);
+	light->SetShadowMapSize(DIRECTIONAL_LIGHT_SIZE);
+	light->SetShadowMaxDistance(50.0f);
+	light->SetMaxDistance(0.0f);
+	light->SetEnabled(true);
+
+	//static_cast<LightDrawable*>(light->GetDrawable())->SetAutoFocus(true);
+#endif
+
+}
+
+void Application::CreateSpheresScene()
+{
 	ResourceCache* cache = ResourceCache::Instance();
-#if 1
-	for (int y = -55; y <= 55; ++y) {
-		for (int x = -55; x <= 55; ++x) {
+	Node* root = scene->GetRoot();
+
+	std::shared_ptr<Material> baseMaterial = Material::GetDefault();
+
+	constexpr int count = 7;
+	constexpr float v = 1.0f / (count - 1);
+
+	Vector3 basePos {-0.4f, 0.6f, -1.0f};
+
+	for (int y = 0; y < count; ++y) {
+		for (int x = 0; x < count; ++x) {
+			constexpr float size = 0.1f;
+			constexpr float pos = size * 1.2f;
+
 			StaticModel* object = root->CreateChild<StaticModel>();
 			object->SetStatic(true);
-			object->SetPosition(Vector3(10.5f * x, -0.05f, 10.5f * y));
-			object->SetScale(Vector3(10.0f, 0.1f, 10.0f));
-			object->SetModel(cache->LoadResource<Model>("box.tmf"));
-			object->SetMaterial(cache->LoadResource<Material>("stone.xml"));
+			object->SetCastShadows(true);
+			object->SetPosition(basePos + Vector3 {pos * x, pos * y, 0.0f});
+			object->SetScale(size);
+			object->SetModel(cache->LoadResource<Model>("sphere.tmf"));
+
+			float roughness = x * v;
+			float metallic = y * v;
+
+			std::shared_ptr<Material> mtl = baseMaterial->Clone();
+			mtl->SetUniform("BaseColor", Vector4 {1.0f, 1.0f, 1.0f, 1.0f});
+			mtl->SetUniform("AoRoughMetal", Vector4 {1.0f, roughness, metallic, 0.0f});
+
+			object->SetMaterial(mtl);
 		}
 	}
 
-	for (unsigned i = 0; i < 10000; ++i) {
-		StaticModel* object = root->CreateChild<StaticModel>();
-		object->SetStatic(true);
-		object->SetPosition(Vector3(Random() * 1000.0f - 500.0f, 0.0f, Random() * 1000.0f - 500.0f));
-		object->SetScale(1.5f);
-		object->SetModel(cache->LoadResource<Model>("mushroom.tmf"));
-		object->SetMaterial(cache->LoadResource<Material>("mushroom.xml"));
-		object->SetCastShadows(true);
-		object->SetLodBias(2.0f);
-		object->SetMaxDistance(600.0f);
+	bool lights = true;
+	if (lights) {
+		for (unsigned i = 0; i < 4; ++i) {
+			Light* light = root->CreateChild<Light>();
+			//light->SetStatic(true);
+			light->SetLightType(LIGHT_POINT);
+			//light->SetCastShadows(true);
+			light->SetPosition(Vector3 {Random() * 2.0f - 1.0f, Random() * 2.0f - 1.0f, -1.0f} * 3.0f);
+
+			light->SetColor(Color::WHITE * 10.0f);
+			light->SetRange(5.0f);
+			light->SetShadowMapSize(1024);
+			light->SetShadowMaxDistance(10.0f);
+			light->SetMaxDistance(50.0f);
+		}
 	}
 
-	{
-		StaticModel* object = root->CreateChild<StaticModel>();
-		//object->SetStatic(true);
-		object->SetPosition(Vector3(-10.0f, 0.5f, 50.0f));
-		Quaternion rot {};
-		rot.FromEulerAngles(90.0f, 90.0f, 0.0f);
-		object->SetRotation(rot);
-		object->SetScale(10.0f);
-		//object->SetModel(cache->LoadResource<Model>("mushroom.tmf"));
-		object->SetModel(cache->LoadResource<Model>("box.tmf"));
-		//object->SetModel(cache->LoadResource<Model>("jack.tmf"));
-		object->SetMaterial(cache->LoadResource<Material>("mushroom.xml"));
-		object->SetCastShadows(true);
-		//object->SetLodBias(2.0f);
-		object->SetMaxDistance(600.0f);
+	camera->SetPosition(Vector3(0.0f, 1.0f, -2.2f));
+}
 
-		model = object;
-	}
+void Application::CreateThousandMushroomScene()
+{
+	ResourceCache* cache = ResourceCache::Instance();
+	Node* root = scene->GetRoot();
 
-	{
-		StaticModel* object = root->CreateChild<StaticModel>();
-		//object->SetStatic(true);
-		object->SetPosition(Vector3(-15.0f, 0, 50.0f));
-		object->SetModel(cache->LoadResource<Model>("plane.tmf"));
-		object->SetMaterial(cache->LoadResource<Material>("plane.xml"));
-		object->SetCastShadows(true);
-		object->SetMaxDistance(600.0f);
-	}
+	std::shared_ptr<Model> floorModel = cache->LoadResource<Model>("plane.tmf");
+	std::shared_ptr<Material> floorMaterial = cache->LoadResource<Material>("bricks/bricks075a.xml");
 
-	{
-		AnimatedModel* object = root->CreateChild<AnimatedModel>();
-		//object->SetStatic(true);
-		object->SetPosition(Vector3(Random() * 90.0f - 45.0f, 0.0f, Random() * 90.0f - 45.0f));
-		object->SetRotation(Quaternion(Random(360.0f), Vector3::UP));
-		object->SetModel(cache->LoadResource<Model>("jack.tmf"));
-		object->SetCastShadows(true);
-		object->SetMaxDistance(600.0f);
+	std::shared_ptr<Model> mushroomModel = cache->LoadResource<Model>("mushroom.tmf");
+	std::shared_ptr<Material> mushroomMaterial = cache->LoadResource<Material>("mushroom.xml");
 
-		AnimationState* state = object->AddAnimationState(cache->LoadResource<Animation>("jack_walk.ani"));
-		state->SetWeight(1.0f);
-		state->SetLooped(true);
+	for (int y = -55; y <= 55; ++y) {
+		for (int x = -55; x <= 55; ++x) {
+			StaticModel* floor = root->CreateChild<StaticModel>();
+			floor->SetStatic(true);
+			floor->SetPosition(Vector3(10.5f * x, 0.0f, 10.5f * y));
+			floor->SetScale(Vector3(10.0f, 1.0f, 10.0f));
+			floor->SetModel(floorModel);
+			floor->SetMaterial(floorMaterial);
 
-		characterModel = object;
-	}
-
-	Vector3 quadrantCenters[] =
-	{
-		Vector3(-290.0f, 0.0f, -290.0f),
-		Vector3(290.0f, 0.0f, -290.0f),
-		Vector3(-290.0f, 0.0f, 290.0f),
-		Vector3(290.0f, 0.0f, 290.0f),
-	};
-
-	std::vector<Light*> lights;
-
-	for (unsigned i = 0; i < 100; ++i) {
-		Light* light = root->CreateChild<Light>();
-		light->SetStatic(true);
-		light->SetLightType(LIGHT_POINT);
-		light->SetCastShadows(true);
-		Vector3 colorVec = 5.0f * Vector3(Random(), Random(), Random()).Normalized();
-		light->SetColor(Color(colorVec.x, colorVec.y, colorVec.z, 1.0f));
-		light->SetRange(50.0f);
-		light->SetShadowMapSize(1024);
-		light->SetShadowMaxDistance(200.0f);
-		light->SetMaxDistance(0.0f);
-
-		for (;;) {
-			Vector3 newPos = quadrantCenters[i % 4] + Vector3(Random() * 500.0f - 250.0f, 10.0f, Random() * 500.0f - 250.0f);
-			bool posOk = true;
-
-			for (unsigned j = 0; j < lights.size(); ++j) {
-				if ((newPos - lights[j]->Position()).Length() < 80.0f) {
-					//posOk = false;
-					break;
+			for (int cx = -1; cx <= 1; ++cx) {
+				for (int cy = -1; cy <= 1; ++cy) {
+					StaticModel* object = root->CreateChild<StaticModel>();
+					object->SetStatic(true);
+					object->SetPosition(Vector3(10.5f * x + cx * 2, 0.0f, 10.5f * y + cy * 2));
+					object->SetRotation(Quaternion(0, Random() * 360, 0));
+					object->SetScale(0.5f);
+					object->SetModel(mushroomModel);
+					object->SetMaterial(mushroomMaterial);
+					object->SetCastShadows(true);
+					//object->SetLodBias(2000.0f);
+					object->SetMaxDistance(0.0f);
 				}
 			}
-
-			if (posOk) {
-				light->SetPosition(newPos);
-				break;
-			}
 		}
-
-		lights.push_back(light);
 	}
-
-	{
-		Vector4 color = 100.0f * Vector4(1.0f, 1.0f, 0.5f, 1.0);
-
-		Light* light = root->CreateChild<Light>();
-		//light->SetStatic(true);
-		light->SetLightType(LIGHT_DIRECTIONAL);
-		light->SetCastShadows(true);
-		light->SetColor(Color(color.Data()));
-		light->SetDirection(Vector3(0.45f, -0.45f, 0.0f));
-		//light->SetRange(600.0f);
-		light->SetShadowMapSize(DIRECTIONAL_LIGHT_SIZE);
-		light->SetShadowMaxDistance(1000.0f);
-		light->SetMaxDistance(0.0f);
-		light->SetEnabled(true);
-	}
-
-	{
-		StaticModel* object = root->CreateChild<StaticModel>();
-		object->SetStatic(true);
-		object->SetPosition(Vector3(0.0f, 25.0f, 0.0f));
-		object->SetScale(Vector3(1165.0f, 50.0f, 1.0f));
-		object->SetModel(cache->LoadResource<Model>("box.tmf"));
-		object->SetMaterial(cache->LoadResource<Material>("stone.xml"));
-		object->SetCastShadows(true);
-	}
-
-	{
-		StaticModel* object = root->CreateChild<StaticModel>();
-		object->SetStatic(true);
-		object->SetPosition(Vector3(0.0f, 25.0f, 0.0f));
-		object->SetScale(Vector3(1.0f, 50.0f, 1165.0f));
-		object->SetModel(cache->LoadResource<Model>("box.tmf"));
-		object->SetMaterial(cache->LoadResource<Material>("stone.xml"));
-		object->SetCastShadows(true);
-	}
-#endif
 }
 
 bool Application::IsKeyDown(int key)
@@ -536,11 +526,13 @@ void Application::OnFramebufferSize(int width, int height)
 
 	// Define the base rendertargets
 	for (int i = 0; i < 2; ++i) {
-		hdrBuffer[i]->Define(TEX_2D, sz, FMT_R11_G11_B10F, false, multiSample * i);
+		hdrBuffer[i]->Define(TEX_2D, sz, FORMAT_RGBA16_SFLOAT_PACK16, multiSample * i);
 		hdrBuffer[i]->DefineSampler(FILTER_BILINEAR, ADDRESS_CLAMP, ADDRESS_CLAMP, ADDRESS_CLAMP);
-		normalBuffer[i]->Define(TEX_2D, sz, FMT_RGBA8, false, multiSample * i);
+
+		normalBuffer[i]->Define(TEX_2D, sz, FORMAT_RGBA8_SNORM_PACK32, multiSample * i);
 		normalBuffer[i]->DefineSampler(FILTER_BILINEAR, ADDRESS_CLAMP, ADDRESS_CLAMP, ADDRESS_CLAMP);
-		depthStencilBuffer[i]->Define(TEX_2D, sz, FMT_D32, false, multiSample * i);
+
+		depthStencilBuffer[i]->Define(TEX_2D, sz, FORMAT_D32_SFLOAT_PACK32, multiSample * i);
 		depthStencilBuffer[i]->DefineSampler(FILTER_BILINEAR, ADDRESS_CLAMP, ADDRESS_CLAMP, ADDRESS_CLAMP);
 
 		Texture* colors[] = {
@@ -548,19 +540,23 @@ void Application::OnFramebufferSize(int width, int height)
 			normalBuffer[i].get()
 		};
 		mrtFbo[i]->Define(colors, std::size(colors), depthStencilBuffer[i].get());
+
+		if (multiSample == 1) {
+			break;
+		}
 	}
 
-	ldrBuffer->Define(TEX_2D, sz, FMT_RGBA8, true);
+	ldrBuffer->Define(TEX_2D, sz, FORMAT_RGBA8_SRGB_PACK32);
 	ldrBuffer->DefineSampler(FILTER_BILINEAR, ADDRESS_CLAMP, ADDRESS_CLAMP, ADDRESS_CLAMP);
 	ldrFbo->Define(ldrBuffer.get(), depthStencilBuffer[0].get());
 
-	guiTexture->Define(TEX_2D, sz, FMT_RGBA8, true);
+	guiTexture->Define(TEX_2D, sz, FORMAT_RGBA8_SRGB_PACK32);
 	guiTexture->DefineSampler(FILTER_BILINEAR, ADDRESS_CLAMP, ADDRESS_CLAMP, ADDRESS_CLAMP);
 	guiFbo->Define(guiTexture.get(), nullptr);
 
 	// Bloom resources
 	if (bloomRenderer) {
-		bloomRenderer->UpdateBuffers(sz);
+		bloomRenderer->UpdateBuffers(sz, hdrBuffer[0]->Format());
 	}
 
 	// SSAO resources
@@ -568,7 +564,7 @@ void Application::OnFramebufferSize(int width, int height)
 		ssaoRenderer->UpdateBuffers(sz);
 	}
 
-	blurRenderer->UpdateBuffers(sz, 3, FMT_RGBA8, true);
+	blurRenderer->UpdateBuffers(sz, FORMAT_RGBA8_SRGB_PACK32, 3);
 
 	if (rmlRenderer) {
 		rmlRenderer->UpdateBuffers(sz, multiSample);
@@ -629,30 +625,6 @@ void Application::Update(double dt)
 	}
 
 	if (IsKeyPressed(GLFW_KEY_F)) graphics->SetFullscreen(!graphics->IsFullscreen());
-
-	{
-		AnimatedModel* object = characterModel;
-		AnimationState* state = object->AnimationStates()[0].get();
-		state->AddTime(dt);
-		object->Translate(Vector3::FORWARD * 2.0f * dt);
-
-		// Rotate to avoid going outside the plane
-		Vector3 pos = object->Position();
-		if (pos.x < -45.0f || pos.x > 45.0f || pos.z < -45.0f || pos.z > 45.0f) {
-			object->Yaw(45.0f * dt);
-		}
-	}
-
-	if (model) {
-		model->Yaw(25.0f * dt, TS_WORLD);
-
-		if (IsKeyPressed(GLFW_KEY_R)) {
-			model->RemoveSelf();
-			model = nullptr;
-
-			ResourceCache::Instance()->ClearUnused();
-		}
-	}
 
 #endif
 
@@ -719,8 +691,8 @@ void Application::Render(double dt)
 
 	// Apply hdr bloom
 	if (bloomRenderer) {
-		bloomRenderer->Render(color);
-		color = bloomRenderer->GetResultTexture();
+		//bloomRenderer->Render(color);
+		//color = bloomRenderer->GetResultTexture();
 	}
 
 	// Apply tonemap

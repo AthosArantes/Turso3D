@@ -10,7 +10,7 @@ namespace Turso3D
 	RenderBuffer::RenderBuffer() :
 		buffer(0),
 		size(IntVector2::ZERO),
-		format(FMT_NONE),
+		format(FORMAT_NONE),
 		multisample(0)
 	{
 	}
@@ -24,7 +24,7 @@ namespace Turso3D
 	{
 		Release();
 
-		if (format_ > FMT_DXT1) {
+		if (Texture::IsCompressed(format_)) {
 			LOG_ERROR("Compressed formats are unsupported for renderbuffers");
 			return false;
 		}
@@ -40,7 +40,7 @@ namespace Turso3D
 		glGenRenderbuffers(1, &buffer);
 		if (!buffer) {
 			size = IntVector2::ZERO;
-			format = FMT_NONE;
+			format = FORMAT_NONE;
 			multisample = 0;
 
 			LOG_ERROR("Failed to create renderbuffer");
@@ -51,7 +51,7 @@ namespace Turso3D
 		format = format_;
 		multisample = multisample_;
 
-		unsigned internalFormat = Texture::glInternalFormats[format];
+		unsigned internalFormat = Texture::GetGLInternalFormat(format);
 
 		// Clear previous error first to be able to check whether the data was successfully set
 		glGetError();
@@ -67,7 +67,7 @@ namespace Turso3D
 		if (glGetError() != GL_NO_ERROR) {
 			Release();
 			size = IntVector2::ZERO;
-			format = FMT_NONE;
+			format = FORMAT_NONE;
 
 			LOG_ERROR("Failed to create renderbuffer");
 			return false;

@@ -3,15 +3,22 @@
 namespace Turso3D
 {
 	LightEnvironment::LightEnvironment() :
-		ambientColor(DEFAULT_AMBIENT_COLOR),
-		fogColor(DEFAULT_FOG_COLOR),
-		fogStart(DEFAULT_FOG_START),
-		fogEnd(DEFAULT_FOG_END)
+		ambientColor(Color {0.0f, 0.0f, 0.0f}),
+		fogColor(Color {0.0f, 0.0f, 0.0f}),
+		fogStart(100.0f),
+		fogEnd(1000.0f)
 	{
 	}
 
 	LightEnvironment::~LightEnvironment()
 	{
+	}
+
+	void LightEnvironment::SetIBLMaps(std::shared_ptr<Texture> iem, std::shared_ptr<Texture> pmrem, std::shared_ptr<Texture> brdf)
+	{
+		iemTex = iem;
+		pmremTex = pmrem;
+		brdfTex = brdf;
 	}
 
 	void LightEnvironment::SetAmbientColor(const Color& color)

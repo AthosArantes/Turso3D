@@ -130,7 +130,7 @@ namespace Turso3D
 		glfwTerminate();
 	}
 
-	bool Graphics::Initialize(const char* windowTitle, const IntVector2& windowSize)
+	bool Graphics::Initialize(const char* windowTitle, int width, int height)
 	{
 		if (context) {
 			return true;
@@ -151,9 +151,9 @@ namespace Turso3D
 		glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
 		lastWindowPos = IntVector2::ZERO;
-		lastWindowSize = windowSize;
+		lastWindowSize = IntVector2 {width, height};
 
-		window = glfwCreateWindow(windowSize.x, windowSize.y, windowTitle, nullptr, nullptr);
+		window = glfwCreateWindow(width, height, windowTitle, nullptr, nullptr);
 		if (!window) {
 			throw std::exception("Failed to create GLFW window.");
 		}
@@ -206,6 +206,7 @@ namespace Turso3D
 		glEnable(GL_DEPTH_TEST);
 		glEnable(GL_MULTISAMPLE);
 		glEnable(GL_FRAMEBUFFER_SRGB);
+		glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
 		glClearDepth(1.0f);
 		glDepthRange(0.0f, 1.0f);
 		glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
@@ -230,9 +231,9 @@ namespace Turso3D
 		return true;
 	}
 
-	void Graphics::Resize(const IntVector2& size)
+	void Graphics::Resize(int width, int height)
 	{
-		glfwSetWindowSize(window, size.x, size.y);
+		glfwSetWindowSize(window, width, height);
 	}
 
 	void Graphics::SetFullscreen(bool enable)

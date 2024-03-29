@@ -1,0 +1,9 @@
+brdf.dds
+BRDF LUT generated
+https://github.com/HectorMF/BRDFGenerator
+
+===========================================================
+daysky_env.dds; daysky_iem.dds; daysky_pmrem.dds
+
+Created using DaySkyHDRI022A from ambientCG.com, licensed under the Creative Commons CC0 1.0 Universal License.
+https://ambientcg.com/a/DaySkyHDRI022A

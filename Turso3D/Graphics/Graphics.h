@@ -48,10 +48,10 @@ namespace Turso3D
 
 		// Create window and rendering context.
 		// Return true on success.
-		bool Initialize(const char* windowTitle, const IntVector2& windowSize);
+		bool Initialize(const char* windowTitle, int width, int height);
 
 		// Set new window size.
-		void Resize(const IntVector2& size);
+		void Resize(int width, int height);
 		// Set fullscreen mode.
 		void SetFullscreen(bool enable);
 		// Set vertical sync on/off.
@@ -160,18 +160,21 @@ namespace Turso3D
 		bool IsInitialized() const { return context != nullptr; }
 		// Return whether has instancing support.
 		bool HasInstancing() const { return hasInstancing; }
+
 		// Return current window size.
 		IntVector2 Size() const;
 		// Return current window width.
 		int Width() const { return Size().x; }
 		// Return current window height.
 		int Height() const { return Size().y; }
+		
 		// Return window render size, which can be different if the OS is doing resolution scaling.
 		IntVector2 RenderSize() const;
 		// Return window render width.
 		int RenderWidth() const { return RenderSize().x; }
 		// Return window render height.
 		int RenderHeight() const { return RenderSize().y; }
+
 		// Return whether is fullscreen.
 		bool IsFullscreen() const;
 		// Return whether is using vertical sync.

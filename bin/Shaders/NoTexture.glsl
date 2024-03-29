@@ -43,28 +43,39 @@ in vec4 vWorldPos;
 in vec3 vNormal;
 in vec3 vViewNormal;
 noperspective in vec2 vScreenPos;
-out vec4 fragColor[2];
 
 layout(std140) uniform PerMaterialData3
 {
-	vec4 matDiffColor;
-	vec4 matSpecColor;
+	vec4 BaseColor;
+	vec4 AoRoughMetal;
+#ifdef EMISSIVE
+	vec4 EmissiveParams;
+#endif
 };
+
+out vec4 fragColor[2];
 
 void main()
 {
-	vec3 albedo = matDiffColor.rgb;
+	//float ao = AoRoughMetal.r;
+	float roughness = AoRoughMetal.g;
+	float metallic = AoRoughMetal.b;
+
 	vec3 normal = normalize(vNormal);
-	vec3 f0 = matSpecColor.rgb;
-	float metallic = matSpecColor.a;
-	float roughness = matDiffColor.a;
 
 	// BRDF Shading
-	vec3 color = albedo * ambientColor.rgb;
-	color += CalculateLighting(vWorldPos, vScreenPos, normal, albedo, f0, metallic, roughness);
+	vec3 color = CalculateLighting(vWorldPos, vScreenPos, normal, BaseColor.rgb, metallic, roughness);
+
+#ifdef EMISSIVE
+	color += EmissiveParams.rgb * EmissiveParams.a;
+#endif
+
+#ifdef OPACITY
+	color *= BaseColor.a;
+#endif
 
 	// Add environment fog
-	fragColor[0] = vec4(mix(fogColor, color, GetFogFactor(vWorldPos.w)), matDiffColor.a);
+	fragColor[0] = vec4(mix(fogColor, color, GetFogFactor(vWorldPos.w)), BaseColor.a);
 	fragColor[1] = vec4(vViewNormal, 1.0);
 }
 

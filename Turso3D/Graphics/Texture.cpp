@@ -1,14 +1,15 @@
 #include "Texture.h"
 #include <Turso3D/Graphics/Graphics.h>
+#include <Turso3D/IO/Stream.h>
 #include <Turso3D/IO/Log.h>
 #include <glew/glew.h>
 
+#define GLM_ENABLE_EXPERIMENTAL
+#include <gli/load.hpp>
+#include <gli/generate_mipmaps.hpp>
+
 namespace Turso3D
 {
-	static size_t activeTextureUnit = 0xffffffff;
-	static unsigned activeTargets[MAX_TEXTURE_UNITS];
-	static Texture* boundTextures[MAX_TEXTURE_UNITS];
-
 	static const GLenum glTargets[] =
 	{
 		GL_TEXTURE_2D,
@@ -16,143 +17,7 @@ namespace Turso3D
 		GL_TEXTURE_CUBE_MAP
 	};
 
-	const unsigned Texture::glInternalFormats[] =
-	{
-		0,
-		GL_R8,
-		GL_RG8,
-		GL_RGBA8,
-		GL_R11F_G11F_B10F,
-		GL_ALPHA,
-		GL_R16,
-		GL_RG16,
-		GL_RGBA16,
-		GL_R16F,
-		GL_RG16F,
-		GL_RGBA16F,
-		GL_R32F,
-		GL_RG32F,
-		GL_RGB32F,
-		GL_RGBA32F,
-		GL_R32UI,
-		GL_RG32UI,
-		GL_RGBA32UI,
-		GL_DEPTH_COMPONENT16,
-		GL_DEPTH_COMPONENT32,
-		GL_DEPTH24_STENCIL8,
-		GL_COMPRESSED_RGBA_S3TC_DXT1_EXT,
-		GL_COMPRESSED_RGBA_S3TC_DXT3_EXT,
-		GL_COMPRESSED_RGBA_S3TC_DXT5_EXT,
-		0,
-		0,
-		0,
-		0,
-		0
-	};
-
-	static const unsigned glSRGBInternalFormats[] = {
-		0,
-		0,
-		0,
-		GL_SRGB8_ALPHA8,
-		0,
-		0,
-		0,
-		0,
-		0,
-		0,
-		0,
-		0,
-		0,
-		0,
-		0,
-		0,
-		0,
-		0,
-		0,
-		0,
-		0,
-		0,
-		GL_COMPRESSED_SRGB_ALPHA_S3TC_DXT1_EXT,
-		GL_COMPRESSED_SRGB_ALPHA_S3TC_DXT3_EXT,
-		GL_COMPRESSED_SRGB_ALPHA_S3TC_DXT5_EXT,
-		0,
-		0,
-		0,
-		0,
-		0
-	};
-
-	static const unsigned glFormats[] =
-	{
-		0,
-		GL_RED,
-		GL_RG,
-		GL_RGBA,
-		GL_RGB,
-		GL_ALPHA,
-		GL_RED,
-		GL_RG,
-		GL_RGBA,
-		GL_RED,
-		GL_RG,
-		GL_RGBA,
-		GL_RED,
-		GL_RG,
-		GL_RGB,
-		GL_RGBA,
-		GL_RED_INTEGER,
-		GL_RG_INTEGER,
-		GL_RGBA_INTEGER,
-		GL_DEPTH_COMPONENT,
-		GL_DEPTH_COMPONENT,
-		GL_DEPTH_STENCIL,
-		GL_COMPRESSED_RGBA_S3TC_DXT1_EXT,
-		GL_COMPRESSED_RGBA_S3TC_DXT3_EXT,
-		GL_COMPRESSED_RGBA_S3TC_DXT5_EXT,
-		0,
-		0,
-		0,
-		0,
-		0
-	};
-
-	static const unsigned glDataTypes[] =
-	{
-		0,
-		GL_UNSIGNED_BYTE,
-		GL_UNSIGNED_BYTE,
-		GL_UNSIGNED_BYTE,
-		GL_UNSIGNED_INT_10F_11F_11F_REV,
-		GL_UNSIGNED_BYTE,
-		GL_UNSIGNED_SHORT,
-		GL_UNSIGNED_SHORT,
-		GL_UNSIGNED_SHORT,
-		GL_FLOAT,
-		GL_FLOAT,
-		GL_FLOAT,
-		GL_FLOAT,
-		GL_FLOAT,
-		GL_FLOAT,
-		GL_FLOAT,
-		GL_UNSIGNED_INT,
-		GL_UNSIGNED_INT,
-		GL_UNSIGNED_INT,
-		GL_UNSIGNED_SHORT,
-		GL_UNSIGNED_INT,
-		GL_UNSIGNED_INT_24_8,
-		0,
-		0,
-		0,
-		0,
-		0,
-		0,
-		0,
-		0
-	};
-
-	static const unsigned glWrapModes[] =
-	{
+	static const unsigned glWrapModes[] = {
 		GL_REPEAT,
 		GL_MIRRORED_REPEAT,
 		GL_CLAMP_TO_EDGE,
@@ -160,29 +25,179 @@ namespace Turso3D
 		GL_MIRROR_CLAMP_EXT
 	};
 
+	static ImageFormat GetSRGBFormat(ImageFormat format)
+	{
+		switch (format) {
+			case FORMAT_R8_UNORM_PACK8:
+			case FORMAT_R8_SNORM_PACK8:
+			case FORMAT_R8_USCALED_PACK8:
+			case FORMAT_R8_SSCALED_PACK8:
+			case FORMAT_R8_UINT_PACK8:
+			case FORMAT_R8_SINT_PACK8:
+				return FORMAT_R8_SRGB_PACK8;
+
+			case FORMAT_RG8_UNORM_PACK8:
+			case FORMAT_RG8_SNORM_PACK8:
+			case FORMAT_RG8_USCALED_PACK8:
+			case FORMAT_RG8_SSCALED_PACK8:
+			case FORMAT_RG8_UINT_PACK8:
+			case FORMAT_RG8_SINT_PACK8:
+				return FORMAT_RG8_SRGB_PACK8;
+
+			case FORMAT_RGB8_UNORM_PACK8:
+			case FORMAT_RGB8_SNORM_PACK8:
+			case FORMAT_RGB8_USCALED_PACK8:
+			case FORMAT_RGB8_SSCALED_PACK8:
+			case FORMAT_RGB8_UINT_PACK8:
+			case FORMAT_RGB8_SINT_PACK8:
+				return FORMAT_RGB8_SRGB_PACK8;
+
+			case FORMAT_BGR8_UNORM_PACK8:
+			case FORMAT_BGR8_SNORM_PACK8:
+			case FORMAT_BGR8_USCALED_PACK8:
+			case FORMAT_BGR8_SSCALED_PACK8:
+			case FORMAT_BGR8_UINT_PACK8:
+			case FORMAT_BGR8_SINT_PACK8:
+				return FORMAT_BGR8_SRGB_PACK8;
+
+			case FORMAT_RGBA8_UNORM_PACK8:
+			case FORMAT_RGBA8_SNORM_PACK8:
+			case FORMAT_RGBA8_USCALED_PACK8:
+			case FORMAT_RGBA8_SSCALED_PACK8:
+			case FORMAT_RGBA8_UINT_PACK8:
+			case FORMAT_RGBA8_SINT_PACK8:
+				return FORMAT_RGBA8_SRGB_PACK8;
+
+			case FORMAT_BGRA8_UNORM_PACK8:
+			case FORMAT_BGRA8_SNORM_PACK8:
+			case FORMAT_BGRA8_USCALED_PACK8:
+			case FORMAT_BGRA8_SSCALED_PACK8:
+			case FORMAT_BGRA8_UINT_PACK8:
+			case FORMAT_BGRA8_SINT_PACK8:
+				return FORMAT_BGRA8_SRGB_PACK8;
+
+			case FORMAT_RGBA8_UNORM_PACK32:
+			case FORMAT_RGBA8_SNORM_PACK32:
+			case FORMAT_RGBA8_USCALED_PACK32:
+			case FORMAT_RGBA8_SSCALED_PACK32:
+			case FORMAT_RGBA8_UINT_PACK32:
+			case FORMAT_RGBA8_SINT_PACK32:
+				return FORMAT_RGBA8_SRGB_PACK32;
+
+			case FORMAT_RGB_DXT1_UNORM_BLOCK8: return FORMAT_RGB_DXT1_SRGB_BLOCK8;
+			case FORMAT_RGBA_DXT1_UNORM_BLOCK8: return FORMAT_RGBA_DXT1_SRGB_BLOCK8;
+			case FORMAT_RGBA_DXT3_UNORM_BLOCK16: return FORMAT_RGBA_DXT3_SRGB_BLOCK16;
+			case FORMAT_RGBA_DXT5_UNORM_BLOCK16: return FORMAT_RGBA_DXT5_SRGB_BLOCK16;
+			case FORMAT_RGBA_BP_UNORM_BLOCK16: return FORMAT_RGBA_BP_SRGB_BLOCK16;
+
+			case FORMAT_RGB_ETC2_UNORM_BLOCK8: return FORMAT_RGB_ETC2_SRGB_BLOCK8;
+			case FORMAT_RGBA_ETC2_UNORM_BLOCK8: return FORMAT_RGBA_ETC2_SRGB_BLOCK8;
+			case FORMAT_RGBA_ETC2_UNORM_BLOCK16: return FORMAT_RGBA_ETC2_SRGB_BLOCK16;
+
+			case FORMAT_RGBA_ASTC_4X4_UNORM_BLOCK16: return FORMAT_RGBA_ASTC_4X4_SRGB_BLOCK16;
+			case FORMAT_RGBA_ASTC_5X4_UNORM_BLOCK16: return FORMAT_RGBA_ASTC_5X4_SRGB_BLOCK16;
+			case FORMAT_RGBA_ASTC_5X5_UNORM_BLOCK16: return FORMAT_RGBA_ASTC_5X5_SRGB_BLOCK16;
+			case FORMAT_RGBA_ASTC_6X5_UNORM_BLOCK16: return FORMAT_RGBA_ASTC_6X5_SRGB_BLOCK16;
+			case FORMAT_RGBA_ASTC_6X6_UNORM_BLOCK16: return FORMAT_RGBA_ASTC_6X6_SRGB_BLOCK16;
+			case FORMAT_RGBA_ASTC_8X5_UNORM_BLOCK16: return FORMAT_RGBA_ASTC_8X5_SRGB_BLOCK16;
+			case FORMAT_RGBA_ASTC_8X6_UNORM_BLOCK16: return FORMAT_RGBA_ASTC_8X6_SRGB_BLOCK16;
+			case FORMAT_RGBA_ASTC_8X8_UNORM_BLOCK16: return FORMAT_RGBA_ASTC_8X8_SRGB_BLOCK16;
+			case FORMAT_RGBA_ASTC_10X5_UNORM_BLOCK16: return FORMAT_RGBA_ASTC_10X5_SRGB_BLOCK16;
+			case FORMAT_RGBA_ASTC_10X6_UNORM_BLOCK16: return FORMAT_RGBA_ASTC_10X6_SRGB_BLOCK16;
+			case FORMAT_RGBA_ASTC_10X8_UNORM_BLOCK16: return FORMAT_RGBA_ASTC_10X8_SRGB_BLOCK16;
+			case FORMAT_RGBA_ASTC_10X10_UNORM_BLOCK16: return FORMAT_RGBA_ASTC_10X10_SRGB_BLOCK16;
+			case FORMAT_RGBA_ASTC_12X10_UNORM_BLOCK16: return FORMAT_RGBA_ASTC_12X10_SRGB_BLOCK16;
+			case FORMAT_RGBA_ASTC_12X12_UNORM_BLOCK16: return FORMAT_RGBA_ASTC_12X12_SRGB_BLOCK16;
+
+			case FORMAT_RGB_PVRTC1_8X8_UNORM_BLOCK32: return FORMAT_RGB_PVRTC1_8X8_SRGB_BLOCK32;
+			case FORMAT_RGB_PVRTC1_16X8_UNORM_BLOCK32: return FORMAT_RGB_PVRTC1_16X8_SRGB_BLOCK32;
+			case FORMAT_RGBA_PVRTC1_8X8_UNORM_BLOCK32: return FORMAT_RGBA_PVRTC1_8X8_SRGB_BLOCK32;
+			case FORMAT_RGBA_PVRTC1_16X8_UNORM_BLOCK32: return FORMAT_RGBA_PVRTC1_16X8_SRGB_BLOCK32;
+			case FORMAT_RGBA_PVRTC2_4X4_UNORM_BLOCK8: return FORMAT_RGBA_PVRTC2_4X4_SRGB_BLOCK8;
+			case FORMAT_RGBA_PVRTC2_8X4_UNORM_BLOCK8: return FORMAT_RGBA_PVRTC2_8X4_SRGB_BLOCK8;
+
+			case FORMAT_BGR8_UNORM_PACK32: return FORMAT_BGR8_SRGB_PACK32;
+		}
+		return format;
+	}
+
+	// ==========================================================================================
+	struct Texture::LoadBuffer
+	{
+		gli::texture texture;
+	};
+
+	// ==========================================================================================
+	static size_t ActiveTextureUnit = 0xffffffff;
+	static unsigned ActiveTargets[MAX_TEXTURE_UNITS];
+	static Texture* BoundTextures[MAX_TEXTURE_UNITS];
+
+	// ==========================================================================================
+	ImageLevel::ImageLevel() :
+		data(nullptr),
+		size(IntVector3::ZERO),
+		dataSize(0)
+	{
+	}
+
+	ImageLevel::ImageLevel(const IntVector2& size, ImageFormat format, const void* data) :
+		data(reinterpret_cast<const uint8_t*>(data)),
+		size(IntVector3 {size.x, size.y, 1})
+	{
+		gli::format f = static_cast<gli::format>(format);
+		dataSize = gli::block_size(f) * size.x * size.y;
+	}
+
+	ImageLevel::ImageLevel(const IntVector3& size, ImageFormat format, const void* data) :
+		data(reinterpret_cast<const uint8_t*>(data)),
+		size(size)
+	{
+		gli::format f = static_cast<gli::format>(format);
+		dataSize = gli::block_size(f) * size.x * size.y * size.y;
+	}
+
+	// ==========================================================================================
+	unsigned Texture::GetGLInternalFormat(ImageFormat format)
+	{
+		gli::gl GL {gli::gl::PROFILE_GL33};
+		gli::gl::format texFormat = GL.translate(static_cast<gli::format>(format), gli::swizzles {});
+		return texFormat.Internal;
+	}
+
+	bool Texture::IsCompressed(ImageFormat format)
+	{
+		gli::format texFormat = static_cast<gli::format>(format);
+		return gli::is_compressed(texFormat) || gli::is_s3tc_compressed(texFormat);
+	}
+
+	bool Texture::IsStencil(ImageFormat format)
+	{
+		gli::format texFormat = static_cast<gli::format>(format);
+		return gli::is_stencil(texFormat);
+	}
+
 	// ==========================================================================================
 	Texture::Texture() :
 		texture(0),
 		target(0),
 		type(TEX_2D),
 		size(IntVector3::ZERO),
-		format(FMT_NONE),
+		format(FORMAT_NONE),
 		multisample(0),
 		numLevels(0),
-		loadSRGB(false),
-		srgb(false)
+		loadSRGB(false)
 	{
 	}
+
 	Texture::Texture(bool loadSRGB) :
 		texture(0),
 		target(0),
 		type(TEX_2D),
 		size(IntVector3::ZERO),
-		format(FMT_NONE),
+		format(FORMAT_NONE),
 		multisample(0),
 		numLevels(0),
-		loadSRGB(loadSRGB),
-		srgb(false)
+		loadSRGB(loadSRGB)
 	{
 	}
 
@@ -193,75 +208,211 @@ namespace Turso3D
 
 	bool Texture::BeginLoad(Stream& source)
 	{
-		loadImages.clear();
+		loadBuffer.reset();
 
-		std::unique_ptr<Image>& image = loadImages.emplace_back(std::make_unique<Image>());
-		if (!image->Load(source)) {
-			loadImages.clear();
+		gli::texture texture;
+		{
+			size_t sz = source.Size();
+			std::unique_ptr<char[]> data = std::make_unique<char[]>(sz);
+			size_t length = source.Read(data.get(), sz);
+
+			texture = gli::load(data.get(), length);
+		}
+
+		if (texture.empty()) {
+			LOG_ERROR("Failed to load texture.");
 			return false;
 		}
 
-		// If image uses unsupported format, decompress to RGBA now
-		if (image->Format() >= FMT_ETC1) {
-			std::unique_ptr<Image> rgbaImage = std::make_unique<Image>();
-			rgbaImage->SetSize(image->Size(), FMT_RGBA8);
-			image->DecompressLevel(rgbaImage->Data(), 0);
-			rgbaImage.swap(image); // This destroys the original compressed image
+		ImageFormat format = static_cast<ImageFormat>(texture.format());
+		bool compressed = IsCompressed(format);
+
+		// Generate mip maps
+		if (!compressed && texture.levels() == 1) {
+			// TODO: generate mipmaps
 		}
 
-		// Construct mip levels now if image is uncompressed
-		if (!image->IsCompressed()) {
-			Image* mipImage = image.get();
-
-			while (mipImage->Width() > 1 || mipImage->Height() > 1) {
-				std::unique_ptr<Image>& newMip = loadImages.emplace_back(std::make_unique<Image>());
-				mipImage->GenerateMipImage(*newMip);
-
-				mipImage = newMip.get();
-			}
-		}
+		loadBuffer = std::make_unique<LoadBuffer>();
+		loadBuffer->texture = texture;
 
 		return true;
 	}
 
 	bool Texture::EndLoad()
 	{
-		if (loadImages.empty()) {
+		// Clear gl errors
+		glGetError();
+
+		gli::texture& tex = loadBuffer->texture;
+
+		// Override sRGB format
+		ImageFormat texFormat = static_cast<ImageFormat>(tex.format());
+		if (loadSRGB) {
+			texFormat = GetSRGBFormat(texFormat);
+		}
+
+		bool compressed = IsCompressed(texFormat);
+
+		gli::gl GL {gli::gl::PROFILE_GL33};
+		gli::gl::format glFormat = GL.translate(static_cast<gli::format>(texFormat), tex.swizzles());
+		GLenum glTarget = GL.translate(tex.target());
+
+		if (glFormat.Type == gli::gl::TYPE_NONE) {
+			glFormat.Type = gli::gl::TYPE_U8;
+		}
+
+		GLuint tid = 0;
+		glGenTextures(1, &tid);
+		glBindTexture(glTarget, tid);
+		glTexParameteri(glTarget, GL_TEXTURE_BASE_LEVEL, 0);
+		glTexParameteri(glTarget, GL_TEXTURE_MAX_LEVEL, static_cast<GLint>(tex.levels() - 1));
+		glTexParameteri(glTarget, GL_TEXTURE_SWIZZLE_R, glFormat.Swizzles[0]);
+		glTexParameteri(glTarget, GL_TEXTURE_SWIZZLE_G, glFormat.Swizzles[1]);
+		glTexParameteri(glTarget, GL_TEXTURE_SWIZZLE_B, glFormat.Swizzles[2]);
+		glTexParameteri(glTarget, GL_TEXTURE_SWIZZLE_A, glFormat.Swizzles[3]);
+
+		if (glGetError() != GL_NO_ERROR) {
+			LOG_ERROR("Failed to create OpenGL texture.");
 			return false;
 		}
 
-		std::vector<ImageLevel> initialData;
+		glm::tvec3<GLsizei> extent {tex.extent()};
+		GLsizei face_count = static_cast<GLsizei>(tex.layers() * tex.faces());
+		GLint num_levels = static_cast<GLint>(tex.levels());
 
-		for (size_t i = 0; i < loadImages.size(); ++i) {
-			for (size_t j = 0; j < loadImages[i]->NumLevels(); ++j) {
-				initialData.push_back(loadImages[i]->Level(j));
+		for (size_t layer = 0; layer < tex.layers(); ++layer) {
+			for (size_t face = 0; face < tex.faces(); ++face) {
+				for (size_t level = 0, glMip = 0; level < tex.levels(); ++level, ++glMip) {
+					glm::tvec3<GLsizei> extent {tex.extent(level)};
+
+					GLenum target = gli::is_target_cube(tex.target()) ? static_cast<GLenum>(GL_TEXTURE_CUBE_MAP_POSITIVE_X + face) : glTarget;
+
+					switch (tex.target()) {
+						case gli::TARGET_1D:
+							if (compressed) {
+								glCompressedTexImage1D(
+									target,
+									static_cast<GLint>(glMip),
+									glFormat.Internal,
+									extent.x,
+									0,
+									static_cast<GLsizei>(tex.size(level)),
+									tex.data(layer, face, level)
+								);
+							} else {
+								glTexImage1D(
+									target,
+									static_cast<GLint>(glMip),
+									glFormat.Internal,
+									extent.x,
+									0,
+									glFormat.External,
+									glFormat.Type,
+									tex.data(layer, face, level)
+								);
+							}
+							break;
+						case gli::TARGET_1D_ARRAY:
+						case gli::TARGET_2D:
+						case gli::TARGET_CUBE:
+							if (compressed) {
+								glCompressedTexImage2D(
+									target,
+									static_cast<GLint>(glMip),
+									glFormat.Internal,
+									extent.x,
+									tex.target() == gli::TARGET_1D_ARRAY ? static_cast<GLint>(layer) : extent.y,
+									0,
+									static_cast<GLsizei>(tex.size(level)),
+									tex.data(layer, face, level)
+								);
+							} else {
+								glTexImage2D(
+									target,
+									static_cast<GLint>(glMip),
+									glFormat.Internal,
+									extent.x,
+									tex.target() == gli::TARGET_1D_ARRAY ? static_cast<GLint>(layer) : extent.y,
+									0,
+									glFormat.External,
+									glFormat.Type,
+									tex.data(layer, face, level)
+								);
+							}
+							break;
+						case gli::TARGET_2D_ARRAY:
+						case gli::TARGET_3D:
+						case gli::TARGET_CUBE_ARRAY:
+							if (compressed) {
+								glCompressedTexImage3D(
+									target,
+									static_cast<GLint>(glMip),
+									glFormat.Internal,
+									extent.x,
+									extent.y,
+									tex.target() == gli::TARGET_3D ? extent.z : static_cast<GLint>(layer),
+									0,
+									static_cast<GLsizei>(tex.size(level)),
+									tex.data(layer, face, level)
+								);
+							} else {
+								glTexImage3D(
+									target,
+									static_cast<GLint>(glMip),
+									glFormat.Internal,
+									extent.x,
+									extent.y,
+									tex.target() == gli::TARGET_3D ? extent.z : static_cast<GLint>(layer),
+									0,
+									glFormat.External,
+									glFormat.Type,
+									tex.data(layer, face, level)
+								);
+							}
+							break;
+						default:
+							assert(0);
+							break;
+					}
+				}
 			}
 		}
 
-		Image* image = loadImages[0].get();
-		bool success = Define(TEX_2D, image->Size(), image->Format(), loadSRGB, 1, initialData.size(), &initialData[0]);
-		// TODO: Read a parameter file for the sampling parameters (Values retrieved in BeginLoad)
-		// TODO: Create a default setting
-		success &= DefineSampler(FILTER_ANISOTROPIC, ADDRESS_WRAP, ADDRESS_WRAP, ADDRESS_WRAP);
+		if (glGetError() != GL_NO_ERROR) {
+			LOG_ERROR("Failed to load OpenGL texture.");
+			return false;
+		}
 
-		std::vector<std::unique_ptr<Image>> {}.swap(loadImages);
+		Release();
+		texture = tid;
+		target = glTarget;
 
-		return success;
+		size = IntVector3 {
+			extent.x,
+			(tex.target() == gli::TARGET_1D_ARRAY) ? static_cast<int>(tex.layers()) : extent.y,
+			(tex.target() == gli::TARGET_3D) ? extent.z : ((tex.target() == gli::TARGET_1D_ARRAY) ? 1 : static_cast<int>(tex.layers()))
+		};
+		format = texFormat;
+		multisample = 1;
+		numLevels = num_levels;
+
+		// IMPROVE: Use a default global setting for samplers
+		DefineSampler(FILTER_ANISOTROPIC, ADDRESS_WRAP, ADDRESS_WRAP, ADDRESS_WRAP);
+
+		loadBuffer.reset();
+
+		return true;
 	}
 
-	bool Texture::Define(TextureType type_, const IntVector2& size_, ImageFormat format_, bool srgb_, int multisample_, size_t numLevels_, const ImageLevel* initialData)
+	bool Texture::Define(TextureType type_, const IntVector2& size_, ImageFormat format_, int multisample_, size_t numLevels_, const ImageLevel* initialData)
 	{
-		return Define(type_, IntVector3(size_.x, size_.y, 1), format_, srgb_, multisample_, numLevels_, initialData);
+		return Define(type_, IntVector3 {size_.x, size_.y, 1}, format_, multisample_, numLevels_, initialData);
 	}
 
-	bool Texture::Define(TextureType type_, const IntVector3& size_, ImageFormat format_, bool srgb_, int multisample_, size_t numLevels_, const ImageLevel* initialData)
+	bool Texture::Define(TextureType type_, const IntVector3& size_, ImageFormat format_, int multisample_, size_t numLevels_, const ImageLevel* initialData)
 	{
 		Release();
 
-		if (format_ >= FMT_ETC1) {
-			LOG_ERROR("ETC1 and PVRTC formats are unsupported");
-			return false;
-		}
 		if (size_.x < 1 || size_.y < 1 || size_.z < 1) {
 			LOG_ERROR("Texture must not have zero or negative size");
 			return false;
@@ -270,7 +421,7 @@ namespace Turso3D
 			LOG_ERROR("2D texture must have depth of 1");
 			return false;
 		}
-		if (type_ == TEX_CUBE && (size_.x != size_.y || size_.z != MAX_CUBE_FACES)) {
+		if (type_ == TEX_CUBE && (size_.x != size_.y)) {
 			LOG_ERROR("Cube map must have square dimensions and 6 faces");
 			return false;
 		}
@@ -287,7 +438,7 @@ namespace Turso3D
 		glGenTextures(1, &texture);
 		if (!texture) {
 			size = IntVector3::ZERO;
-			format = FMT_NONE;
+			format = FORMAT_NONE;
 			numLevels = 0;
 			multisample = 0;
 
@@ -295,21 +446,18 @@ namespace Turso3D
 			return false;
 		}
 
+		glTexParameteri(target, GL_TEXTURE_BASE_LEVEL, 0);
+		glTexParameteri(target, GL_TEXTURE_MAX_LEVEL, type != TEX_3D ? (unsigned)numLevels - 1 : 0);
+
 		size = size_;
 		format = format_;
 		numLevels = numLevels_;
 		multisample = multisample_;
-		srgb = false;
 
-		unsigned internalFormat = glInternalFormats[format];
-		if (srgb_) {
-			unsigned srgbFormat = glSRGBInternalFormats[format];
-			if (srgbFormat) {
-				internalFormat = srgbFormat;
-				srgb = true;
-			} else {
-				LOG_WARNING("sRGB not supported for format {:d}", (int)format);
-			}
+		gli::gl GL {gli::gl::PROFILE_GL33};
+		gli::gl::format glFormat = GL.translate(static_cast<gli::format>(format), gli::swizzles {0, 0, 0, 0});
+		if (glFormat.Type == gli::gl::TYPE_NONE) {
+			glFormat.Type = gli::gl::TYPE_U8;
 		}
 
 		target = glTargets[type];
@@ -322,25 +470,25 @@ namespace Turso3D
 		// If not compressed and no initial data, create the initial level 0 texture with null data
 		// Clear previous error first to be able to check whether the data was successfully set
 		glGetError();
-		if (!IsCompressed() && !initialData) {
+		if (!IsCompressed(format) && !initialData) {
 			if (multisample == 1) {
 				if (type == TEX_2D) {
-					glTexImage2D(target, 0, internalFormat, size.x, size.y, 0, glFormats[format], glDataTypes[format], nullptr);
+					glTexImage2D(target, 0, glFormat.Internal, size.x, size.y, 0, glFormat.External, glFormat.Type, nullptr);
 				} else if (type == TEX_3D) {
-					glTexImage3D(target, 0, internalFormat, size.x, size.y, size.z, 0, glFormats[format], glDataTypes[format], nullptr);
+					glTexImage3D(target, 0, glFormat.Internal, size.x, size.y, size.z, 0, glFormat.External, glFormat.Type, nullptr);
 				} else if (type == TEX_CUBE) {
 					for (size_t i = 0; i < MAX_CUBE_FACES; ++i) {
-						glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + (GLenum)i, 0, internalFormat, size.x, size.y, 0, glFormats[format], glDataTypes[format], nullptr);
+						glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + (GLenum)i, 0, glFormat.Internal, size.x, size.y, 0, glFormat.External, glFormat.Type, nullptr);
 					}
 				}
 			} else {
 				if (type == TEX_2D) {
-					glTexImage2DMultisample(target, multisample, internalFormat, size.x, size.y, GL_TRUE);
+					glTexImage2DMultisample(target, multisample, glFormat.Internal, size.x, size.y, GL_TRUE);
 				} else if (type == TEX_3D) {
-					glTexImage3DMultisample(target, multisample, internalFormat, size.x, size.y, size.z, GL_TRUE);
+					glTexImage3DMultisample(target, multisample, glFormat.Internal, size.x, size.y, size.z, GL_TRUE);
 				} else if (type == TEX_CUBE) {
 					for (size_t i = 0; i < MAX_CUBE_FACES; ++i) {
-						glTexImage2DMultisample(GL_TEXTURE_CUBE_MAP_POSITIVE_X + (GLenum)i, multisample, internalFormat, size.x, size.y, GL_TRUE);
+						glTexImage2DMultisample(GL_TEXTURE_CUBE_MAP_POSITIVE_X + (GLenum)i, multisample, glFormat.Internal, size.x, size.y, GL_TRUE);
 					}
 				}
 			}
@@ -362,15 +510,13 @@ namespace Turso3D
 		if (glGetError() != GL_NO_ERROR) {
 			Release();
 			size = IntVector3::ZERO;
-			format = FMT_NONE;
+			format = FORMAT_NONE;
 			numLevels = 0;
 
 			LOG_ERROR("Failed to create texture");
 			return false;
 		}
 
-		glTexParameteri(target, GL_TEXTURE_BASE_LEVEL, 0);
-		glTexParameteri(target, GL_TEXTURE_MAX_LEVEL, type != TEX_3D ? (unsigned)numLevels - 1 : 0);
 		LOG_DEBUG("Created texture width {:d} height {:d} depth {:d} format {:d} numLevels {:d}", size.x, size.y, size.z, (int)format, numLevels);
 
 		return true;
@@ -469,8 +615,6 @@ namespace Turso3D
 			return false;
 		}
 
-		GLenum glTarget = (type == TEX_CUBE) ? GL_TEXTURE_CUBE_MAP_POSITIVE_X + box.near : target;
-
 		IntBox levelBox(0, 0, 0, std::max(size.x >> level, 1), std::max(size.y >> level, 1), std::max(size.z >> level, 1));
 		if (type == TEX_CUBE) {
 			if (box.Depth() != 1) {
@@ -483,34 +627,42 @@ namespace Turso3D
 		}
 
 		if (levelBox.IsInside(box) != INSIDE) {
-			LOG_ERROR("Texture update region {:s} is outside level {:s}", box.ToString(), levelBox.ToString());
+			assert(false);
+			LOG_ERROR("Texture update region is outside level");
 			return false;
 		}
 
 		ForceBind();
 
 		bool wholeLevel = box == levelBox;
-		unsigned internalFormat = srgb ? glSRGBInternalFormats[format] : glInternalFormats[format];
+
+		gli::gl GL {gli::gl::PROFILE_GL33};
+		gli::gl::format glFormat = GL.translate(static_cast<gli::format>(format), gli::swizzles {});
+		if (glFormat.Type == gli::gl::TYPE_NONE) {
+			glFormat.Type = gli::gl::TYPE_U8;
+		}
+
+		GLenum glTarget = (type == TEX_CUBE) ? GL_TEXTURE_CUBE_MAP_POSITIVE_X + box.near : target;
 
 		if (type != TEX_3D) {
-			if (!IsCompressed()) {
+			if (!IsCompressed(format)) {
 				if (wholeLevel) {
-					glTexImage2D(glTarget, (int)level, internalFormat, box.Width(), box.Height(), 0, glFormats[format], glDataTypes[format], data.data);
+					glTexImage2D(glTarget, (int)level, glFormat.Internal, box.Width(), box.Height(), 0, glFormat.External, glFormat.Type, data.data);
 				} else {
-					glTexSubImage2D(glTarget, (int)level, box.left, box.top, box.Width(), box.Height(), glFormats[format], glDataTypes[format], data.data);
+					glTexSubImage2D(glTarget, (int)level, box.left, box.top, box.Width(), box.Height(), glFormat.External, glFormat.Type, data.data);
 				}
 			} else {
 				if (wholeLevel) {
-					glCompressedTexImage2D(glTarget, (int)level, internalFormat, box.Width(), box.Height(), 0, (GLsizei)data.dataSize, data.data);
+					glCompressedTexImage2D(glTarget, (int)level, glFormat.Internal, box.Width(), box.Height(), 0, (GLsizei)data.dataSize, data.data);
 				} else {
-					glCompressedTexSubImage2D(glTarget, (int)level, box.left, box.top, box.Width(), box.Height(), glFormats[format], (GLsizei)data.dataSize, data.data);
+					glCompressedTexSubImage2D(glTarget, (int)level, box.left, box.top, box.Width(), box.Height(), glFormat.External, (GLsizei)data.dataSize, data.data);
 				}
 			}
 		} else {
 			if (wholeLevel) {
-				glTexImage3D(glTarget, (int)level, internalFormat, box.Width(), box.Height(), box.Depth(), 0, glFormats[format], glDataTypes[format], data.data);
+				glTexImage3D(glTarget, (int)level, glFormat.Internal, box.Width(), box.Height(), box.Depth(), 0, glFormat.External, glFormat.Type, data.data);
 			} else {
-				glTexSubImage3D(glTarget, (int)level, box.left, box.top, box.near, box.Width(), box.Height(), box.Depth(), glFormats[format], glDataTypes[format], data.data);
+				glTexSubImage3D(glTarget, (int)level, box.left, box.top, box.near, box.Width(), box.Height(), box.Depth(), glFormat.External, glFormat.Type, data.data);
 			}
 		}
 
@@ -519,35 +671,22 @@ namespace Turso3D
 
 	void Texture::Bind(size_t unit)
 	{
-		if (unit >= MAX_TEXTURE_UNITS || !texture || boundTextures[unit] == this) {
+		if (unit >= MAX_TEXTURE_UNITS || !texture || BoundTextures[unit] == this) {
 			return;
 		}
 
-		if (activeTextureUnit != unit) {
+		if (ActiveTextureUnit != unit) {
 			glActiveTexture(GL_TEXTURE0 + (GLenum)unit);
-			activeTextureUnit = unit;
+			ActiveTextureUnit = unit;
 		}
 
-		if (activeTargets[unit] && activeTargets[unit] != target) {
-			glBindTexture(activeTargets[unit], 0);
+		if (ActiveTargets[unit] && ActiveTargets[unit] != target) {
+			glBindTexture(ActiveTargets[unit], 0);
 		}
 
 		glBindTexture(target, texture);
-		activeTargets[unit] = target;
-		boundTextures[unit] = this;
-	}
-
-	void Texture::Unbind(size_t unit)
-	{
-		if (boundTextures[unit]) {
-			if (activeTextureUnit != unit) {
-				glActiveTexture(GL_TEXTURE0 + (GLenum)unit);
-				activeTextureUnit = unit;
-			}
-			glBindTexture(activeTargets[unit], 0);
-			activeTargets[unit] = 0;
-			boundTextures[unit] = nullptr;
-		}
+		ActiveTargets[unit] = target;
+		BoundTextures[unit] = this;
 	}
 
 	unsigned Texture::GLTarget() const
@@ -555,9 +694,23 @@ namespace Turso3D
 		return target;
 	}
 
+	void Texture::Unbind(size_t unit)
+	{
+		if (BoundTextures[unit]) {
+			if (ActiveTextureUnit != unit) {
+				glActiveTexture(GL_TEXTURE0 + (GLenum)unit);
+				ActiveTextureUnit = unit;
+			}
+			glBindTexture(ActiveTargets[unit], 0);
+			ActiveTargets[unit] = 0;
+			BoundTextures[unit] = nullptr;
+		}
+	}
+
+	// ==========================================================================================
 	void Texture::ForceBind()
 	{
-		boundTextures[0] = nullptr;
+		BoundTextures[0] = nullptr;
 		Bind(0);
 	}
 
@@ -568,8 +721,8 @@ namespace Turso3D
 			texture = 0;
 
 			for (size_t i = 0; i < MAX_TEXTURE_UNITS; ++i) {
-				if (boundTextures[i] == this) {
-					boundTextures[i] = nullptr;
+				if (BoundTextures[i] == this) {
+					BoundTextures[i] = nullptr;
 				}
 			}
 		}
