@@ -4,10 +4,10 @@
 
 namespace gli
 {
-	template <length_t L, typename T, qualifier Q>
-	inline T levels(vec<L, T, Q> const& Extent)
+	template <glm::length_t L, typename T, glm::qualifier Q>
+	inline T levels(glm::vec<L, T, Q> const& Extent)
 	{
-		return glm::log2(compMax(Extent)) + static_cast<T>(1);
+		return glm::log2(glm::compMax(Extent)) + static_cast<T>(1);
 	}
 
 	template <typename T>

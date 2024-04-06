@@ -318,9 +318,9 @@ namespace detail
 		return detail::get_format_info(Format).BlockSize;
 	}
 
-	inline ivec3 block_extent(format Format)
+	inline glm::ivec3 block_extent(format Format)
 	{
-		return gli::ivec3(detail::get_format_info(Format).BlockExtent);
+		return glm::ivec3(detail::get_format_info(Format).BlockExtent);
 	}
 
 	inline size_t component_count(format Format)
@@ -375,7 +375,7 @@ namespace detail
 
 	inline bool is_packed(format Format)
 	{
-		gli::uint16 flags = detail::get_format_info(Format).Flags;
+		glm::uint16 flags = detail::get_format_info(Format).Flags;
 
 		return (flags & detail::CAP_PACKED8_BIT) != 0 || (flags & detail::CAP_PACKED16_BIT) != 0 || (flags & detail::CAP_PACKED32_BIT) != 0;
 	}

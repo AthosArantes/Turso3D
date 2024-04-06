@@ -120,7 +120,7 @@ namespace detail
 			if(Coord.UseTexelCeil.s)
 				Texel1 = Fetch(Texture, extent_type(Coord.TexelCeil.s), Layer, Face, Level);
 
-			return mix(Texel0, Texel1, Coord.Blend.s);
+			return glm::mix(Texel0, Texel1, Coord.Blend.s);
 		}
 	};
 
@@ -139,7 +139,7 @@ namespace detail
 			texel_type const Texel0 = Fetch(Texture, extent_type(Coord.TexelFloor.s), Layer, Face, Level);
 			texel_type const Texel1 = Fetch(Texture, extent_type(Coord.TexelCeil.s), Layer, Face, Level);
 
-			return mix(Texel0, Texel1, Coord.Blend.s);
+			return glm::mix(Texel0, Texel1, Coord.Blend.s);
 		}
 	};
 
@@ -171,9 +171,9 @@ namespace detail
 			if(Coord.UseTexelFloor.s && Coord.UseTexelCeil.t)
 				Texel01 = Fetch(Texture, extent_type(Coord.TexelFloor.s, Coord.TexelCeil.t), Layer, Face, Level);
 
-			texel_type const ValueA(mix(Texel00, Texel10, Coord.Blend.s));
-			texel_type const ValueB(mix(Texel01, Texel11, Coord.Blend.s));
-			return mix(ValueA, ValueB, Coord.Blend.t);
+			texel_type const ValueA(glm::mix(Texel00, Texel10, Coord.Blend.s));
+			texel_type const ValueB(glm::mix(Texel01, Texel11, Coord.Blend.s));
+			return glm::mix(ValueA, ValueB, Coord.Blend.t);
 		}
 	};
 
@@ -194,9 +194,9 @@ namespace detail
 			texel_type const& Texel11 = Fetch(Texture, extent_type(Coord.TexelCeil.s, Coord.TexelCeil.t), Layer, Face, Level);
 			texel_type const& Texel01 = Fetch(Texture, extent_type(Coord.TexelFloor.s, Coord.TexelCeil.t), Layer, Face, Level);
 
-			texel_type const ValueA(mix(Texel00, Texel10, Coord.Blend.s));
-			texel_type const ValueB(mix(Texel01, Texel11, Coord.Blend.s));
-			return mix(ValueA, ValueB, Coord.Blend.t);
+			texel_type const ValueA(glm::mix(Texel00, Texel10, Coord.Blend.s));
+			texel_type const ValueB(glm::mix(Texel01, Texel11, Coord.Blend.s));
+			return glm::mix(ValueA, ValueB, Coord.Blend.t);
 		}
 	};
 
@@ -244,16 +244,16 @@ namespace detail
 			if(Coord.UseTexelFloor.s && Coord.UseTexelCeil.t && Coord.UseTexelCeil.p)
 				Texel011 = Fetch(Texture, extent_type(Coord.TexelFloor.s, Coord.TexelCeil.t, Coord.TexelCeil.p), Layer, Face, Level);
 
-			texel_type const ValueA(mix(Texel000, Texel100, Coord.Blend.s));
-			texel_type const ValueB(mix(Texel010, Texel110, Coord.Blend.s));
+			texel_type const ValueA(glm::mix(Texel000, Texel100, Coord.Blend.s));
+			texel_type const ValueB(glm::mix(Texel010, Texel110, Coord.Blend.s));
 
-			texel_type const ValueC(mix(Texel001, Texel101, Coord.Blend.s));
-			texel_type const ValueD(mix(Texel011, Texel111, Coord.Blend.s));
+			texel_type const ValueC(glm::mix(Texel001, Texel101, Coord.Blend.s));
+			texel_type const ValueD(glm::mix(Texel011, Texel111, Coord.Blend.s));
 
-			texel_type const ValueE(mix(ValueA, ValueB, Coord.Blend.t));
-			texel_type const ValueF(mix(ValueC, ValueD, Coord.Blend.t));
+			texel_type const ValueE(glm::mix(ValueA, ValueB, Coord.Blend.t));
+			texel_type const ValueF(glm::mix(ValueC, ValueD, Coord.Blend.t));
 
-			return mix(ValueE, ValueF, Coord.Blend.p);
+			return glm::mix(ValueE, ValueF, Coord.Blend.p);
 		}
 	};
 
@@ -278,16 +278,16 @@ namespace detail
 			texel_type const & Texel111 = Fetch(Texture, extent_type(Coord.TexelCeil.s, Coord.TexelCeil.t, Coord.TexelCeil.p), Layer, Face, Level);
 			texel_type const & Texel011 = Fetch(Texture, extent_type(Coord.TexelFloor.s, Coord.TexelCeil.t, Coord.TexelCeil.p), Layer, Face, Level);
 
-			texel_type const ValueA(mix(Texel000, Texel100, Coord.Blend.s));
-			texel_type const ValueB(mix(Texel010, Texel110, Coord.Blend.s));
+			texel_type const ValueA(glm::mix(Texel000, Texel100, Coord.Blend.s));
+			texel_type const ValueB(glm::mix(Texel010, Texel110, Coord.Blend.s));
 
-			texel_type const ValueC(mix(Texel001, Texel101, Coord.Blend.s));
-			texel_type const ValueD(mix(Texel011, Texel111, Coord.Blend.s));
+			texel_type const ValueC(glm::mix(Texel001, Texel101, Coord.Blend.s));
+			texel_type const ValueD(glm::mix(Texel011, Texel111, Coord.Blend.s));
 
-			texel_type const ValueE(mix(ValueA, ValueB, Coord.Blend.t));
-			texel_type const ValueF(mix(ValueC, ValueD, Coord.Blend.t));
+			texel_type const ValueE(glm::mix(ValueA, ValueB, Coord.Blend.t));
+			texel_type const ValueF(glm::mix(ValueC, ValueD, Coord.Blend.t));
 
-			return mix(ValueE, ValueF, Coord.Blend.p);
+			return glm::mix(ValueE, ValueF, Coord.Blend.p);
 		}
 	};
 
@@ -317,7 +317,7 @@ namespace detail
 		{
 			texel_type const MinTexel = nearest<Dimension, texture_type, interpolate_type, normalized_type, fetch_type, texel_type, is_float, support_border>::call(Texture, Fetch, SampleCoordWrap, Layer, Face, static_cast<size_type>(floor(Level)), BorderColor);
 			texel_type const MaxTexel = nearest<Dimension, texture_type, interpolate_type, normalized_type, fetch_type, texel_type, is_float, support_border>::call(Texture, Fetch, SampleCoordWrap, Layer, Face, static_cast<size_type>(ceil(Level)), BorderColor);
-			return mix(MinTexel, MaxTexel, fract(Level));
+			return glm::mix(MinTexel, MaxTexel, glm::fract(Level));
 		}
 	};
 
@@ -349,7 +349,7 @@ namespace detail
 			size_type const CeilLevel = static_cast<size_type>(ceil(Level));
 			texel_type const MinTexel = linear<Dimension, texture_type, interpolate_type, normalized_type, fetch_type, texel_type, is_float, support_border>::call(Texture, Fetch, SampleCoordWrap, Layer, Face, FloorLevel, BorderColor);
 			texel_type const MaxTexel = linear<Dimension, texture_type, interpolate_type, normalized_type, fetch_type, texel_type, is_float, support_border>::call(Texture, Fetch, SampleCoordWrap, Layer, Face, CeilLevel, BorderColor);
-			return mix(MinTexel, MaxTexel, fract(Level));
+			return glm::mix(MinTexel, MaxTexel, glm::fract(Level));
 		}
 	};
 

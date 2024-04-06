@@ -5,7 +5,7 @@
 
 namespace gli
 {
-	template <typename T, qualifier P>
+	template <typename T, glm::qualifier P>
 	inline sampler2d<T, P>::sampler2d(texture_type const & Texture, wrap Wrap, filter Mip, filter Min, texel_type const & BorderColor)
 		: sampler(Wrap, Texture.levels() > 1 ? Mip : FILTER_NEAREST, Min)
 		, Texture(Texture)
@@ -17,13 +17,13 @@ namespace gli
 		GLI_ASSERT((!std::numeric_limits<T>::is_iec559 && Mip == FILTER_NEAREST && Min == FILTER_NEAREST) || std::numeric_limits<T>::is_iec559);
 	}
 
-	template <typename T, qualifier P>
+	template <typename T, glm::qualifier P>
 	inline typename sampler2d<T, P>::texture_type const & sampler2d<T, P>::operator()() const
 	{
 		return this->Texture;
 	}
 
-	template <typename T, qualifier P>
+	template <typename T, glm::qualifier P>
 	inline typename sampler2d<T, P>::texel_type sampler2d<T, P>::texel_fetch(extent_type const & TexelCoord, size_type const & Level) const
 	{
 		GLI_ASSERT(!this->Texture.empty());
@@ -32,7 +32,7 @@ namespace gli
 		return this->Convert.Fetch(this->Texture, TexelCoord, 0, 0, Level);
 	}
 
-	template <typename T, qualifier P>
+	template <typename T, glm::qualifier P>
 	inline void sampler2d<T, P>::texel_write(extent_type const & TexelCoord, size_type const & Level, texel_type const & Texel)
 	{
 		GLI_ASSERT(!this->Texture.empty());
@@ -41,7 +41,7 @@ namespace gli
 		this->Convert.Write(this->Texture, TexelCoord, 0, 0, Level, Texel);
 	}
 
-	template <typename T, qualifier P>
+	template <typename T, glm::qualifier P>
 	inline void sampler2d<T, P>::clear(texel_type const & Color)
 	{
 		GLI_ASSERT(!this->Texture.empty());
@@ -50,7 +50,7 @@ namespace gli
 		detail::clear<texture_type, T, P>::call(this->Texture, this->Convert.Write, Color);
 	}
 
-	template <typename T, qualifier P>
+	template <typename T, glm::qualifier P>
 	inline typename sampler2d<T, P>::texel_type sampler2d<T, P>::texture_lod(normalized_type const & SampleCoord, level_type Level) const
 	{
 		GLI_ASSERT(!this->Texture.empty());
@@ -61,7 +61,7 @@ namespace gli
 		return this->Filter(this->Texture, this->Convert.Fetch, SampleCoordWrap, size_type(0), size_type(0), Level, this->BorderColor);
 	}
 
-	template <typename T, qualifier P>
+	template <typename T, glm::qualifier P>
 	inline typename sampler2d<T, P>::texel_type sampler2d<T, P>::texture_grad(normalized_type const & SampleCoord, normalized_type const& dPdx, normalized_type const& dPdy) const
 	{
 		GLI_ASSERT(!this->Texture.empty());
@@ -81,13 +81,13 @@ namespace gli
 		return this->Filter(this->Texture, this->Convert.Fetch, SampleCoordWrap, size_type(0), size_type(0), Level, this->BorderColor);
 	}
 
-	template <typename T, qualifier P>
+	template <typename T, glm::qualifier P>
 	inline void sampler2d<T, P>::generate_mipmaps(filter Minification)
 	{
 		this->generate_mipmaps(this->Texture.base_level(), this->Texture.max_level(), Minification);
 	}
 
-	template <typename T, qualifier P>
+	template <typename T, glm::qualifier P>
 	inline void sampler2d<T, P>::generate_mipmaps(size_type BaseLevel, size_type MaxLevel, filter Minification)
 	{
 		GLI_ASSERT(!this->Texture.empty());

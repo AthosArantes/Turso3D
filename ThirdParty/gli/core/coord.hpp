@@ -5,10 +5,10 @@
 namespace gli{
 namespace detail
 {
-	template <length_t L, typename T, qualifier Q>
-	inline vec<L, bool, Q> in_interval(vec<L, T, Q> const& Value, vec<L, T, Q> const& Min, vec<L, T, Q> const& Max)
+	template <glm::length_t L, typename T, glm::qualifier Q>
+	inline glm::vec<L, bool, Q> in_interval(glm::vec<L, T, Q> const& Value, glm::vec<L, T, Q> const& Min, glm::vec<L, T, Q> const& Max)
 	{
-		return greaterThanEqual(Value, Min) && lessThanEqual(Value, Max);
+		return glm::greaterThanEqual(Value, Min) && glm::lessThanEqual(Value, Max);
 	}
 
 	template <typename extent_type, typename normalized_type>

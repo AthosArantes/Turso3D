@@ -9,9 +9,9 @@ namespace gli
 		{
 			glm::vec4 Color[4];
 
-			Color[0] = glm::vec4(unpackUnorm1x5_1x6_1x5(Block.Color0), 1.0f);
+			Color[0] = glm::vec4(glm::unpackUnorm1x5_1x6_1x5(Block.Color0), 1.0f);
 			std::swap(Color[0].r, Color[0].b);
-			Color[1] = glm::vec4(unpackUnorm1x5_1x6_1x5(Block.Color1), 1.0f);
+			Color[1] = glm::vec4(glm::unpackUnorm1x5_1x6_1x5(Block.Color1), 1.0f);
 			std::swap(Color[1].r, Color[1].b);
 
 			if(Block.Color0 > Block.Color1)
@@ -33,9 +33,9 @@ namespace gli
 		{
 			glm::vec4 Color[4];
 
-			Color[0] = glm::vec4(unpackUnorm1x5_1x6_1x5(Block.Color0), 1.0f);
+			Color[0] = glm::vec4(glm::unpackUnorm1x5_1x6_1x5(Block.Color0), 1.0f);
 			std::swap(Color[0].r, Color[0].b);
-			Color[1] = glm::vec4(unpackUnorm1x5_1x6_1x5(Block.Color1), 1.0f);
+			Color[1] = glm::vec4(glm::unpackUnorm1x5_1x6_1x5(Block.Color1), 1.0f);
 			std::swap(Color[1].r, Color[1].b);
 
 			if(Block.Color0 > Block.Color1)
@@ -66,9 +66,9 @@ namespace gli
 		{
 			glm::vec3 Color[4];
 
-			Color[0] = glm::vec3(unpackUnorm1x5_1x6_1x5(Block.Color0));
+			Color[0] = glm::vec3(glm::unpackUnorm1x5_1x6_1x5(Block.Color0));
 			std::swap(Color[0].r, Color[0].b);
-			Color[1] = glm::vec3(unpackUnorm1x5_1x6_1x5(Block.Color1));
+			Color[1] = glm::vec3(glm::unpackUnorm1x5_1x6_1x5(Block.Color1));
 			std::swap(Color[1].r, Color[1].b);
 
 			Color[2] = (2.0f / 3.0f) * Color[0] + (1.0f / 3.0f) * Color[1];
@@ -84,9 +84,9 @@ namespace gli
 		{
 			glm::vec3 Color[4];
 
-			Color[0] = glm::vec3(unpackUnorm1x5_1x6_1x5(Block.Color0));
+			Color[0] = glm::vec3(glm::unpackUnorm1x5_1x6_1x5(Block.Color0));
 			std::swap(Color[0].r, Color[0].b);
-			Color[1] = glm::vec3(unpackUnorm1x5_1x6_1x5(Block.Color1));
+			Color[1] = glm::vec3(glm::unpackUnorm1x5_1x6_1x5(Block.Color1));
 			std::swap(Color[1].r, Color[1].b);
 
 			Color[2] = (2.0f / 3.0f) * Color[0] + (1.0f / 3.0f) * Color[1];
@@ -111,9 +111,9 @@ namespace gli
 			glm::vec3 Color[4];
 			float Alpha[8];
 
-			Color[0] = glm::vec3(unpackUnorm1x5_1x6_1x5(Block.Color0));
+			Color[0] = glm::vec3(glm::unpackUnorm1x5_1x6_1x5(Block.Color0));
 			std::swap(Color[0].r, Color[0].b);
-			Color[1] = glm::vec3(unpackUnorm1x5_1x6_1x5(Block.Color1));
+			Color[1] = glm::vec3(glm::unpackUnorm1x5_1x6_1x5(Block.Color1));
 			std::swap(Color[1].r, Color[1].b);
 
 			Color[2] = (2.0f / 3.0f) * Color[0] + (1.0f / 3.0f) * Color[1];
@@ -157,9 +157,9 @@ namespace gli
 			glm::vec3 Color[4];
 			float Alpha[8];
 
-			Color[0] = glm::vec3(unpackUnorm1x5_1x6_1x5(Block.Color0));
+			Color[0] = glm::vec3(glm::unpackUnorm1x5_1x6_1x5(Block.Color0));
 			std::swap(Color[0].r, Color[0].b);
-			Color[1] = glm::vec3(unpackUnorm1x5_1x6_1x5(Block.Color1));
+			Color[1] = glm::vec3(glm::unpackUnorm1x5_1x6_1x5(Block.Color1));
 			std::swap(Color[1].r, Color[1].b);
 
 			Color[2] = (2.0f / 3.0f) * Color[0] + (1.0f / 3.0f) * Color[1];
