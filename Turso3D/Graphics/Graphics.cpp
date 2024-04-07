@@ -84,9 +84,22 @@ namespace Turso3D
 	unsigned occlusionQueryType = GL_SAMPLES_PASSED;
 
 #ifdef _DEBUG
+	const char* GLSeverity(GLenum severity)
+	{
+		switch (severity) {
+			case GL_DEBUG_SEVERITY_NOTIFICATION: return "Notification";
+			case GL_DEBUG_SEVERITY_HIGH: return "High";
+			case GL_DEBUG_SEVERITY_MEDIUM: return "Medium";
+			case GL_DEBUG_SEVERITY_LOW: return "Low";
+		}
+		return nullptr;
+	}
+
 	void GLDebugCallback(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar* message, const void* userParam)
 	{
-		LOG_RAW("[GL DEBUG] [source: {:d}] [type: {:d}] [id: {:d}] [severity: {:d}] {:s}", source, type, id, severity, std::string(message, length));
+		if (id) {
+			LOG_RAW("[GL DEBUG] [source: {:d}] [type: {:d}] [id: {:d}] [severity: {:d}] {:s}", source, type, id, severity, std::string(message, length));
+		}
 	}
 #endif
 
@@ -176,7 +189,7 @@ namespace Turso3D
 			occlusionQueryType = GL_ANY_SAMPLES_PASSED;
 		}
 
-#if 0 //def _DEBUG
+#ifdef _DEBUG
 		glEnable(GL_DEBUG_OUTPUT);
 
 		if (GLEW_KHR_debug)
@@ -199,6 +212,9 @@ namespace Turso3D
 		{
 			LOG_DEBUG("KHR_debug extension NOT found.");
 		}
+
+		// Exclude "detailed info" messages
+		glDebugMessageControl(GL_DONT_CARE, GL_DEBUG_TYPE_OTHER, GL_DONT_CARE, 0, nullptr, GL_FALSE);
 #endif
 
 		glPixelStorei(GL_PACK_ALIGNMENT, 1);
