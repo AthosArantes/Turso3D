@@ -123,15 +123,15 @@ namespace Turso3D
 			output.append("] ");
 		}
 #endif
+		size_t intLevel = static_cast<size_t>(level);
+		if (level != LogLevel::None && intLevel < std::size(LogLevelPrefixes)) {
+			output.append(LogLevelPrefixes[intLevel]);
+		}
 
 		if (!ScopeManager::Scopes().empty()) {
 			output.append(ScopeManager::FormattedString());
 		}
 
-		size_t intLevel = static_cast<size_t>(level);
-		if (level != LogLevel::None && intLevel < std::size(LogLevelPrefixes)) {
-			output.append(LogLevelPrefixes[intLevel]);
-		}
 		output.append(message);
 		output.append("\n");
 
