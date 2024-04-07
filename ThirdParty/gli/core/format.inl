@@ -285,13 +285,14 @@ namespace detail
 		return Table[Format - FORMAT_FIRST];
 	};
 
+}//namespace detail
+
 	inline std::uint32_t bits_per_pixel(format Format)
 	{
 		detail::formatInfo const & Info = detail::get_format_info(Format);
 
 		return Info.BlockSize * 8 / (Info.BlockExtent.x * Info.BlockExtent.y * Info.BlockExtent.z);
 	}
-}//namespace detail
 
 	inline bool has_decoder(format Format)
 	{
