@@ -1,4 +1,4 @@
-#include "AnimatedModel.h"
+#include <Turso3D/Renderer/AnimatedModel.h>
 #include <Turso3D/Core/Allocator.h>
 #include <Turso3D/Graphics/GraphicsDefs.h>
 #include <Turso3D/Graphics/UniformBuffer.h>

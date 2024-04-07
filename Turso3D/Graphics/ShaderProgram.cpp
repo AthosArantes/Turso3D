@@ -1,4 +1,4 @@
-﻿#include "ShaderProgram.h"
+﻿#include <Turso3D/Graphics/ShaderProgram.h>
 #include <Turso3D/Graphics/Graphics.h>
 #include <Turso3D/IO/Log.h>
 #include <glew/glew.h>
@@ -10,7 +10,7 @@ namespace Turso3D
 {
 	static ShaderProgram* boundProgram = nullptr;
 
-	const size_t MAX_NAME_LENGTH = 256;
+	constexpr size_t MAX_NAME_LENGTH = 256;
 
 	int NumberPostfix(const std::string& string)
 	{
@@ -137,10 +137,14 @@ namespace Turso3D
 				presetUniforms[preset] = location;
 			}
 
-			if ((type >= GL_SAMPLER_1D && type <= GL_SAMPLER_2D_SHADOW) || (type >= GL_SAMPLER_1D_ARRAY && type <= GL_SAMPLER_CUBE_SHADOW) || (type >= GL_INT_SAMPLER_1D && type <= GL_UNSIGNED_INT_SAMPLER_2D_ARRAY)) {
+			if (
+				(type >= GL_SAMPLER_1D && type <= GL_SAMPLER_2D_SHADOW) ||
+				(type >= GL_SAMPLER_1D_ARRAY && type <= GL_SAMPLER_CUBE_SHADOW) ||
+				(type >= GL_INT_SAMPLER_1D && type <= GL_UNSIGNED_INT_SAMPLER_2D_ARRAY) ||
+				(type >= GL_SAMPLER_CUBE_MAP_ARRAY && type <= GL_UNSIGNED_INT_SAMPLER_CUBE_MAP_ARRAY)
+			) {
 				// Assign sampler uniforms to a texture unit according to the number appended to the sampler name
 				int unit = NumberPostfix(name);
-
 				if (unit < 0) {
 					continue;
 				}

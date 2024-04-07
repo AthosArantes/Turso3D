@@ -49,12 +49,11 @@ namespace Turso3D
 	// Texture units with built-in meanings.
 	constexpr size_t TU_DIRLIGHTSHADOW = 8;
 	constexpr size_t TU_SHADOWATLAS = 9;
-	constexpr size_t TU_FACESELECTION1 = 10;
-	constexpr size_t TU_FACESELECTION2 = 11;
-	constexpr size_t TU_LIGHTCLUSTERDATA = 12;
-	constexpr size_t TU_IBL_IEM = 13;
-	constexpr size_t TU_IBL_PMREM = 14;
-	constexpr size_t TU_IBL_BRDFLUT = 15;
+	constexpr size_t TU_FACESELECTION = 10;
+	constexpr size_t TU_LIGHTCLUSTERDATA = 11;
+	constexpr size_t TU_IBL_IEM = 12;
+	constexpr size_t TU_IBL_PMREM = 13;
+	constexpr size_t TU_IBL_BRDFLUT = 14;
 
 	// Per-thread results for octant collection.
 	struct ThreadOctantResult
@@ -366,10 +365,8 @@ namespace Turso3D
 		std::vector<std::unique_ptr<CollectShadowBatchesTask>> collectShadowBatchesTasks;
 		// Tasks for light grid culling.
 		std::unique_ptr<CullLightsTask> cullLightsTasks[NUM_CLUSTER_Z];
-		// Face selection UV indirection texture 1.
-		std::unique_ptr<Texture> faceSelectionTexture1;
-		// Face selection UV indirection texture 2.
-		std::unique_ptr<Texture> faceSelectionTexture2;
+		// Face selection UV indirection texture array.
+		std::unique_ptr<Texture> faceSelectionTexture;
 		// Cluster lookup 3D texture.
 		std::unique_ptr<Texture> clusterTexture;
 		// Per-view uniform buffer.

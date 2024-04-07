@@ -1,4 +1,4 @@
-#include "DebugRenderer.h"
+#include <Turso3D/Renderer/DebugRenderer.h>
 #include <Turso3D/Graphics/Graphics.h>
 #include <Turso3D/Graphics/IndexBuffer.h>
 #include <Turso3D/Graphics/ShaderProgram.h>

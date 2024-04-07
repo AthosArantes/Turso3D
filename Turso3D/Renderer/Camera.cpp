@@ -1,4 +1,4 @@
-#include "Camera.h"
+#include <Turso3D/Renderer/Camera.h>
 #include <Turso3D/Math/Matrix3x4.h>
 
 namespace Turso3D

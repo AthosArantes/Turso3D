@@ -1,4 +1,4 @@
-#include "UniformBuffer.h"
+#include <Turso3D/Graphics/UniformBuffer.h>
 #include <Turso3D/Graphics/Graphics.h>
 #include <Turso3D/IO/Log.h>
 #include <glew/glew.h>

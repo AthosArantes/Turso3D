@@ -1,11 +1,8 @@
-#include "SpatialNode.h"
-//#include <Turso3D/Core/Allocator.h>
+#include <Turso3D/Scene/SpatialNode.h>
 #include <cassert>
 
 namespace Turso3D
 {
-	//static Allocator<Matrix3x4> worldMatrixAllocator;
-
 	SpatialNode::SpatialNode()
 	{
 		position = Vector3::ZERO();
@@ -17,7 +14,6 @@ namespace Turso3D
 
 	SpatialNode::~SpatialNode()
 	{
-		//worldMatrixAllocator.Free(worldTransform);
 	}
 
 	void SpatialNode::SetPosition(const Vector3& newPosition)

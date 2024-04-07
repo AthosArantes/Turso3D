@@ -1,4 +1,4 @@
-#include "Resource.h"
+#include <Turso3D/Resource/Resource.h>
 
 namespace Turso3D
 {

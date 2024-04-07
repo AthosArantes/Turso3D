@@ -1,4 +1,4 @@
-#include "Random.h"
+#include <Turso3D/Math/Random.h>
 
 namespace Turso3D
 {

@@ -1,4 +1,4 @@
-#include "Shader.h"
+#include <Turso3D/Graphics/Shader.h>
 #include <Turso3D/IO/Log.h>
 #include <Turso3D/IO/MemoryStream.h>
 #include <Turso3D/Resource/ResourceCache.h>
@@ -150,7 +150,7 @@ namespace Turso3D
 					ProcessIncludes(stream->Read<std::string>(), outResult);
 
 #ifdef _DEBUG
-					outResult += "// }";
+					outResult += "// }\n";
 #endif
 				}
 

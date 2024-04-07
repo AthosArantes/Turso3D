@@ -1,4 +1,4 @@
-#include "Material.h"
+#include <Turso3D/Renderer/Material.h>
 #include <Turso3D/Graphics/Texture.h>
 #include <Turso3D/Graphics/UniformBuffer.h>
 #include <Turso3D/Graphics/Shader.h>
@@ -114,19 +114,15 @@ namespace Turso3D
 				ResourceCache* cache = ResourceCache::Instance();
 
 				for (xml_node texture : node.children("texture")) {
-					std::unique_ptr<Stream> image;
-
-					std::string texname {texture.attribute("name").value()};
-
-					// Force absolute if it begins with a forward slash
-					if (texname.front() == '/') {
-						image = cache->OpenData(texname.substr(1));
+					std::string namepath {texture.attribute("name").value()};
+					if (namepath.front() == '/') {
+						// Force absolute if it begins with a forward slash
+						namepath = namepath.substr(1);
 					} else if (basePath.find_first_of("/\\") != std::string::npos) {
-						image = cache->OpenData(std::filesystem::path {basePath}.replace_filename(texname).string());
-					} else {
-						image = cache->OpenData(texname);
+						namepath = std::filesystem::path {basePath}.replace_filename(namepath).string();
 					}
 
+					std::unique_ptr<Stream> image = cache->OpenData(namepath);
 					if (!image) {
 						continue;
 					}
@@ -134,10 +130,12 @@ namespace Turso3D
 					TextureData& data = textures.emplace_back();
 					data.slot = texture.attribute("slot").as_uint();
 					bool srgb = texture.attribute("srgb").as_bool();
+					bool genMips = texture.attribute("generateMips").as_bool();
 
 					data.texture = std::make_shared<Texture>();
-					data.texture->SetName(texname);
-					data.texture->SetLoadSRGB(srgb);
+					data.texture->SetName(namepath);
+					data.texture->SetLoadFlag(Texture::LOAD_FLAG_SRGB, srgb);
+					data.texture->SetLoadFlag(Texture::LOAD_FLAG_GENERATE_MIPS, genMips);
 					if (!data.texture->BeginLoad(*image)) {
 						data.texture.reset();
 					}
@@ -292,7 +290,21 @@ namespace Turso3D
 
 		// Load textures
 		for (auto& data : loadBuffer->textures) {
-			if (data.texture && data.texture->EndLoad()) {
+			if (!data.texture) {
+				continue;
+			}
+
+			// Check if the texture was already loaded.
+			std::shared_ptr<Texture> texture = cache->GetResource<Texture>(data.texture->NameHash());
+			if (texture) {
+				LOG_TRACE("Material using texture \"{:s}\" from cache.", texture->Name());
+				SetTexture(data.slot, texture);
+				continue;
+			}
+
+			// Upload texture data to GPU and store in the cache
+			if (data.texture->EndLoad()) {
+				cache->StoreResource(data.texture);
 				SetTexture(data.slot, data.texture);
 			}
 		}

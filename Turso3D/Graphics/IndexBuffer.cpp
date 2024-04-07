@@ -1,4 +1,4 @@
-#include "IndexBuffer.h"
+#include <Turso3D/Graphics/IndexBuffer.h>
 #include <Turso3D/Graphics/Graphics.h>
 #include <Turso3D/IO/Log.h>
 #include <glew/glew.h>

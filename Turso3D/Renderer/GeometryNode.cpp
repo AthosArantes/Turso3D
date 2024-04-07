@@ -1,4 +1,4 @@
-#include "GeometryNode.h"
+#include <Turso3D/Renderer/GeometryNode.h>
 #include <Turso3D/Graphics/Graphics.h>
 #include <Turso3D/Graphics/IndexBuffer.h>
 #include <Turso3D/Graphics/VertexBuffer.h>

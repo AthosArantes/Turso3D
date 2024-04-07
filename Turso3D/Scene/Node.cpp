@@ -1,4 +1,4 @@
-#include "Node.h"
+#include <Turso3D/Scene/Node.h>
 #include <Turso3D/IO/Log.h>
 #include <Turso3D/Scene/Scene.h>
 

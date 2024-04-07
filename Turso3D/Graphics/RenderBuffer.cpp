@@ -1,4 +1,4 @@
-#include "RenderBuffer.h"
+#include <Turso3D/Graphics/RenderBuffer.h>
 #include <Turso3D/Graphics/Graphics.h>
 #include <Turso3D/Graphics/Texture.h>
 #include <Turso3D/IO/Log.h>

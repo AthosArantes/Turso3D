@@ -37,7 +37,7 @@ namespace Turso3D
 	{
 		Log::Scope logScope {"BlurRenderer::UpdateBuffers"};
 
-		resultTexture->Define(TEX_2D, size, format);
+		resultTexture->Define(TARGET_2D, size, format);
 		resultTexture->DefineSampler(FILTER_POINT, ADDRESS_CLAMP, ADDRESS_CLAMP, ADDRESS_CLAMP);
 		resultFbo->Define(resultTexture.get(), nullptr);
 
@@ -47,7 +47,7 @@ namespace Turso3D
 			MipPass& mip = mipPasses.emplace_back();
 
 			mip.texture = std::make_unique<Texture>();
-			mip.texture->Define(TEX_2D, IntVector2 {hw, hh}, format);
+			mip.texture->Define(TARGET_2D, IntVector2 {hw, hh}, format);
 			mip.texture->DefineSampler(FILTER_BILINEAR, ADDRESS_CLAMP, ADDRESS_CLAMP, ADDRESS_CLAMP);
 
 			mip.fbo = std::make_unique<FrameBuffer>();

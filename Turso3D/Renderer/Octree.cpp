@@ -1,4 +1,4 @@
-#include "Octree.h"
+#include <Turso3D/Renderer/Octree.h>
 #include <Turso3D/Core/WorkQueue.h>
 #include <Turso3D/Graphics/Graphics.h>
 #include <Turso3D/IO/Log.h>

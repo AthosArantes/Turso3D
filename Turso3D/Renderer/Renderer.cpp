@@ -172,7 +172,7 @@ namespace Turso3D
 		}
 
 		clusterTexture = std::make_unique<Texture>();
-		clusterTexture->Define(TEX_3D, IntVector3 {NUM_CLUSTER_X, NUM_CLUSTER_Y, NUM_CLUSTER_Z}, FORMAT_RGBA32_UINT_PACK32);
+		clusterTexture->Define(TARGET_3D, IntVector3 {NUM_CLUSTER_X, NUM_CLUSTER_Y, NUM_CLUSTER_Z}, FORMAT_RGBA32_UINT_PACK32);
 		clusterTexture->DefineSampler(FILTER_POINT, ADDRESS_CLAMP, ADDRESS_CLAMP, ADDRESS_CLAMP);
 
 		clusterCullData = std::make_unique<ClusterCullData[]>(NUM_CLUSTER_X * NUM_CLUSTER_Y * NUM_CLUSTER_Z);
@@ -218,7 +218,7 @@ namespace Turso3D
 		for (size_t i = 0; i < NUM_SHADOW_MAPS; ++i) {
 			ShadowMap& shadowMap = shadowMaps[i];
 
-			shadowMap.texture->Define(TEX_2D, i == 0 ? IntVector2 {dirLightSize * 2, dirLightSize} : IntVector2 {lightAtlasSize, lightAtlasSize}, format);
+			shadowMap.texture->Define(TARGET_2D, i == 0 ? IntVector3 {dirLightSize * 2, dirLightSize, 1} : IntVector3 {lightAtlasSize, lightAtlasSize, 1}, format);
 			shadowMap.texture->DefineSampler(COMPARE_BILINEAR, ADDRESS_CLAMP, ADDRESS_CLAMP, ADDRESS_CLAMP, 1);
 			shadowMap.fbo->Define(nullptr, shadowMap.texture.get());
 		}
@@ -457,8 +457,7 @@ namespace Turso3D
 		if (shadowMaps) {
 			shadowMaps[0].texture->Bind(TU_DIRLIGHTSHADOW);
 			shadowMaps[1].texture->Bind(TU_SHADOWATLAS);
-			faceSelectionTexture1->Bind(TU_FACESELECTION1);
-			faceSelectionTexture2->Bind(TU_FACESELECTION2);
+			faceSelectionTexture->Bind(TU_FACESELECTION);
 		}
 
 		clusterTexture->Bind(TU_LIGHTCLUSTERDATA);
@@ -493,8 +492,7 @@ namespace Turso3D
 		if (shadowMaps) {
 			shadowMaps[0].texture->Bind(TU_DIRLIGHTSHADOW);
 			shadowMaps[1].texture->Bind(TU_SHADOWATLAS);
-			faceSelectionTexture1->Bind(TU_FACESELECTION1);
-			faceSelectionTexture2->Bind(TU_FACESELECTION2);
+			faceSelectionTexture->Bind(TU_FACESELECTION);
 		}
 
 		clusterTexture->Bind(TU_LIGHTCLUSTERDATA);
@@ -764,8 +762,14 @@ namespace Turso3D
 
 	void Renderer::UpdateLightData()
 	{
-		ImageLevel clusterLevel(IntVector3 {NUM_CLUSTER_X, NUM_CLUSTER_Y, NUM_CLUSTER_Z}, FORMAT_RGBA32_UINT_PACK32, clusterData.get());
-		clusterTexture->SetData(0, IntBox(0, 0, 0, NUM_CLUSTER_X, NUM_CLUSTER_Y, NUM_CLUSTER_Z), clusterLevel);
+		ImageLevel clusterLevel {
+			clusterData.get(),
+			0,
+			IntBox {0, 0, 0, NUM_CLUSTER_X, NUM_CLUSTER_Y, NUM_CLUSTER_Z},
+			0,
+			0
+		};
+		clusterTexture->SetData(clusterLevel);
 		lightDataBuffer->SetData(0, (lights.size() + 1) * sizeof(LightData), lightData.get());
 	}
 
@@ -926,10 +930,11 @@ namespace Turso3D
 			return;
 		}
 
-		Matrix3x4 boxMatrix(Matrix3x4::IDENTITY());
+		Matrix3x4 boxMatrix {Matrix3x4::IDENTITY()};
 		float nearClip = camera->NearClip();
 
-		// Use camera's motion since last frame to enlarge the bounding boxes. Use multiplied movement speed to account for latency in query results
+		// Use camera's motion since last frame to enlarge the bounding boxes.
+		// Use multiplied movement speed to account for latency in query results
 		Vector3 cameraPosition = camera->WorldPosition();
 		Vector3 cameraMove = cameraPosition - previousCameraPosition;
 		Vector3 enlargement = (OCCLUSION_MARGIN + 4.0f * cameraMove.Length()) * Vector3::ONE();
@@ -979,12 +984,13 @@ namespace Turso3D
 	void Renderer::DefineFaceSelectionTextures()
 	{
 		// Face selection textures do not depend on shadow map size. No-op if already defined
-		if (faceSelectionTexture1 && faceSelectionTexture2) {
+		if (faceSelectionTexture) {
 			return;
 		}
 
-		faceSelectionTexture1 = std::make_unique<Texture>();
-		faceSelectionTexture2 = std::make_unique<Texture>();
+		faceSelectionTexture = std::make_unique<Texture>();
+		faceSelectionTexture->Define(TARGET_CUBE_ARRAY, IntVector3 {1, 1, MAX_CUBE_FACES * 2}, FORMAT_RGBA32_SFLOAT_PACK32, 1, 1);
+		faceSelectionTexture->DefineSampler(FILTER_POINT, ADDRESS_CLAMP, ADDRESS_CLAMP, ADDRESS_CLAMP);
 
 		const float faceSelectionData1[] =
 		{
@@ -995,7 +1001,6 @@ namespace Turso3D
 			0.0f, 0.0f, 1.0f, 0.0f,
 			0.0f, 0.0f, 1.0f, 0.0f
 		};
-
 		const float faceSelectionData2[] =
 		{
 			-0.5f, 0.5f, 0.5f, 1.5f,
@@ -1005,20 +1010,22 @@ namespace Turso3D
 			0.5f, 0.5f, 2.5f, 1.5f,
 			-0.5f, 0.5f, 2.5f, 0.5f
 		};
+		const float* const layers[] = {
+			faceSelectionData1,
+			faceSelectionData2
+		};
 
-		std::vector<ImageLevel> faces1;
-		std::vector<ImageLevel> faces2;
-
-		for (size_t i = 0; i < MAX_CUBE_FACES; ++i) {
-			faces1.push_back(ImageLevel(IntVector2 {1, 1}, FORMAT_RGBA32_SFLOAT_PACK32, &faceSelectionData1[4 * i]));
-			faces2.push_back(ImageLevel(IntVector2 {1, 1}, FORMAT_RGBA32_SFLOAT_PACK32, &faceSelectionData2[4 * i]));
+		for (int layer = 0; layer < std::size(layers); ++layer) {
+			for (int face = 0; face < MAX_CUBE_FACES; ++face) {
+				faceSelectionTexture->SetData(ImageLevel {
+					&layers[layer][face * 4],
+					0,
+					IntBox {0, 0, 0, 1, 1, 0},
+					layer * (int)MAX_CUBE_FACES + face,
+					0
+				});
+			}
 		}
-
-		faceSelectionTexture1->Define(TEX_CUBE, IntVector3 {1, 1, MAX_CUBE_FACES}, FORMAT_RGBA32_SFLOAT_PACK32, 1, 1, &faces1[0]);
-		faceSelectionTexture1->DefineSampler(FILTER_POINT, ADDRESS_CLAMP, ADDRESS_CLAMP, ADDRESS_CLAMP);
-
-		faceSelectionTexture2->Define(TEX_CUBE, IntVector3 {1, 1, MAX_CUBE_FACES}, FORMAT_RGBA32_SFLOAT_PACK32, 1, 1, &faces2[0]);
-		faceSelectionTexture2->DefineSampler(FILTER_POINT, ADDRESS_CLAMP, ADDRESS_CLAMP, ADDRESS_CLAMP);
 	}
 
 	void Renderer::DefineBoundingBoxGeometry()

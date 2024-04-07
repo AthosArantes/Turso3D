@@ -1,4 +1,4 @@
-#include "Stream.h"
+#include <Turso3D/IO/Stream.h>
 
 namespace Turso3D
 {

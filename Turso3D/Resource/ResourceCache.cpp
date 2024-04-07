@@ -1,5 +1,5 @@
-#include "ResourceCache.h"
-#include "Resource.h"
+#include <Turso3D/Resource/ResourceCache.h>
+#include <Turso3D/Resource/Resource.h>
 #include <Turso3D/Graphics/GraphicsDefs.h>
 #include <Turso3D/Graphics/Shader.h>
 #include <Turso3D/IO/FileStream.h>

@@ -1,4 +1,4 @@
-#include "Texture.h"
+#include <Turso3D/Graphics/Texture.h>
 #include <Turso3D/Graphics/Graphics.h>
 #include <Turso3D/IO/Stream.h>
 #include <Turso3D/IO/Log.h>
@@ -10,13 +10,6 @@
 
 namespace Turso3D
 {
-	static const GLenum glTargets[] =
-	{
-		GL_TEXTURE_2D,
-		GL_TEXTURE_3D,
-		GL_TEXTURE_CUBE_MAP
-	};
-
 	static const unsigned glWrapModes[] = {
 		GL_REPEAT,
 		GL_MIRRORED_REPEAT,
@@ -121,10 +114,11 @@ namespace Turso3D
 		return format;
 	}
 
-	// ==========================================================================================
 	struct Texture::LoadBuffer
 	{
 		gli::texture texture;
+		IntVector3 size;
+		std::vector<ImageLevel> imageData;
 	};
 
 	// ==========================================================================================
@@ -132,72 +126,30 @@ namespace Turso3D
 	static unsigned ActiveTargets[MAX_TEXTURE_UNITS];
 	static Texture* BoundTextures[MAX_TEXTURE_UNITS];
 
-	// ==========================================================================================
-	ImageLevel::ImageLevel() :
-		data(nullptr),
-		size(IntVector3::ZERO()),
-		dataSize(0)
-	{
-	}
-
-	ImageLevel::ImageLevel(const IntVector2& size, ImageFormat format, const void* data) :
-		data(reinterpret_cast<const uint8_t*>(data)),
-		size(IntVector3 {size.x, size.y, 1})
-	{
-		gli::format f = static_cast<gli::format>(format);
-		dataSize = gli::block_size(f) * size.x * size.y;
-	}
-
-	ImageLevel::ImageLevel(const IntVector3& size, ImageFormat format, const void* data) :
-		data(reinterpret_cast<const uint8_t*>(data)),
-		size(size)
-	{
-		gli::format f = static_cast<gli::format>(format);
-		dataSize = gli::block_size(f) * size.x * size.y * size.y;
-	}
-
-	// ==========================================================================================
-	unsigned Texture::GetGLInternalFormat(ImageFormat format)
-	{
-		gli::gl GL {gli::gl::PROFILE_GL33};
-		gli::gl::format texFormat = GL.translate(static_cast<gli::format>(format), gli::swizzles {});
-		return texFormat.Internal;
-	}
-
-	bool Texture::IsCompressed(ImageFormat format)
-	{
-		gli::format texFormat = static_cast<gli::format>(format);
-		return gli::is_compressed(texFormat) || gli::is_s3tc_compressed(texFormat);
-	}
-
-	bool Texture::IsStencil(ImageFormat format)
-	{
-		gli::format texFormat = static_cast<gli::format>(format);
-		return gli::is_stencil(texFormat);
-	}
+	static gli::gl GLIProfile {gli::gl::PROFILE_GL33};
 
 	// ==========================================================================================
 	Texture::Texture() :
 		texture(0),
 		target(0),
-		type(TEX_2D),
+		type(TARGET_2D),
 		size(IntVector3::ZERO()),
 		format(FORMAT_NONE),
 		multisample(0),
 		numLevels(0),
-		loadSRGB(false)
+		loadFlags(0)
 	{
 	}
 
-	Texture::Texture(bool loadSRGB) :
+	Texture::Texture(unsigned loadFlags) :
 		texture(0),
 		target(0),
-		type(TEX_2D),
-		size(IntVector3::ZERO()),
+		type(TARGET_2D),
+		size(0),
 		format(FORMAT_NONE),
 		multisample(0),
 		numLevels(0),
-		loadSRGB(loadSRGB)
+		loadFlags(loadFlags)
 	{
 	}
 
@@ -208,335 +160,320 @@ namespace Turso3D
 
 	bool Texture::BeginLoad(Stream& source)
 	{
-		loadBuffer.reset();
-
-		gli::texture texture;
+		loadBuffer = std::make_unique<LoadBuffer>();
 		{
 			size_t sz = source.Size();
 			std::unique_ptr<char[]> data = std::make_unique<char[]>(sz);
 			size_t length = source.Read(data.get(), sz);
 
-			texture = gli::load(data.get(), length);
+			loadBuffer->texture = gli::load(data.get(), length);
 		}
 
+		// The gli texture buffer
+		gli::texture& texture = loadBuffer->texture;
+		std::vector<ImageLevel>& imageLevels = loadBuffer->imageData;
+
 		if (texture.empty()) {
-			LOG_ERROR("Failed to load texture.");
+			LOG_ERROR("Failed to load texture from \"{:s}\"", source.Name());
+			loadBuffer.reset();
 			return false;
 		}
 
-		ImageFormat format = static_cast<ImageFormat>(texture.format());
-		bool compressed = IsCompressed(format);
+		bool compressed = gli::is_compressed(texture.format());
 
 		// Generate mip maps
-		if (!compressed && texture.levels() == 1) {
-			// TODO: generate mipmaps
+		if (!compressed && texture.levels() == 1 && (loadFlags & LOAD_FLAG_GENERATE_MIPS)) {
+			gli::filter filter = gli::FILTER_LINEAR;
+			switch (texture.target()) {
+				case gli::TARGET_1D:
+					texture = gli::generate_mipmaps(gli::texture1d {texture}, filter);
+					break;
+				case gli::TARGET_1D_ARRAY:
+					texture = gli::generate_mipmaps(gli::texture1d_array {texture}, filter);
+					break;
+				case gli::TARGET_2D:
+					texture = gli::generate_mipmaps(gli::texture2d {texture}, filter);
+					break;
+				case gli::TARGET_2D_ARRAY:
+					texture = gli::generate_mipmaps(gli::texture2d_array {texture}, filter);
+					break;
+				case gli::TARGET_3D:
+					texture = gli::generate_mipmaps(gli::texture3d {texture}, filter);
+					break;
+				case gli::TARGET_CUBE:
+					texture = gli::generate_mipmaps(gli::texture_cube {texture}, filter);
+					break;
+				case gli::TARGET_CUBE_ARRAY:
+					texture = gli::generate_mipmaps(gli::texture_cube_array {texture}, filter);
+					break;
+			}
 		}
 
-		loadBuffer = std::make_unique<LoadBuffer>();
-		loadBuffer->texture = texture;
+		// Retrieve the texture size
+		{
+			glm::ivec3 extent = texture.extent();
+			loadBuffer->size = IntVector3 {extent.x, extent.y, extent.z};
+		}
+		switch (texture.target()) {
+			case gli::TARGET_1D_ARRAY:
+				loadBuffer->size.y = static_cast<int>(texture.layers());
+				break;
+			case gli::TARGET_2D_ARRAY:
+				loadBuffer->size.z = static_cast<int>(texture.layers());
+				break;
+			case gli::TARGET_CUBE:
+			case gli::TARGET_CUBE_ARRAY:
+				loadBuffer->size.z = static_cast<int>(texture.layers() * texture.faces());
+				break;
+		}
+
+		size_t face_count = texture.layers() * texture.faces();
+
+		for (size_t layer = 0; layer < texture.layers(); ++layer) {
+			for (size_t face = 0; face < texture.faces(); ++face) {
+				for (size_t level = 0; level < texture.levels(); ++level) {
+					ImageLevel& image = imageLevels.emplace_back();
+					image.data = texture.data(layer, face, level);
+					image.dataSize = compressed ? static_cast<int>(texture.size(level)) : 0;
+					image.layer_face = static_cast<int>(face_count * layer + face);
+					image.level = static_cast<int>(level);
+
+					glm::ivec3 extent {texture.extent(level)};
+					switch (texture.target()) {
+						case gli::TARGET_1D:
+						case gli::TARGET_1D_ARRAY:
+							image.dimensions = IntBox {0, 0, 0, extent.x, 0, 0};
+							break;
+						case gli::TARGET_2D:
+						case gli::TARGET_2D_ARRAY:
+						case gli::TARGET_CUBE:
+						case gli::TARGET_CUBE_ARRAY:
+							image.dimensions = IntBox {0, 0, 0, extent.x, extent.y, 0};
+							break;
+						case gli::TARGET_3D:
+							image.dimensions = IntBox {0, 0, 0, extent.x, extent.y, extent.z};
+							break;
+						default:
+							LOG_ERROR("Unsupported texture format");
+							loadBuffer.reset();
+							return false;
+					}
+				}
+			}
+		}
 
 		return true;
 	}
 
 	bool Texture::EndLoad()
 	{
-		// Clear gl errors
-		glGetError();
-
-		gli::texture& tex = loadBuffer->texture;
-
-		// Override sRGB format
-		ImageFormat texFormat = static_cast<ImageFormat>(tex.format());
-		if (loadSRGB) {
-			texFormat = GetSRGBFormat(texFormat);
-		}
-
-		bool compressed = IsCompressed(texFormat);
-
-		gli::gl GL {gli::gl::PROFILE_GL33};
-		gli::gl::format glFormat = GL.translate(static_cast<gli::format>(texFormat), tex.swizzles());
-		GLenum glTarget = GL.translate(tex.target());
-
-		if (glFormat.Type == gli::gl::TYPE_NONE) {
-			glFormat.Type = gli::gl::TYPE_U8;
-		}
-
-		GLuint tid = 0;
-		glGenTextures(1, &tid);
-		glBindTexture(glTarget, tid);
-		glTexParameteri(glTarget, GL_TEXTURE_BASE_LEVEL, 0);
-		glTexParameteri(glTarget, GL_TEXTURE_MAX_LEVEL, static_cast<GLint>(tex.levels() - 1));
-		glTexParameteri(glTarget, GL_TEXTURE_SWIZZLE_R, glFormat.Swizzles[0]);
-		glTexParameteri(glTarget, GL_TEXTURE_SWIZZLE_G, glFormat.Swizzles[1]);
-		glTexParameteri(glTarget, GL_TEXTURE_SWIZZLE_B, glFormat.Swizzles[2]);
-		glTexParameteri(glTarget, GL_TEXTURE_SWIZZLE_A, glFormat.Swizzles[3]);
-
-		if (glGetError() != GL_NO_ERROR) {
-			LOG_ERROR("Failed to create OpenGL texture.");
+		if (!loadBuffer) {
 			return false;
 		}
 
-		glm::tvec3<GLsizei> extent {tex.extent()};
-		GLsizei face_count = static_cast<GLsizei>(tex.layers() * tex.faces());
-		GLint num_levels = static_cast<GLint>(tex.levels());
+		// The gli texture buffer
+		gli::texture& texture = loadBuffer->texture;
 
-		for (size_t layer = 0; layer < tex.layers(); ++layer) {
-			for (size_t face = 0; face < tex.faces(); ++face) {
-				for (size_t level = 0, glMip = 0; level < tex.levels(); ++level, ++glMip) {
-					glm::tvec3<GLsizei> extent {tex.extent(level)};
+		TextureTarget type = static_cast<TextureTarget>(texture.target());
+		ImageFormat format = static_cast<ImageFormat>(texture.format());
+		if (loadFlags & LOAD_FLAG_SRGB) {
+			// sRGB override
+			format = GetSRGBFormat(format);
+		}
 
-					GLenum target = gli::is_target_cube(tex.target()) ? static_cast<GLenum>(GL_TEXTURE_CUBE_MAP_POSITIVE_X + face) : glTarget;
+		bool success = false;
+		if (Define(type, loadBuffer->size, format, 1, texture.levels())) {
+			gli::gl::format glFormat = GLIProfile.translate(texture.format(), texture.swizzles());
+			glTexParameteri(target, GL_TEXTURE_SWIZZLE_R, glFormat.Swizzles[0]);
+			glTexParameteri(target, GL_TEXTURE_SWIZZLE_G, glFormat.Swizzles[1]);
+			glTexParameteri(target, GL_TEXTURE_SWIZZLE_B, glFormat.Swizzles[2]);
+			glTexParameteri(target, GL_TEXTURE_SWIZZLE_A, glFormat.Swizzles[3]);
 
-					switch (tex.target()) {
-						case gli::TARGET_1D:
-							if (compressed) {
-								glCompressedTexImage1D(
-									target,
-									static_cast<GLint>(glMip),
-									glFormat.Internal,
-									extent.x,
-									0,
-									static_cast<GLsizei>(tex.size(level)),
-									tex.data(layer, face, level)
-								);
-							} else {
-								glTexImage1D(
-									target,
-									static_cast<GLint>(glMip),
-									glFormat.Internal,
-									extent.x,
-									0,
-									glFormat.External,
-									glFormat.Type,
-									tex.data(layer, face, level)
-								);
-							}
-							break;
-						case gli::TARGET_1D_ARRAY:
-						case gli::TARGET_2D:
-						case gli::TARGET_CUBE:
-							if (compressed) {
-								glCompressedTexImage2D(
-									target,
-									static_cast<GLint>(glMip),
-									glFormat.Internal,
-									extent.x,
-									tex.target() == gli::TARGET_1D_ARRAY ? static_cast<GLint>(layer) : extent.y,
-									0,
-									static_cast<GLsizei>(tex.size(level)),
-									tex.data(layer, face, level)
-								);
-							} else {
-								glTexImage2D(
-									target,
-									static_cast<GLint>(glMip),
-									glFormat.Internal,
-									extent.x,
-									tex.target() == gli::TARGET_1D_ARRAY ? static_cast<GLint>(layer) : extent.y,
-									0,
-									glFormat.External,
-									glFormat.Type,
-									tex.data(layer, face, level)
-								);
-							}
-							break;
-						case gli::TARGET_2D_ARRAY:
-						case gli::TARGET_3D:
-						case gli::TARGET_CUBE_ARRAY:
-							if (compressed) {
-								glCompressedTexImage3D(
-									target,
-									static_cast<GLint>(glMip),
-									glFormat.Internal,
-									extent.x,
-									extent.y,
-									tex.target() == gli::TARGET_3D ? extent.z : static_cast<GLint>(layer),
-									0,
-									static_cast<GLsizei>(tex.size(level)),
-									tex.data(layer, face, level)
-								);
-							} else {
-								glTexImage3D(
-									target,
-									static_cast<GLint>(glMip),
-									glFormat.Internal,
-									extent.x,
-									extent.y,
-									tex.target() == gli::TARGET_3D ? extent.z : static_cast<GLint>(layer),
-									0,
-									glFormat.External,
-									glFormat.Type,
-									tex.data(layer, face, level)
-								);
-							}
-							break;
-						default:
-							assert(0);
-							break;
-					}
-				}
+			for (const ImageLevel& il : loadBuffer->imageData) {
+				SetData(il);
 			}
+
+			// IMPROVE: Use a default global setting for samplers
+			success = DefineSampler(FILTER_ANISOTROPIC, ADDRESS_WRAP, ADDRESS_WRAP, ADDRESS_WRAP);
 		}
-
-		if (glGetError() != GL_NO_ERROR) {
-			LOG_ERROR("Failed to load OpenGL texture.");
-			return false;
-		}
-
-		Release();
-		texture = tid;
-		target = glTarget;
-
-		size = IntVector3 {
-			extent.x,
-			(tex.target() == gli::TARGET_1D_ARRAY) ? static_cast<int>(tex.layers()) : extent.y,
-			(tex.target() == gli::TARGET_3D) ? extent.z : ((tex.target() == gli::TARGET_1D_ARRAY) ? 1 : static_cast<int>(tex.layers()))
-		};
-		format = texFormat;
-		multisample = 1;
-		numLevels = num_levels;
-
-		// IMPROVE: Use a default global setting for samplers
-		DefineSampler(FILTER_ANISOTROPIC, ADDRESS_WRAP, ADDRESS_WRAP, ADDRESS_WRAP);
 
 		loadBuffer.reset();
-
-		return true;
+		return success;
 	}
 
-	bool Texture::Define(TextureType type_, const IntVector2& size_, ImageFormat format_, int multisample_, size_t numLevels_, const ImageLevel* initialData)
-	{
-		return Define(type_, IntVector3 {size_.x, size_.y, 1}, format_, multisample_, numLevels_, initialData);
-	}
-
-	bool Texture::Define(TextureType type_, const IntVector3& size_, ImageFormat format_, int multisample_, size_t numLevels_, const ImageLevel* initialData)
+	bool Texture::Define(TextureTarget type, const IntVector3& size, ImageFormat format, int multisample, int numLevels)
 	{
 		Release();
 
-		if (size_.x < 1 || size_.y < 1 || size_.z < 1) {
-			LOG_ERROR("Texture must not have zero or negative size");
-			return false;
-		}
-		if (type_ == TEX_2D && size_.z != 1) {
-			LOG_ERROR("2D texture must have depth of 1");
-			return false;
-		}
-		if (type_ == TEX_CUBE && (size_.x != size_.y)) {
-			LOG_ERROR("Cube map must have square dimensions and 6 faces");
+		if ((type == TARGET_CUBE || type == TARGET_CUBE_ARRAY) && (size.x != size.y || size.z % MAX_CUBE_FACES != 0)) {
+			LOG_ERROR("Cube map must have square dimensions and have all 6 faces.");
 			return false;
 		}
 
-		if (numLevels_ < 1) {
-			numLevels_ = 1;
+#ifdef _DEBUG
+		// Clear GL errors
+		unsigned err;
+		do {
+			err = glGetError();
+		} while (err != GL_NO_ERROR);
+#endif
+
+		if (multisample < 1) {
+			multisample = 1;
 		}
-		if (multisample_ < 1) {
-			multisample_ = 1;
+		if (numLevels < 1 || multisample > 1) {
+			numLevels = 1;
 		}
 
-		type = type_;
+		// Validate multisampled target types
+		target = GLIProfile.translate(static_cast<gli::target>(type));
+		if (multisample > 1) {
+			switch (type) {
+				case TARGET_2D:
+					target = GL_TEXTURE_2D_MULTISAMPLE;
+					break;
+				case TARGET_2D_ARRAY:
+					target = GL_TEXTURE_2D_MULTISAMPLE_ARRAY;
+					break;
+				case TARGET_3D:
+				case TARGET_CUBE:
+				case TARGET_CUBE_ARRAY:
+					break;
+				default:
+					LOG_ERROR("Multisample not supported for {:s}", TextureTargetName(type));
+					return false;
+			}
+		}
 
 		glGenTextures(1, &texture);
 		if (!texture) {
-			size = IntVector3::ZERO();
-			format = FORMAT_NONE;
-			numLevels = 0;
-			multisample = 0;
+			this->size = IntVector3::ZERO();
+			this->format = FORMAT_NONE;
+			this->multisample = 0;
+			this->numLevels = 0;
 
-			LOG_ERROR("Failed to create texture");
+			LOG_ERROR("Failed to create opengl texture");
 			return false;
 		}
-
-		size = size_;
-		format = format_;
-		numLevels = numLevels_;
-		multisample = multisample_;
-
-		gli::gl GL {gli::gl::PROFILE_GL33};
-		gli::gl::format glFormat = GL.translate(static_cast<gli::format>(format), gli::swizzles {0, 0, 0, 0});
-		if (glFormat.Type == gli::gl::TYPE_NONE) {
-			glFormat.Type = gli::gl::TYPE_U8;
-		}
-
-		target = glTargets[type];
-		if (target == GL_TEXTURE_2D && multisample > 1) {
-			target = GL_TEXTURE_2D_MULTISAMPLE;
-		}
-
 		ForceBind();
 
-		glTexParameteri(target, GL_TEXTURE_BASE_LEVEL, 0);
-		glTexParameteri(target, GL_TEXTURE_MAX_LEVEL, type != TEX_3D ? (unsigned)numLevels - 1 : 0);
+		if (multisample == 1) {
+			glTexParameteri(target, GL_TEXTURE_BASE_LEVEL, 0);
+			glTexParameteri(target, GL_TEXTURE_MAX_LEVEL, numLevels - 1);
+		}
 
-		// If not compressed and no initial data, create the initial level 0 texture with null data
-		// Clear previous error first to be able to check whether the data was successfully set
-		glGetError();
-		if (!IsCompressed(format) && !initialData) {
-			if (multisample == 1) {
-				if (type == TEX_2D) {
-					glTexImage2D(target, 0, glFormat.Internal, size.x, size.y, 0, glFormat.External, glFormat.Type, nullptr);
-				} else if (type == TEX_3D) {
-					glTexImage3D(target, 0, glFormat.Internal, size.x, size.y, size.z, 0, glFormat.External, glFormat.Type, nullptr);
-				} else if (type == TEX_CUBE) {
-					for (size_t i = 0; i < MAX_CUBE_FACES; ++i) {
-						glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + (GLenum)i, 0, glFormat.Internal, size.x, size.y, 0, glFormat.External, glFormat.Type, nullptr);
+		this->type = type;
+		this->size = size;
+		this->format = format;
+		this->multisample = multisample;
+		this->numLevels = numLevels;
+
+		gli::gl::format glFormat = GLIProfile.translate(static_cast<gli::format>(format), gli::swizzles {});
+
+		if (GLEW_VERSION_4_2 || (GLEW_ARB_texture_storage && GLEW_ARB_texture_storage_multisample)) {
+			switch (type) {
+				case TARGET_1D:
+					glTexStorage1D(target, numLevels, glFormat.Internal, size.x);
+					break;
+				case TARGET_1D_ARRAY:
+				case TARGET_2D:
+				case TARGET_CUBE:
+					if (multisample > 1) {
+						glTexStorage2DMultisample(target, multisample, glFormat.Internal, size.x, size.y, GL_TRUE);
+					} else {
+						glTexStorage2D(target, numLevels, glFormat.Internal, size.x, size.y);
 					}
-				}
-			} else {
-				if (type == TEX_2D) {
-					glTexImage2DMultisample(target, multisample, glFormat.Internal, size.x, size.y, GL_TRUE);
-				} else if (type == TEX_3D) {
-					glTexImage3DMultisample(target, multisample, glFormat.Internal, size.x, size.y, size.z, GL_TRUE);
-				} else if (type == TEX_CUBE) {
-					for (size_t i = 0; i < MAX_CUBE_FACES; ++i) {
-						glTexImage2DMultisample(GL_TEXTURE_CUBE_MAP_POSITIVE_X + (GLenum)i, multisample, glFormat.Internal, size.x, size.y, GL_TRUE);
+					break;
+				case TARGET_2D_ARRAY:
+				case TARGET_3D:
+				case TARGET_CUBE_ARRAY:
+					if (multisample > 1) {
+						glTexStorage3DMultisample(target, multisample, glFormat.Internal, size.x, size.y, size.z, GL_TRUE);
+					} else {
+						glTexStorage3D(target, numLevels, glFormat.Internal, size.x, size.y, size.z);
 					}
+					break;
+			}
+
+		} else {
+			bool compressed = IsCompressed(format);
+
+			// Set valid values
+			glFormat.External = (glFormat.External == gli::gl::EXTERNAL_NONE) ? gli::gl::EXTERNAL_RGBA : glFormat.External;
+			glFormat.Type = (glFormat.Type == gli::gl::TYPE_NONE) ? gli::gl::TYPE_U8 : glFormat.Type;
+
+			for (int level = 0; level < (int)numLevels; ++level) {
+				int w = std::max(size.x >> level, 1);
+				int h = std::max(size.y >> level, 1);
+				int d = std::max(size.z >> level, 1);
+
+				switch (type) {
+					case TARGET_1D:
+						glTexImage1D(target, level, glFormat.Internal, w, 0, glFormat.External, glFormat.Type, nullptr);
+						break;
+					case TARGET_1D_ARRAY:
+					case TARGET_2D:
+					case TARGET_CUBE:
+						for (unsigned i = 0; i < ((type == TARGET_CUBE) ? MAX_CUBE_FACES : 1); ++i) {
+							GLenum t = (type == TARGET_CUBE) ? GL_TEXTURE_CUBE_MAP_POSITIVE_X + (GLenum)i : target;
+							if (multisample == 1) {
+								glTexImage2D(t, level, glFormat.Internal, w, h, 0, glFormat.External, glFormat.Type, nullptr);
+							} else {
+								glTexImage2DMultisample(t, multisample, glFormat.Internal, w, h, GL_TRUE);
+							}
+						}
+						break;
+					case TARGET_2D_ARRAY:
+					case TARGET_3D:
+					case TARGET_CUBE_ARRAY:
+					{
+						d = (type == TARGET_CUBE_ARRAY) ? size.z : d;
+						if (multisample == 1) {
+							glTexImage3D(target, level, glFormat.Internal, w, h, d, 0, glFormat.External, glFormat.Type, nullptr);
+						} else {
+							glTexImage3DMultisample(target, multisample, glFormat.Internal, w, h, d, GL_TRUE);
+						}
+						break;
+					}
+					default:
+						LOG_ERROR("{:s} is not supported.", TextureTargetName(type));
+						Release();
+						return false;
 				}
 			}
 		}
 
-		if (initialData) {
-			for (size_t i = 0; i < numLevels; ++i) {
-				if (type != TEX_3D) {
-					for (int j = 0; j < size.z; ++j) {
-						SetData(i, IntBox(0, 0, j, std::max(size.x >> i, 1), std::max(size.y >> i, 1), j + 1), initialData[i * size.z + j]);
-					}
-				} else {
-					SetData(i, IntBox(0, 0, 0, std::max(size.x >> i, 1), std::max(size.y >> i, 1), std::max(size.z >> i, 1)), initialData[i]);
-				}
-			}
-		}
-
-		// If we have an error now, the texture was not created correctly
+#ifdef _DEBUG
 		if (glGetError() != GL_NO_ERROR) {
-			Release();
-			size = IntVector3::ZERO();
-			format = FORMAT_NONE;
-			numLevels = 0;
-
-			LOG_ERROR("Failed to create texture");
+			LOG_ERROR("Failed to create {:s} ({:s})", TextureTargetName(type), Name());
 			return false;
 		}
+#endif
 
-		LOG_DEBUG("Created texture width {:d} height {:d} depth {:d} format {:d} numLevels {:d}", size.x, size.y, size.z, (int)format, numLevels);
-
+		LOG_DEBUG("Created {:s} ({:s}) [{:d} x {:d}] depth {:d} format {:d} numLevels {:d}", TextureTargetName(type), Name(), size.x, size.y, size.z, (int)format, numLevels);
 		return true;
 	}
 
-	bool Texture::DefineSampler(TextureFilterMode filter_, TextureAddressMode u, TextureAddressMode v, TextureAddressMode w, unsigned maxAnisotropy_, float minLod_, float maxLod_, const Color& borderColor_)
+	bool Texture::DefineSampler(TextureFilterMode filter, TextureAddressMode u, TextureAddressMode v, TextureAddressMode w, unsigned maxAnisotropy, float minLod, float maxLod, const Color& borderColor)
 	{
-		filter = filter_;
-		addressModes[0] = u;
-		addressModes[1] = v;
-		addressModes[2] = w;
-		maxAnisotropy = maxAnisotropy_;
-		minLod = minLod_;
-		maxLod = maxLod_;
-		borderColor = borderColor_;
-
 		if (!texture) {
 			LOG_ERROR("Texture must be defined before defining sampling parameters");
 			return false;
 		}
+
+		if (multisample > 1) {
+			LOG_ERROR("Multisample textures doesn't support sampler state.");
+			return false;
+		}
+
+		this->filter = filter;
+		addressModes[0] = u;
+		addressModes[1] = v;
+		addressModes[2] = w;
+		this->maxAnisotropy = maxAnisotropy;
+		this->minLod = minLod;
+		this->maxLod = maxLod;
+		this->borderColor = borderColor;
 
 		ForceBind();
 
@@ -594,12 +531,7 @@ namespace Turso3D
 		return true;
 	}
 
-	bool Texture::SetData(size_t level, const IntRect& rect, const ImageLevel& data)
-	{
-		return SetData(level, IntBox(rect.left, rect.top, 0, rect.right, rect.bottom, 1), data);
-	}
-
-	bool Texture::SetData(size_t level, const IntBox& box, const ImageLevel& data)
+	bool Texture::SetData(const ImageLevel& data)
 	{
 		if (!texture) {
 			return true;
@@ -610,23 +542,35 @@ namespace Turso3D
 			return false;
 		}
 
-		if (level >= numLevels) {
+		if (data.level >= numLevels) {
 			LOG_ERROR("Mipmap level to update out of bounds");
 			return false;
 		}
 
-		IntBox levelBox(0, 0, 0, std::max(size.x >> level, 1), std::max(size.y >> level, 1), std::max(size.z >> level, 1));
-		if (type == TEX_CUBE) {
-			if (box.Depth() != 1) {
-				LOG_ERROR("Cube map must update one face at a time");
-				return false;
-			}
-
-			levelBox.near = box.near;
-			levelBox.far = box.far;
+		// Check image boundaries
+		IntBox dstBox;
+		IntBox box = data.dimensions;
+		switch (type) {
+			case TARGET_1D:
+			case TARGET_1D_ARRAY:
+				dstBox = IntBox {0, 0, 0, std::max(size.x >> data.level, 1), 1, 1};
+				box.left = box.near = 0;
+				box.right = box.far = 1;
+				break;
+			case TARGET_2D:
+			case TARGET_2D_ARRAY:
+			case TARGET_CUBE:
+			case TARGET_CUBE_ARRAY:
+				dstBox = IntBox {0, 0, 0, std::max(size.x >> data.level, 1), std::max(size.y >> data.level, 1), 1};
+				box.near = 0;
+				box.far = 1;
+				break;
+			case TARGET_3D:
+				dstBox = IntBox {0, 0, 0, std::max(size.x >> data.level, 1), std::max(size.y >> data.level, 1), std::max(size.z >> data.level, 1)};
+				break;
 		}
 
-		if (levelBox.IsInside(box) != INSIDE) {
+		if (dstBox.IsInside(box) != INSIDE) {
 			assert(false);
 			LOG_ERROR("Texture update region is outside level");
 			return false;
@@ -634,35 +578,43 @@ namespace Turso3D
 
 		ForceBind();
 
-		bool wholeLevel = box == levelBox;
+		gli::gl::format glFormat = GLIProfile.translate(static_cast<gli::format>(format), gli::swizzles {0, 0, 0, 0});
+		bool compressed = IsCompressed(format);
 
-		gli::gl GL {gli::gl::PROFILE_GL33};
-		gli::gl::format glFormat = GL.translate(static_cast<gli::format>(format), gli::swizzles {});
-		if (glFormat.Type == gli::gl::TYPE_NONE) {
-			glFormat.Type = gli::gl::TYPE_U8;
-		}
-
-		GLenum glTarget = (type == TEX_CUBE) ? GL_TEXTURE_CUBE_MAP_POSITIVE_X + box.near : target;
-
-		if (type != TEX_3D) {
-			if (!IsCompressed(format)) {
-				if (wholeLevel) {
-					glTexImage2D(glTarget, (int)level, glFormat.Internal, box.Width(), box.Height(), 0, glFormat.External, glFormat.Type, data.data);
+		switch (type) {
+			case TARGET_1D:
+				if (!compressed) {
+					glTexSubImage1D(target, data.level, box.left, box.Width(), glFormat.External, glFormat.Type, data.data);
 				} else {
-					glTexSubImage2D(glTarget, (int)level, box.left, box.top, box.Width(), box.Height(), glFormat.External, glFormat.Type, data.data);
+					glCompressedTexSubImage1D(target, data.level, box.left, box.Width(), glFormat.Internal, data.dataSize, data.data);
 				}
-			} else {
-				if (wholeLevel) {
-					glCompressedTexImage2D(glTarget, (int)level, glFormat.Internal, box.Width(), box.Height(), 0, (GLsizei)data.dataSize, data.data);
+				break;
+			case TARGET_1D_ARRAY:
+			case TARGET_2D:
+			case TARGET_CUBE:
+			{
+				unsigned t = (type == TARGET_CUBE) ? GL_TEXTURE_CUBE_MAP_POSITIVE_X + data.layer_face : target;
+				int y = (type == TARGET_1D_ARRAY) ? data.layer_face : box.top;
+				int h = (type == TARGET_1D_ARRAY) ? 1 : box.Height();
+				if (!compressed) {
+					glTexSubImage2D(t, data.level, box.left, y, box.Width(), h, glFormat.External, glFormat.Type, data.data);
 				} else {
-					glCompressedTexSubImage2D(glTarget, (int)level, box.left, box.top, box.Width(), box.Height(), glFormat.External, (GLsizei)data.dataSize, data.data);
+					glCompressedTexSubImage2D(t, data.level, box.left, y, box.Width(), h, glFormat.Internal, data.dataSize, data.data);
 				}
+				break;
 			}
-		} else {
-			if (wholeLevel) {
-				glTexImage3D(glTarget, (int)level, glFormat.Internal, box.Width(), box.Height(), box.Depth(), 0, glFormat.External, glFormat.Type, data.data);
-			} else {
-				glTexSubImage3D(glTarget, (int)level, box.left, box.top, box.near, box.Width(), box.Height(), box.Depth(), glFormat.External, glFormat.Type, data.data);
+			case TARGET_2D_ARRAY:
+			case TARGET_3D:
+			case TARGET_CUBE_ARRAY:
+			{
+				int z = (type == TARGET_3D) ? box.near : data.layer_face;
+				int d = (type == TARGET_3D) ? box.Depth() : 1;
+				if (!compressed) {
+					glTexSubImage3D(target, data.level, box.left, box.top, z, box.Width(), box.Height(), d, glFormat.External, glFormat.Type, data.data);
+				} else {
+					glCompressedTexSubImage3D(target, data.level, box.left, box.top, z, box.Width(), box.Height(), d, glFormat.Internal, data.dataSize, data.data);
+				}
+				break;
 			}
 		}
 
@@ -689,24 +641,6 @@ namespace Turso3D
 		BoundTextures[unit] = this;
 	}
 
-	unsigned Texture::GLTarget() const
-	{
-		return target;
-	}
-
-	void Texture::Unbind(size_t unit)
-	{
-		if (BoundTextures[unit]) {
-			if (ActiveTextureUnit != unit) {
-				glActiveTexture(GL_TEXTURE0 + (GLenum)unit);
-				ActiveTextureUnit = unit;
-			}
-			glBindTexture(ActiveTargets[unit], 0);
-			ActiveTargets[unit] = 0;
-			BoundTextures[unit] = nullptr;
-		}
-	}
-
 	// ==========================================================================================
 	void Texture::ForceBind()
 	{
@@ -726,5 +660,45 @@ namespace Turso3D
 				}
 			}
 		}
+	}
+
+	// ==========================================================================================
+	void Texture::Unbind(size_t unit)
+	{
+		if (BoundTextures[unit]) {
+			if (ActiveTextureUnit != unit) {
+				glActiveTexture(GL_TEXTURE0 + (GLenum)unit);
+				ActiveTextureUnit = unit;
+			}
+			if (ActiveTargets[unit]) {
+				glBindTexture(ActiveTargets[unit], 0);
+				ActiveTargets[unit] = 0;
+			}
+			BoundTextures[unit] = nullptr;
+		}
+	}
+
+	unsigned Texture::GetGLInternalFormat(ImageFormat format)
+	{
+		gli::gl::format glFormat = GLIProfile.translate(static_cast<gli::format>(format), gli::swizzles {});
+		return glFormat.Internal;
+	}
+
+	bool Texture::IsCompressed(ImageFormat format)
+	{
+		gli::format f = static_cast<gli::format>(format);
+		return gli::is_compressed(f);
+	}
+
+	bool Texture::IsStencil(ImageFormat format)
+	{
+		gli::format f = static_cast<gli::format>(format);
+		return gli::is_stencil(f);
+	}
+
+	size_t Texture::BitsPerPixel(ImageFormat format)
+	{
+		gli::format f = static_cast<gli::format>(format);
+		return gli::bits_per_pixel(f);
 	}
 }

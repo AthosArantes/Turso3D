@@ -1,4 +1,4 @@
-#include "VertexBuffer.h"
+#include <Turso3D/Graphics/VertexBuffer.h>
 #include <Turso3D/Graphics/Graphics.h>
 #include <Turso3D/IO/Log.h>
 #include <glew/glew.h>
@@ -42,6 +42,7 @@ namespace Turso3D
 		GL_UNSIGNED_BYTE,
 	};
 
+	// ==========================================================================================
 	VertexBuffer::VertexBuffer() :
 		buffer(0),
 		numVertices(0),

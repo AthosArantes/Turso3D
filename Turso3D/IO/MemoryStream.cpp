@@ -1,4 +1,4 @@
-#include "MemoryStream.h"
+#include <Turso3D/IO/MemoryStream.h>
 #include <cstring>
 
 namespace Turso3D

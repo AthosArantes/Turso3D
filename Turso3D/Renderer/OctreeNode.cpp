@@ -1,4 +1,4 @@
-#include "OctreeNode.h"
+#include <Turso3D/Renderer/OctreeNode.h>
 #include <Turso3D/Math/Ray.h>
 #include <Turso3D/Scene/Scene.h>
 #include <Turso3D/Renderer/Camera.h>

@@ -1,4 +1,4 @@
-#include "Light.h"
+#include <Turso3D/Renderer/Light.h>
 #include <Turso3D/Core/Allocator.h>
 #include <Turso3D/Graphics/Texture.h>
 #include <Turso3D/IO/Log.h>
@@ -158,11 +158,11 @@ namespace Turso3D
 	IntVector2 LightDrawable::TotalShadowMapSize() const
 	{
 		if (lightType == LIGHT_DIRECTIONAL) {
-			return IntVector2(shadowMapSize * 2, shadowMapSize);
+			return IntVector2 {shadowMapSize * 2, shadowMapSize};
 		} else if (lightType == LIGHT_POINT) {
-			return IntVector2(shadowMapSize * 3, shadowMapSize * 2);
+			return IntVector2 {shadowMapSize * 3, shadowMapSize * 2};
 		} else {
-			return IntVector2(shadowMapSize, shadowMapSize);
+			return IntVector2 {shadowMapSize, shadowMapSize};
 		}
 	}
 
@@ -195,7 +195,7 @@ namespace Turso3D
 
 	Vector2 LightDrawable::ShadowCascadeSplits() const
 	{
-		return Vector2(shadowCascadeSplit * shadowMaxDistance, shadowMaxDistance);
+		return Vector2 {shadowCascadeSplit * shadowMaxDistance, shadowMaxDistance};
 	}
 
 	size_t LightDrawable::NumShadowViews() const
@@ -262,11 +262,11 @@ namespace Turso3D
 		switch (lightType) {
 			case LIGHT_DIRECTIONAL:
 			{
-				IntVector2 topLeft(shadowRect.left, shadowRect.top);
+				IntVector2 topLeft {shadowRect.left, shadowRect.top};
 				if (viewIndex & 1) {
 					topLeft.x += actualShadowMapSize;
 				}
-				view.viewport = IntRect(topLeft.x, topLeft.y, topLeft.x + actualShadowMapSize, topLeft.y + actualShadowMapSize);
+				view.viewport = IntRect {topLeft.x, topLeft.y, topLeft.x + actualShadowMapSize, topLeft.y + actualShadowMapSize};
 				Vector2 cascadeSplits = ShadowCascadeSplits();
 
 				view.splitMinZ = std::max(mainCamera->NearClip(), (viewIndex == 0) ? 0.0f : cascadeSplits.x);
@@ -324,20 +324,20 @@ namespace Turso3D
 				size.x = std::max(size.x * size.x * shadowQuantize, shadowMinView);
 				size.y = std::max(size.y * size.y * shadowQuantize, shadowMinView);
 
-				shadowCamera->SetOrthoSize(Vector2(size.x, size.y));
+				shadowCamera->SetOrthoSize(Vector2 {size.x, size.y});
 				shadowCamera->SetZoom(1.0f);
 
 				// Center shadow camera to the view space bounding box
-				Quaternion rot(shadowCamera->WorldRotation());
-				Vector3 adjust(center.x, center.y, 0.0f);
+				Quaternion rot {shadowCamera->WorldRotation()};
+				Vector3 adjust {center.x, center.y, 0.0f};
 				shadowCamera->Translate(rot * adjust, TS_WORLD);
 
 				// Snap to whole texels
 				{
-					Vector3 viewPos(rot.Inverse() * shadowCamera->WorldPosition());
+					Vector3 viewPos {rot.Inverse() * shadowCamera->WorldPosition()};
 					float invSize = 4.0f / actualShadowMapSize;
-					Vector2 texelSize(size.x * invSize, size.y * invSize);
-					Vector3 snap(-fmodf(viewPos.x, texelSize.x), -fmodf(viewPos.y, texelSize.y), 0.0f);
+					Vector2 texelSize {size.x * invSize, size.y * invSize};
+					Vector3 snap {-fmodf(viewPos.x, texelSize.x), -fmodf(viewPos.y, texelSize.y), 0.0f};
 					shadowCamera->Translate(rot * snap, TS_WORLD);
 				}
 			}
@@ -345,12 +345,12 @@ namespace Turso3D
 
 			case LIGHT_POINT:
 			{
-				IntVector2 topLeft(shadowRect.left, shadowRect.top);
+				IntVector2 topLeft {shadowRect.left, shadowRect.top};
 				if (viewIndex & 1) {
 					topLeft.y += actualShadowMapSize;
 				}
 				topLeft.x += ((unsigned)viewIndex >> 1) * actualShadowMapSize;
-				view.viewport = IntRect(topLeft.x, topLeft.y, topLeft.x + actualShadowMapSize, topLeft.y + actualShadowMapSize);
+				view.viewport = IntRect {topLeft.x, topLeft.y, topLeft.x + actualShadowMapSize, topLeft.y + actualShadowMapSize};
 
 				shadowCamera->SetTransform(WorldPosition(), pointLightFaceRotations[viewIndex]);
 				shadowCamera->SetFov(90.0f);
@@ -380,8 +380,8 @@ namespace Turso3D
 		if (lightType != LIGHT_POINT) {
 			float width = (float)shadowMap->Width();
 			float height = (float)shadowMap->Height();
-			Vector3 viewOffset((float)view.viewport.left / width, (float)view.viewport.top / height, 0.0f);
-			Vector3 viewScale(0.5f * (float)view.viewport.Width() / width, 0.5f * (float)view.viewport.Height() / height, 1.0f);
+			Vector3 viewOffset {(float)view.viewport.left / width, (float)view.viewport.top / height, 0.0f};
+			Vector3 viewScale {0.5f * (float)view.viewport.Width() / width, 0.5f * (float)view.viewport.Height() / height, 1.0f};
 
 			viewOffset.x += viewScale.x;
 			viewOffset.y += viewScale.y;
@@ -390,7 +390,7 @@ namespace Turso3D
 			viewOffset.z = 0.5f;
 			viewScale.z = 0.5f;
 
-			Matrix4 texAdjust(Matrix4::IDENTITY());
+			Matrix4 texAdjust {Matrix4::IDENTITY()};
 			texAdjust.SetTranslation(viewOffset);
 			texAdjust.SetScale(viewScale);
 
@@ -398,7 +398,7 @@ namespace Turso3D
 		} else {
 			if (!viewIndex) {
 				Vector3 worldPosition = WorldPosition();
-				Vector2 textureSize((float)shadowMap->Width(), (float)shadowMap->Height());
+				Vector2 textureSize {(float)shadowMap->Width(), (float)shadowMap->Height()};
 				float nearClip = Range() * 0.01f;
 				float farClip = Range();
 				float q = farClip / (farClip - nearClip);

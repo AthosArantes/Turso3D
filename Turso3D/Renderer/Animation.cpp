@@ -1,4 +1,4 @@
-#include "Animation.h"
+#include <Turso3D/Renderer/Animation.h>
 #include <Turso3D/IO/Log.h>
 #include <Turso3D/IO/Stream.h>
 

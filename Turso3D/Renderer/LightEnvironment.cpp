@@ -1,4 +1,4 @@
-#include "LightEnvironment.h"
+#include <Turso3D/Renderer/LightEnvironment.h>
 
 namespace Turso3D
 {

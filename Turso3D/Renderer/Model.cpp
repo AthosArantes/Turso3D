@@ -1,4 +1,4 @@
-#include "Model.h"
+#include <Turso3D/Renderer/Model.h>
 #include <Turso3D/Graphics/IndexBuffer.h>
 #include <Turso3D/Graphics/VertexBuffer.h>
 #include <Turso3D/IO/Log.h>

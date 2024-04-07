@@ -1,9 +1,9 @@
 #pragma once
 
+#include <Turso3D/Graphics/GraphicsDefs.h>
 #include <Turso3D/Math/Color.h>
 #include <Turso3D/Math/IntRect.h>
 #include <Turso3D/Math/Matrix3x4.h>
-#include <Turso3D/Graphics/GraphicsDefs.h>
 #include <vector>
 #include <string>
 #include <memory>

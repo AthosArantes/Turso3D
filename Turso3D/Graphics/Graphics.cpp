@@ -1,4 +1,4 @@
-#include "Graphics.h"
+#include <Turso3D/Graphics/Graphics.h>
 #include <Turso3D/Graphics/FrameBuffer.h>
 #include <Turso3D/Graphics/IndexBuffer.h>
 #include <Turso3D/Graphics/Shader.h>
@@ -187,6 +187,11 @@ namespace Turso3D
 		// "Any samples passed" is potentially faster if supported
 		if (GLEW_VERSION_3_3) {
 			occlusionQueryType = GL_ANY_SAMPLES_PASSED;
+		}
+
+		if (!GLEW_VERSION_4_0 && !GLEW_ARB_texture_cube_map_array) {
+			LOG_ERROR("ARB_texture_cube_map_array not supported.");
+			return false;
 		}
 
 #ifdef _DEBUG

@@ -306,16 +306,16 @@ void Application::CreateDefaultScene()
 	Material::SetGlobalShaderDefines("", "HQSHADOW");
 	renderer->SetShadowDepthBiasMul(biasMul, biasMul);
 
-#if 0
+#if 1
 	// Sun
 	Light* light = root->CreateChild<Light>();
 	//light->SetStatic(true);
 	light->SetLightType(LIGHT_DIRECTIONAL);
 	light->SetCastShadows(true);
 
-	Vector3 color = 100.0f * Vector3(1.0f, 1.0f, 0.6f);
+	Vector3 color = 100.0f * Vector3 {1.0f, 1.0f, 0.6f};
 	light->SetColor(Color(color.x, color.y, color.z, 1.0f));
-	light->SetDirection(Vector3(0.45f, -0.45f, 0.30f));
+	light->SetDirection(Vector3 {0.45f, -0.45f, 0.30f});
 	//light->SetRange(600.0f);
 	light->SetShadowMapSize(DIRECTIONAL_LIGHT_SIZE);
 	light->SetShadowMaxDistance(50.0f);
@@ -388,12 +388,12 @@ void Application::CreateSpheresScene()
 			//light->SetStatic(true);
 			light->SetLightType(LIGHT_POINT);
 			//light->SetCastShadows(true);
-			light->SetPosition(Vector3 {Random() * 2.0f - 1.0f, Random() * 2.0f - 1.0f, -1.0f} *3.0f);
+			light->SetPosition(Vector3 {Random() * 2.0f - 1.0f, Random() * 2.0f - 2.0f, -1.0f} * 3.0f);
 
 			light->SetColor(Color::WHITE() * 10.0f);
-			light->SetRange(5.0f);
+			light->SetRange(10.0f);
 			light->SetShadowMapSize(1024);
-			light->SetShadowMaxDistance(10.0f);
+			light->SetShadowMaxDistance(5.0f);
 			light->SetMaxDistance(50.0f);
 		}
 	}
@@ -434,19 +434,6 @@ void Application::CreateThousandMushroomScene()
 					//object->SetLodBias(2000.0f);
 					object->SetMaxDistance(0.0f);
 				}
-			}
-
-			if (x % 10 == 0 && y % 2 == 0) {
-				Light* light = root->CreateChild<Light>();
-				light->SetLightType(LIGHT_POINT);
-				light->SetCastShadows(true);
-				light->SetPosition(floor->Position() + Vector3 {0.0f, 1.0f, 0.0f});
-
-				light->SetColor(Color::WHITE() * 20.0f);
-				light->SetRange(15.0f);
-				light->SetShadowMapSize(512);
-				light->SetShadowMaxDistance(15.0f);
-				light->SetMaxDistance(20.0f);
 			}
 		}
 	}
@@ -539,13 +526,13 @@ void Application::OnFramebufferSize(int width, int height)
 
 	// Define the base rendertargets
 	for (int i = 0; i < 2; ++i) {
-		hdrBuffer[i]->Define(TEX_2D, sz, FORMAT_RGBA16_SFLOAT_PACK16, multiSample * i);
+		hdrBuffer[i]->Define(TARGET_2D, sz, FORMAT_RG11B10_UFLOAT_PACK32, multiSample * i);
 		hdrBuffer[i]->DefineSampler(FILTER_BILINEAR, ADDRESS_CLAMP, ADDRESS_CLAMP, ADDRESS_CLAMP);
 
-		normalBuffer[i]->Define(TEX_2D, sz, FORMAT_RGBA8_SNORM_PACK32, multiSample * i);
+		normalBuffer[i]->Define(TARGET_2D, sz, FORMAT_RG16_SNORM_PACK16, multiSample * i);
 		normalBuffer[i]->DefineSampler(FILTER_BILINEAR, ADDRESS_CLAMP, ADDRESS_CLAMP, ADDRESS_CLAMP);
 
-		depthStencilBuffer[i]->Define(TEX_2D, sz, FORMAT_D32_SFLOAT_PACK32, multiSample * i);
+		depthStencilBuffer[i]->Define(TARGET_2D, sz, FORMAT_D32_SFLOAT_PACK32, multiSample * i);
 		depthStencilBuffer[i]->DefineSampler(FILTER_BILINEAR, ADDRESS_CLAMP, ADDRESS_CLAMP, ADDRESS_CLAMP);
 
 		Texture* colors[] = {
@@ -559,11 +546,11 @@ void Application::OnFramebufferSize(int width, int height)
 		}
 	}
 
-	ldrBuffer->Define(TEX_2D, sz, FORMAT_RGBA8_SRGB_PACK32);
+	ldrBuffer->Define(TARGET_2D, sz, FORMAT_RGBA8_SRGB_PACK32);
 	ldrBuffer->DefineSampler(FILTER_BILINEAR, ADDRESS_CLAMP, ADDRESS_CLAMP, ADDRESS_CLAMP);
 	ldrFbo->Define(ldrBuffer.get(), depthStencilBuffer[0].get());
 
-	guiTexture->Define(TEX_2D, sz, FORMAT_RGBA8_SRGB_PACK32);
+	guiTexture->Define(TARGET_2D, sz, ldrBuffer->Format());
 	guiTexture->DefineSampler(FILTER_BILINEAR, ADDRESS_CLAMP, ADDRESS_CLAMP, ADDRESS_CLAMP);
 	guiFbo->Define(guiTexture.get(), nullptr);
 
@@ -577,7 +564,7 @@ void Application::OnFramebufferSize(int width, int height)
 		ssaoRenderer->UpdateBuffers(sz);
 	}
 
-	blurRenderer->UpdateBuffers(sz, FORMAT_RGBA8_SRGB_PACK32, 3);
+	blurRenderer->UpdateBuffers(sz, ldrBuffer->Format(), 3);
 
 	if (rmlRenderer) {
 		rmlRenderer->UpdateBuffers(sz, multiSample);

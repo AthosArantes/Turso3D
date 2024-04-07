@@ -15,19 +15,17 @@ namespace Turso3D
 	// Description of image mip level data.
 	struct ImageLevel
 	{
-		// Default construct.
-		ImageLevel();
-		// Construct with parameters for non-compressed data.
-		ImageLevel(const IntVector2& size, ImageFormat format, const void* data);
-		// Construct with parameters for non-compressed data.
-		ImageLevel(const IntVector3& size, ImageFormat format, const void* data);
-
 		// Pointer to pixel data.
-		const uint8_t* data;
-		// Level size in pixels.
-		IntVector3 size;
+		const void* data;
 		// Total data size in bytes.
-		size_t dataSize;
+		// Optional for non-compressed data.
+		int dataSize;
+
+		// Dimensions in pixels.
+		IntBox dimensions;
+
+		int layer_face;
+		int level;
 	};
 
 	// Texture on the GPU.
@@ -36,10 +34,17 @@ namespace Turso3D
 		struct LoadBuffer;
 
 	public:
+		enum LoadFlag
+		{
+			LOAD_FLAG_SRGB = 0x1,
+			LOAD_FLAG_GENERATE_MIPS = 0x2
+		};
+
+	public:
 		// Construct.
 		Texture();
 		// Construct.
-		Texture(bool loadSRGB);
+		Texture(unsigned loadFlags);
 		// Destruct.
 		~Texture();
 
@@ -50,30 +55,36 @@ namespace Turso3D
 		// Return true on success.
 		bool EndLoad() override;
 
-		// Define texture type and dimensions and set initial data.
-		// Return true on success.
-		bool Define(TextureType type, const IntVector2& size, ImageFormat format, int multisample = 1, size_t numLevels = 1, const ImageLevel* initialData = nullptr);
-		// Define texture type and dimensions and set initial data.
-		// Return true on success.
-		bool Define(TextureType type, const IntVector3& size, ImageFormat format, int multisample = 1, size_t numLevels = 1, const ImageLevel* initialData = nullptr);
-
+		// Allocate a texture on the GPU.
+		// The size determines the dimensions of the texture, but for some texture types each component have it's own meaning.
+		// e.g:
+		//	TARGET_1D: [x] is the texture width, [y,z] are ignored.
+		//	TARGET_1D_ARRAY: [x] is the texture width, [y] is the number of layers, [z] is ignored.
+		//	TARGET_2D: [x,y] are the texture width and height, [z] is ignored.
+		//	TARGET_2D_ARRAY: [x,y] are the texture width and height, [z] is the number of layers.
+		//	TARGET_CUBE: [x,y] are the texture width and height, [z] must be MAX_CUBE_FACES.
+		//	TARGET_CUBE_ARRAY: [x,y] are the texture width and height, [z] must be the number of cubemaps * MAX_CUBE_FACES.
+		//	TARGET_3D: [x,y,z] are the texture width, height and depth.
+		// Returns true on success.
+		bool Define(TextureTarget type, const IntVector3& size, ImageFormat format, int multisample = 1, int numLevels = 1);
+		bool Define(TextureTarget type, const IntVector2& size, ImageFormat format, int multisample = 1, int numLevels = 1)
+		{
+			return Define(type, IntVector3 {size.x, size.y, 1}, format, multisample, numLevels);
+		}
 		// Define sampling parameters.
 		// Return true on success.
 		bool DefineSampler(TextureFilterMode filter = FILTER_ANISOTROPIC, TextureAddressMode u = ADDRESS_WRAP, TextureAddressMode v = ADDRESS_WRAP, TextureAddressMode w = ADDRESS_WRAP, unsigned maxAnisotropy = 16, float minLod = -M_MAX_FLOAT, float maxLod = M_MAX_FLOAT, const Color& borderColor = Color::BLACK());
 
-		// Set data for a mipmap level.
+		// Upload texture data to GPU.
 		// Return true on success.
-		bool SetData(size_t level, const IntRect& rect, const ImageLevel& data);
-		// Set data for a mipmap level.
-		// Return true on success.
-		bool SetData(size_t level, const IntBox& box, const ImageLevel& data);
+		bool SetData(const ImageLevel& data);
 
 		// Bind to texture unit.
 		// No-op if already bound.
 		void Bind(size_t unit);
 
-		// Return texture type.
-		TextureType TexType() const { return type; }
+		// Return texture target type.
+		TextureTarget Target() const { return type; }
 		// Return dimensions in pixels.
 		const IntVector3& Size() const { return size; }
 		// Return 2D dimensions in pixels.
@@ -93,7 +104,7 @@ namespace Turso3D
 		// Return multisampling level, or 1 if not multisampled.
 		int Multisample() const { return multisample; }
 		// Return number of mipmap levels.
-		size_t NumLevels() const { return numLevels; }
+		int NumLevels() const { return numLevels; }
 
 		// Return texture filter mode.
 		TextureFilterMode FilterMode() const { return filter; }
@@ -108,16 +119,23 @@ namespace Turso3D
 		// Return border color.
 		const Color& BorderColor() const { return borderColor; }
 
-		// Set the sRGB flag used when loading from a stream.
-		// Must be set before calling EndLoad().
-		void SetLoadSRGB(bool srgb = true) { loadSRGB = srgb; }
-		// Return whether the image will be loaded in sRGB format.
-		bool GetLoadSRGB() const { return loadSRGB; }
+		// Set loading flags.
+		// Must be set before calling BeginLoad().
+		void SetLoadFlag(unsigned flag, bool set)
+		{
+			if (set) {
+				loadFlags |= flag;
+			} else {
+				loadFlags &= ~flag;
+			}
+		}
+		// Return the load flags.
+		unsigned LoadFlags() const { return loadFlags; }
 
 		// Return the OpenGL object identifier.
 		unsigned GLTexture() const { return texture; }
 		// Return the OpenGL binding target of the texture.
-		unsigned GLTarget() const;
+		unsigned GLTarget() const { return target; }
 
 		// Unbind a texture unit.
 		static void Unbind(size_t unit);
@@ -128,6 +146,8 @@ namespace Turso3D
 		static bool IsCompressed(ImageFormat format);
 		// Return whether the format has stencil component.
 		static bool IsStencil(ImageFormat format);
+		// Return the number of bits per pixel.
+		static size_t BitsPerPixel(ImageFormat format);
 
 	private:
 		// Force bind to the first texture unit. Used when editing.
@@ -141,8 +161,8 @@ namespace Turso3D
 		// OpenGL texture target.
 		unsigned target;
 
-		// Texture type.
-		TextureType type;
+		// Texture target type.
+		TextureTarget type;
 		// Texture dimensions in pixels.
 		IntVector3 size;
 		// Image format.
@@ -150,7 +170,7 @@ namespace Turso3D
 		// Multisampling level.
 		int multisample;
 		// Number of mipmap levels.
-		size_t numLevels;
+		int numLevels;
 
 		// Texture filtering mode.
 		TextureFilterMode filter;
@@ -166,8 +186,8 @@ namespace Turso3D
 		// Only effective in border addressing mode.
 		Color borderColor;
 
-		// sRGB load flag. Must be set before loading from a stream.
-		bool loadSRGB;
+		// Loading flags
+		unsigned loadFlags;
 
 		// Loading buffer used to hold temporary image data. Internal use only.
 		std::unique_ptr<LoadBuffer> loadBuffer;

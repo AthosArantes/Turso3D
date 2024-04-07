@@ -1,4 +1,4 @@
-#include "FrameBuffer.h"
+#include <Turso3D/Graphics/FrameBuffer.h>
 #include <Turso3D/Graphics/Graphics.h>
 #include <Turso3D/Graphics/RenderBuffer.h>
 #include <Turso3D/Graphics/Texture.h>
@@ -67,7 +67,7 @@ namespace Turso3D
 
 		IntVector2 size = IntVector2::ZERO();
 
-		if (colorTexture && colorTexture->TexType() == TEX_2D) {
+		if (colorTexture && colorTexture->Target() == TARGET_2D) {
 			size = colorTexture->Size2D();
 			glDrawBuffer(GL_COLOR_ATTACHMENT0);
 			glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, colorTexture->GLTarget(), colorTexture->GLTexture(), 0);
@@ -103,7 +103,7 @@ namespace Turso3D
 
 		IntVector2 size = IntVector2::ZERO();
 
-		if (colorTexture && colorTexture->TexType() == TEX_CUBE) {
+		if (colorTexture && colorTexture->Target() == TARGET_CUBE) {
 			size = colorTexture->Size2D();
 			glDrawBuffer(GL_COLOR_ATTACHMENT0);
 			glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_CUBE_MAP_POSITIVE_X + (GLenum)cubeMapFace, colorTexture->GLTexture(), 0);
@@ -141,7 +141,7 @@ namespace Turso3D
 
 		std::vector<GLenum> drawBufferIds;
 		for (size_t i = 0; i < countColorTextures; ++i) {
-			if (colorTextures[i] && colorTextures[i]->TexType() == TEX_2D) {
+			if (colorTextures[i] && colorTextures[i]->Target() == TARGET_2D) {
 				if (size != IntVector2::ZERO() && size != colorTextures[i]->Size2D()) {
 					LOG_WARNING("Framebuffer color dimensions don't match");
 				} else {

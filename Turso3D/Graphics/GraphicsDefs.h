@@ -465,19 +465,31 @@ namespace Turso3D
 	}
 
 	// Texture types.
-	enum TextureType
+	enum TextureTarget
 	{
-		TEX_2D = 0,
-		TEX_3D,
-		TEX_CUBE
+		TARGET_1D,
+		TARGET_1D_ARRAY,
+		TARGET_2D,
+		TARGET_2D_ARRAY,
+		TARGET_3D,
+		TARGET_RECT,
+		TARGET_RECT_ARRAY,
+		TARGET_CUBE,
+		TARGET_CUBE_ARRAY
 	};
 
-	constexpr const char* TextureTargetName(TextureType value)
+	constexpr const char* TextureTargetName(TextureTarget value)
 	{
 		constexpr const char* data[] = {
+			"Texture1D",
+			"Texture1DArray",
 			"Texture2D",
+			"Texture2DArray",
 			"Texture3D",
-			"TextureCube"
+			"TextureRect",
+			"TextureRectArray",
+			"TextureCube",
+			"TextureCubeArray"
 		};
 		return data[value];
 	}

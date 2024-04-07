@@ -1,4 +1,4 @@
-#include "WorkQueue.h"
+#include <Turso3D/Core/WorkQueue.h>
 #include <Turso3D/IO/Log.h>
 #include <cassert>
 #include <string>

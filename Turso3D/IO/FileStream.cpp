@@ -1,4 +1,4 @@
-#include "FileStream.h"
+#include <Turso3D/IO/FileStream.h>
 #include <cstdio>
 
 static const char* OpenModes[] =

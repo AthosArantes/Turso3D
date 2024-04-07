@@ -1,4 +1,4 @@
-#include "StaticModel.h"
+#include <Turso3D/Renderer/StaticModel.h>
 #include <Turso3D/Core/Allocator.h>
 #include <Turso3D/IO/Log.h>
 #include <Turso3D/Renderer/Camera.h>

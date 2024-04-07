@@ -43,7 +43,7 @@ namespace Turso3D
 		Log::Scope logScope {"SSAORenderer::UpdateBuffers"};
 		IntVector2 texSize {size.x / 2, size.y / 2};
 
-		resultTexture->Define(TEX_2D, texSize, FORMAT_RGBA8_UNORM_PACK32);
+		resultTexture->Define(TARGET_2D, texSize, FORMAT_RGBA8_UNORM_PACK32);
 		resultTexture->DefineSampler(FILTER_BILINEAR, ADDRESS_CLAMP, ADDRESS_CLAMP, ADDRESS_CLAMP);
 		resultFbo->Define(resultTexture.get(), nullptr);
 	}
@@ -106,9 +106,10 @@ namespace Turso3D
 			noiseData[i * 4 + 2] = (unsigned char)(noiseVec.z * 127.0f + 128.0f);
 			noiseData[i * 4 + 3] = 0;
 		}
-		ImageLevel noiseDataLevel(IntVector2(4, 4), FORMAT_RGBA8_UNORM_PACK32, &noiseData[0]);
-		
-		noiseTexture->Define(TEX_2D, IntVector2(4, 4), FORMAT_RGBA8_UNORM_PACK32, 1, 1, &noiseDataLevel);
+		ImageLevel noiseDataLevel {&noiseData[0], 0, IntBox {0, 0, 0, 4, 4, 0}, 0, 0};
+
+		noiseTexture->Define(TARGET_2D, IntVector3 {4, 4, 1}, FORMAT_RGBA8_UNORM_PACK32, 1, 1);
 		noiseTexture->DefineSampler(FILTER_POINT);
+		noiseTexture->SetData(noiseDataLevel);
 	}
 }

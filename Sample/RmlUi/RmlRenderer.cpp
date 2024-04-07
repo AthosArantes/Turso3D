@@ -206,7 +206,7 @@ namespace Turso3D
 	bool RmlRenderer::LoadTexture(Rml::TextureHandle& texture_handle, Rml::Vector2i& texture_dimensions, const Rml::String& source)
 	{
 		ResourceCache* cache = ResourceCache::Instance();
-		std::shared_ptr<Texture> tex = cache->LoadResource<Texture>(source, true);
+		std::shared_ptr<Texture> tex = cache->LoadResource<Texture>(source, Texture::LOAD_FLAG_SRGB);
 		if (tex) {
 			//tex->DefineSampler(FILTER_BILINEAR, ADDRESS_CLAMP, ADDRESS_CLAMP, ADDRESS_CLAMP);
 
@@ -226,15 +226,16 @@ namespace Turso3D
 
 		std::shared_ptr<Texture> tex = std::make_shared<Texture>();
 		if (tex) {
-			IntVector2 sz {source_dimensions.x, source_dimensions.y};
-			ImageLevel il {sz, FORMAT_RGBA8_SRGB_PACK32, source};
+			IntVector3 sz {source_dimensions.x, source_dimensions.y, 1};
+			ImageLevel il {source, 0, IntBox {0, 0, 0, sz.x, sz.y, 0}, 0, 0};
 
-			bool defined = tex->Define(TEX_2D, sz, FORMAT_RGBA8_SRGB_PACK32, 1, 1, &il);
+			bool defined = tex->Define(TARGET_2D, sz, FORMAT_RGBA8_SRGB_PACK32, 1, 1);
 			if (!defined) {
 				LOG_ERROR("Failed to define texture.");
 				return false;
 			}
 			tex->DefineSampler(FILTER_BILINEAR, ADDRESS_CLAMP, ADDRESS_CLAMP, ADDRESS_CLAMP);
+			tex->SetData(il);
 
 			texture_handle = reinterpret_cast<Rml::TextureHandle>(tex.get());
 			textures.push_back(tex);
@@ -269,7 +270,7 @@ namespace Turso3D
 		multisample = multisample_;
 
 		for (int i = 0; i < 2; ++i) {
-			buffer[i]->Define(TEX_2D, size, FORMAT_RGBA8_SRGB_PACK32, multisample * i);
+			buffer[i]->Define(TARGET_2D, size, FORMAT_RGBA8_SRGB_PACK32, multisample * i);
 			buffer[i]->DefineSampler(FILTER_BILINEAR, ADDRESS_CLAMP, ADDRESS_CLAMP, ADDRESS_CLAMP);
 			fbo[i]->Define(buffer[i].get(), nullptr);
 
