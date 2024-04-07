@@ -446,9 +446,6 @@ namespace Turso3D
 			return false;
 		}
 
-		glTexParameteri(target, GL_TEXTURE_BASE_LEVEL, 0);
-		glTexParameteri(target, GL_TEXTURE_MAX_LEVEL, type != TEX_3D ? (unsigned)numLevels - 1 : 0);
-
 		size = size_;
 		format = format_;
 		numLevels = numLevels_;
@@ -466,6 +463,9 @@ namespace Turso3D
 		}
 
 		ForceBind();
+
+		glTexParameteri(target, GL_TEXTURE_BASE_LEVEL, 0);
+		glTexParameteri(target, GL_TEXTURE_MAX_LEVEL, type != TEX_3D ? (unsigned)numLevels - 1 : 0);
 
 		// If not compressed and no initial data, create the initial level 0 texture with null data
 		// Clear previous error first to be able to check whether the data was successfully set

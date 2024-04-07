@@ -74,7 +74,7 @@ namespace Turso3D
 		for (size_t i = 0; i < elements.size(); ++i) {
 			elements[i] = elements_[i];
 			elements[i].offset = vertexSize;
-			vertexSize += VertexElementSize(elements[i]);
+			vertexSize += ElementTypeSize(elements[i].type);
 		}
 
 		attributes = CalculateAttributeMask(elements);
@@ -182,11 +182,6 @@ namespace Turso3D
 			attributes |= attributeBit;
 		}
 		return attributes;
-	}
-
-	size_t VertexBuffer::VertexElementSize(const VertexElement& element)
-	{
-		return ElementSizes[element.type];
 	}
 
 	bool VertexBuffer::Create(const void* data)

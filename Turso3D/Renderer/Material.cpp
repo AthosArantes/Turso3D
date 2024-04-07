@@ -53,9 +53,11 @@ namespace Turso3D
 			cullMode = CULL_BACK;
 			if (xml_attribute attribute = root.attribute("cullMode"); attribute) {
 				for (int i = 0; i < MAX_CULL_MODES; ++i) {
+					CullMode cm = static_cast<CullMode>(i);
+
 					std::string value {attribute.value()};
-					if (value == CullModeNames[i]) {
-						cullMode = (CullMode)i;
+					if (value == CullModeName(cm)) {
+						cullMode = cm;
 						break;
 					}
 				}
@@ -81,9 +83,11 @@ namespace Turso3D
 
 						if (xml_attribute attribute = pass.attribute("blendMode"); attribute) {
 							for (int i = 0; i < MAX_BLEND_MODES; ++i) {
+								BlendMode bm = static_cast<BlendMode>(i);
+
 								std::string value {attribute.value()};
-								if (value == BlendModeNames[i]) {
-									data.blendMode = (BlendMode)i;
+								if (value == BlendModeName(bm)) {
+									data.blendMode = bm;
 									break;
 								}
 							}
@@ -91,9 +95,11 @@ namespace Turso3D
 
 						if (xml_attribute attribute = pass.attribute("depthTest"); attribute) {
 							for (int i = 0; i < MAX_COMPARE_MODES; ++i) {
+								CompareMode cm = static_cast<CompareMode>(i);
+
 								std::string value {attribute.value()};
-								if (value == CompareModeNames[i]) {
-									data.depthTest = (CompareMode)i;
+								if (value == CompareModeName(cm)) {
+									data.depthTest = cm;
 									break;
 								}
 							}

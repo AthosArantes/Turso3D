@@ -1,5 +1,6 @@
 #pragma once
 
+#include <Turso3D/Math/Vector4.h>
 #include <cstddef>
 
 namespace Turso3D
@@ -15,7 +16,7 @@ namespace Turso3D
 	// Maximum number of color rendertargets in use at once.
 	constexpr size_t MAX_RENDERTARGETS = 4;
 	// Number of cube map faces.
-	constexpr size_t MAX_CUBE_FACES = 6;
+	constexpr unsigned MAX_CUBE_FACES = 6;
 
 	enum ImageFormat
 	{
@@ -281,8 +282,21 @@ namespace Turso3D
 		ELEM_UBYTE4,
 		MAX_ELEMENT_TYPES
 	};
+
 	// Vertex element sizes by element type.
-	extern const size_t ElementSizes[];
+	constexpr size_t ElementTypeSize(ElementType value)
+	{
+		constexpr const size_t data[] = {
+			sizeof(int),
+			sizeof(float),
+			sizeof(Vector2),
+			sizeof(Vector3),
+			sizeof(Vector4),
+			sizeof(unsigned),
+			0
+		};
+		return data[value];
+	}
 
 	// Element semantics for vertex elements.
 	enum ElementSemantic
@@ -296,7 +310,21 @@ namespace Turso3D
 		SEM_BLENDINDICES,
 		MAX_ELEMENT_SEMANTICS
 	};
-	extern const char* ElementSemanticNames[];
+
+	constexpr const char* ElementSemanticName(ElementSemantic value)
+	{
+		constexpr const char* data[] = {
+			"POSITION",
+			"NORMAL",
+			"TANGENT",
+			"TEXCOORD",
+			"COLOR",
+			"BLENDWEIGHT",
+			"BLENDINDICES",
+			nullptr
+		};
+		return data[value];
+	}
 
 	// Vertex attribute indices.
 	enum VertexAttribute
@@ -315,7 +343,26 @@ namespace Turso3D
 		ATTR_BLENDINDICES,
 		MAX_VERTEX_ATTRIBUTES
 	};
-	extern const char* VertexAttributeNames[];
+
+	constexpr const char* VertexAttributeName(VertexAttribute value)
+	{
+		constexpr const char* data[] = {
+			"position",
+			"normal",
+			"tangent",
+			"color",
+			"texCoord",
+			"texCoord1",
+			"texCoord2",
+			"texCoord3",
+			"texCoord4",
+			"texCoord5",
+			"blendWeights",
+			"blendIndices",
+			nullptr
+		};
+		return data[value];
+	}
 
 	// Vertex attribute bitmasks.
 	enum AttributeMask
@@ -348,7 +395,23 @@ namespace Turso3D
 		BLEND_SUBTRACTALPHA,
 		MAX_BLEND_MODES
 	};
-	extern const char* BlendModeNames[];
+	
+	constexpr const char* BlendModeName(BlendMode value)
+	{
+		constexpr const char* data[] = {
+			"replace",
+			"add",
+			"multiply",
+			"alpha",
+			"add_alpha",
+			"pre_mul_alpha",
+			"inv_dest_alpha",
+			"subtract",
+			"subtract_alpha",
+			nullptr
+		};
+		return data[value];
+	}
 
 	// Triangle culling modes.
 	enum CullMode
@@ -358,7 +421,18 @@ namespace Turso3D
 		CULL_BACK,
 		MAX_CULL_MODES
 	};
-	extern const char* CullModeNames[];
+
+	inline static const char* CullModeName(CullMode value)
+	{
+		const char* data[] =
+		{
+			"none",
+			"front",
+			"back",
+			nullptr
+		};
+		return data[value];
+	}
 
 	// Depth or stencil compare modes.
 	enum CompareMode
@@ -373,15 +447,40 @@ namespace Turso3D
 		CMP_ALWAYS,
 		MAX_COMPARE_MODES
 	};
-	extern const char* CompareModeNames[];
+
+	constexpr const char* CompareModeName(CompareMode value)
+	{
+		constexpr const char* data[] = {
+			"never",
+			"less",
+			"equal",
+			"less_equal",
+			"greater",
+			"not_equal",
+			"greater_equal",
+			"always",
+			nullptr
+		};
+		return data[value];
+	}
 
 	// Texture types.
 	enum TextureType
 	{
 		TEX_2D = 0,
 		TEX_3D,
-		TEX_CUBE,
+		TEX_CUBE
 	};
+
+	constexpr const char* TextureTargetName(TextureType value)
+	{
+		constexpr const char* data[] = {
+			"Texture2D",
+			"Texture3D",
+			"TextureCube"
+		};
+		return data[value];
+	}
 
 	// Resource usage modes for buffers.
 	enum ResourceUsage
@@ -419,7 +518,15 @@ namespace Turso3D
 		U_WORLDMATRIX,
 		MAX_PRESET_UNIFORMS
 	};
-	extern const char* PresetUniformNames[];
+	
+	constexpr const char* PresetUniformName(PresetUniform value)
+	{
+		constexpr const char* data[] = {
+			"worldMatrix",
+			nullptr
+		};
+		return data[value];
+	}
 
 	// Uniform buffer binding points.
 	enum UniformBufferBindings
@@ -446,7 +553,16 @@ namespace Turso3D
 		SHADER_FS,
 		MAX_SHADER_TYPES
 	};
-	extern const char* ShaderTypeNames[];
+	
+	constexpr const char* ShaderTypeName(ShaderType value)
+	{
+		constexpr const char* data[] = {
+			"VS",
+			"FS",
+			nullptr
+		};
+		return data[value];
+	}
 
 	// Description of an element in a vertex declaration.
 	struct VertexElement
@@ -461,10 +577,10 @@ namespace Turso3D
 		}
 
 		// Construct with type, semantic, index and whether is per-instance data.
-		VertexElement(ElementType type_, ElementSemantic semantic_, unsigned char index_ = 0) :
-			type(type_),
-			semantic(semantic_),
-			index(index_),
+		VertexElement(ElementType type, ElementSemantic semantic, unsigned char index = 0) :
+			type(type),
+			semantic(semantic),
+			index(index),
 			offset(0)
 		{
 		}

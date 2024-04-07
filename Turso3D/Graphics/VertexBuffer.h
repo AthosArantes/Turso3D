@@ -51,8 +51,6 @@ namespace Turso3D
 
 		// Calculate a vertex attribute mask from elements.
 		static unsigned CalculateAttributeMask(const std::vector<VertexElement>& elements);
-		// Return size of vertex element.
-		static size_t VertexElementSize(const VertexElement& element);
 
 	private:
 		// Create the GPU-side vertex buffer. Return true on success.

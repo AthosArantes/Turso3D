@@ -171,7 +171,6 @@
 		<ClCompile Include="Core\WorkQueue.cpp" />
 		<ClCompile Include="Graphics\FrameBuffer.cpp" />
 		<ClCompile Include="Graphics\Graphics.cpp" />
-		<ClCompile Include="Graphics\GraphicsDefs.cpp" />
 		<ClCompile Include="Graphics\IndexBuffer.cpp" />
 		<ClCompile Include="Graphics\RenderBuffer.cpp" />
 		<ClCompile Include="Graphics\Shader.cpp" />

@@ -24,7 +24,7 @@ namespace Turso3DUtils
 				blendIndicesFound = true;
 				break;
 			} else {
-				blendIndicesOffset += VertexBuffer::VertexElementSize(vbDesc.vertexElements[i]);
+				blendIndicesOffset += ElementTypeSize(vbDesc.vertexElements[i].type);
 			}
 		}
 

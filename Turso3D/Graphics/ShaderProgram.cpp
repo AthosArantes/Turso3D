@@ -54,7 +54,7 @@ namespace Turso3D
 		glAttachShader(program, vs);
 		glAttachShader(program, fs);
 		for (unsigned i = 0; i < MAX_VERTEX_ATTRIBUTES; ++i) {
-			glBindAttribLocation(program, i, VertexAttributeNames[i]);
+			glBindAttribLocation(program, i, VertexAttributeName((VertexAttribute)i));
 		}
 		glLinkProgram(program);
 		glDeleteShader(vs);
@@ -96,7 +96,7 @@ namespace Turso3D
 
 			size_t attribIndex = UINT32_MAX;
 			for (int i = 0; i < MAX_VERTEX_ATTRIBUTES; ++i) {
-				if (name == VertexAttributeNames[i]) {
+				if (name == VertexAttributeName((VertexAttribute)i)) {
 					attribIndex = i;
 					break;
 				}
@@ -128,7 +128,7 @@ namespace Turso3D
 			// Check if uniform is a preset one for quick access
 			PresetUniform preset = MAX_PRESET_UNIFORMS;
 			for (int i = 0; i < MAX_PRESET_UNIFORMS; ++i) {
-				if (name == PresetUniformNames[i]) {
+				if (name == PresetUniformName((PresetUniform)i)) {
 					preset = (PresetUniform)i;
 					break;
 				}
@@ -269,11 +269,11 @@ namespace Turso3D
 			glGetShaderInfoLog(shader, 1024, &outLength, &msg[0]);
 
 			if (!compiled) {
-				LOG_ERROR("Failed to compile shader \"{:s}\": ({:s}) {:s}", name, ShaderTypeNames[type], msg.c_str());
+				LOG_ERROR("Failed to compile shader \"{:s}\": ({:s}) {:s}", name, ShaderTypeName(type), msg.c_str());
 			}
 #ifdef _DEBUG
 			else if (length > 1) {
-				LOG_DEBUG("Compiled shader \"{:s}\": ({:s}) {:s}", name, ShaderTypeNames[type], msg.c_str());
+				LOG_DEBUG("Compiled shader \"{:s}\": ({:s}) {:s}", name, ShaderTypeName(type), msg.c_str());
 			}
 #endif
 		}
