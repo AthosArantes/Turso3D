@@ -11,7 +11,23 @@ namespace Turso3D
 	);
 
 	// ==========================================================================================
-	Camera::Camera()
+	Camera::Camera() :
+		viewMatrix(Matrix3x4::IDENTITY()),
+		viewMatrixDirty(false),
+		orthographic(false),
+		flipVertical(false),
+		nearClip(0.1f),
+		farClip(1000.0f),
+		fov(45.0f),
+		orthoSize(20.0f),
+		aspectRatio(1.0f),
+		zoom(1.0f),
+		lodBias(1.0f),
+		viewMask(M_MAX_UNSIGNED),
+		reflectionPlane(Plane::UP()),
+		clipPlane(Plane::UP()),
+		useReflection(false),
+		useClipping(false)
 	{
 		reflectionMatrix = reflectionPlane.ReflectionMatrix();
 	}
@@ -86,7 +102,7 @@ namespace Turso3D
 
 	Matrix4 Camera::ProjectionMatrix(bool apiSpecific) const
 	{
-		Matrix4 ret(Matrix4::ZERO);
+		Matrix4 ret(Matrix4::ZERO());
 
 		bool openGLFormat = apiSpecific;
 

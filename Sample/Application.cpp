@@ -184,8 +184,8 @@ bool Application::Initialize()
 
 	// Create scene
 	CreateDefaultScene();
-	CreateSpheresScene();
-	//CreateThousandMushroomScene();
+	//CreateSpheresScene();
+	CreateThousandMushroomScene();
 
 	return true;
 }
@@ -388,9 +388,9 @@ void Application::CreateSpheresScene()
 			//light->SetStatic(true);
 			light->SetLightType(LIGHT_POINT);
 			//light->SetCastShadows(true);
-			light->SetPosition(Vector3 {Random() * 2.0f - 1.0f, Random() * 2.0f - 1.0f, -1.0f} * 3.0f);
+			light->SetPosition(Vector3 {Random() * 2.0f - 1.0f, Random() * 2.0f - 1.0f, -1.0f} *3.0f);
 
-			light->SetColor(Color::WHITE * 10.0f);
+			light->SetColor(Color::WHITE() * 10.0f);
 			light->SetRange(5.0f);
 			light->SetShadowMapSize(1024);
 			light->SetShadowMaxDistance(10.0f);
@@ -434,6 +434,19 @@ void Application::CreateThousandMushroomScene()
 					//object->SetLodBias(2000.0f);
 					object->SetMaxDistance(0.0f);
 				}
+			}
+
+			if (x % 10 == 0 && y % 2 == 0) {
+				Light* light = root->CreateChild<Light>();
+				light->SetLightType(LIGHT_POINT);
+				light->SetCastShadows(true);
+				light->SetPosition(floor->Position() + Vector3 {0.0f, 1.0f, 0.0f});
+
+				light->SetColor(Color::WHITE() * 20.0f);
+				light->SetRange(15.0f);
+				light->SetShadowMapSize(512);
+				light->SetShadowMaxDistance(15.0f);
+				light->SetMaxDistance(20.0f);
 			}
 		}
 	}
@@ -595,10 +608,10 @@ void Application::Update(double dt)
 	float moveSpeed = (IsKeyDown(GLFW_KEY_LEFT_SHIFT) || IsKeyDown(GLFW_KEY_RIGHT_SHIFT)) ? 50.0f : 5.0f;
 	moveSpeed *= (IsKeyDown(GLFW_KEY_LEFT_ALT) || IsKeyDown(GLFW_KEY_RIGHT_ALT)) ? 0.25f : 1.0f;
 
-	if (IsKeyDown(GLFW_KEY_W)) camera->Translate(Vector3::FORWARD * moveSpeed * (float)dt);
-	if (IsKeyDown(GLFW_KEY_S)) camera->Translate(Vector3::BACK * moveSpeed * (float)dt);
-	if (IsKeyDown(GLFW_KEY_A)) camera->Translate(Vector3::LEFT * moveSpeed * (float)dt);
-	if (IsKeyDown(GLFW_KEY_D)) camera->Translate(Vector3::RIGHT * moveSpeed * (float)dt);
+	if (IsKeyDown(GLFW_KEY_W)) camera->Translate(Vector3::FORWARD() * moveSpeed * (float)dt);
+	if (IsKeyDown(GLFW_KEY_S)) camera->Translate(Vector3::BACK() * moveSpeed * (float)dt);
+	if (IsKeyDown(GLFW_KEY_A)) camera->Translate(Vector3::LEFT() * moveSpeed * (float)dt);
+	if (IsKeyDown(GLFW_KEY_D)) camera->Translate(Vector3::RIGHT() * moveSpeed * (float)dt);
 
 	GLFWwindow* window = graphics->Window();
 	int mouseMode = glfwGetInputMode(window, GLFW_CURSOR);
@@ -609,7 +622,7 @@ void Application::Update(double dt)
 			captureMouse = false;
 		} else if (!captureMouse) {
 			captureMouse = true;
-			cursorSpeed = Vector2::ZERO;
+			cursorSpeed = Vector2::ZERO();
 		}
 
 		if (captureMouse) {
@@ -651,7 +664,7 @@ void Application::PostUpdate(double dt)
 		}
 	}
 
-	cursorSpeed = Vector2::ZERO;
+	cursorSpeed = Vector2::ZERO();
 }
 
 void Application::FixedUpdate(double dt)
@@ -724,7 +737,7 @@ void Application::Render(double dt)
 			Ray cameraRay(camera->WorldPosition(), camera->WorldDirection());
 			RaycastResult res = scene->GetOctree()->RaycastSingle(cameraRay, Drawable::FLAG_GEOMETRY);
 			if (res.drawable) {
-				debugRenderer->AddSphere(Sphere(res.position, 0.05f), Color::WHITE, true);
+				debugRenderer->AddSphere(Sphere(res.position, 0.05f), Color::WHITE(), true);
 			}
 		}
 

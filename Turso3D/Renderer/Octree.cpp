@@ -90,7 +90,7 @@ namespace Turso3D
 
 	void Octant::OnRenderDebug(DebugRenderer* debug)
 	{
-		debug->AddBoundingBox(CullingBox(), Color::GRAY, true);
+		debug->AddBoundingBox(CullingBox(), Color::GRAY(), true);
 	}
 
 	void Octant::OnOcclusionQuery(unsigned queryId)
@@ -309,7 +309,7 @@ namespace Turso3D
 			return finalRayResult.front();
 		} else {
 			RaycastResult emptyRes;
-			emptyRes.position = emptyRes.normal = Vector3::ZERO;
+			emptyRes.position = emptyRes.normal = Vector3::ZERO();
 			emptyRes.distance = M_INFINITY;
 			emptyRes.drawable = nullptr;
 			emptyRes.subObject = 0;

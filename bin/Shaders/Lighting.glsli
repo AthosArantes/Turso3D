@@ -156,7 +156,7 @@ vec3 CalculateLight(const in uint index, const in vec4 worldPos, const in vec3 n
 	float HdotV = max(dot(H, V), 0.0);
 
 	float attenuation = max(1.0 - dot(scaledLightVec, scaledLightVec), 0.0);
-	float shadow = SampleShadow(index, worldPos, lightVec, L);
+	float shadow = max(SampleShadow(index, worldPos, lightVec, L), 0.0);
 
 	return CookTorranceBRDF(NdotV, NdotH, NdotL, HdotV, lightColor.rgb, albedo, f0, metallic, roughness) * attenuation * shadow;
 }

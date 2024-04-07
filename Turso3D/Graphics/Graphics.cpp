@@ -150,7 +150,7 @@ namespace Turso3D
 		glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
 		glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-		lastWindowPos = IntVector2::ZERO;
+		lastWindowPos = IntVector2::ZERO();
 		lastWindowSize = IntVector2 {width, height};
 
 		window = glfwCreateWindow(width, height, windowTitle, nullptr, nullptr);
@@ -553,7 +553,7 @@ namespace Turso3D
 			glClearBits |= GL_DEPTH_BUFFER_BIT;
 		}
 
-		if (clearRect == IntRect::ZERO) {
+		if (clearRect == IntRect::ZERO()) {
 			glClear(glClearBits);
 		} else {
 			glEnable(GL_SCISSOR_TEST);

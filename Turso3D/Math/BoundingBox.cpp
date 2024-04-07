@@ -105,24 +105,6 @@ namespace Turso3D
 		*this = Transformed(transform);
 	}
 
-	bool BoundingBox::FromString(const char* string)
-	{
-		/*size_t elements = CountElements(string);
-		if (elements < 6) {
-			return false;
-		}*/
-
-		char* ptr = const_cast<char*>(string);
-		min.x = (float)strtod(ptr, &ptr);
-		min.y = (float)strtod(ptr, &ptr);
-		min.z = (float)strtod(ptr, &ptr);
-		max.x = (float)strtod(ptr, &ptr);
-		max.y = (float)strtod(ptr, &ptr);
-		max.z = (float)strtod(ptr, &ptr);
-
-		return true;
-	}
-
 	BoundingBox BoundingBox::Transformed(const Matrix3& transform) const
 	{
 		return Transformed(Matrix3x4(transform));
@@ -165,7 +147,7 @@ namespace Turso3D
 		Rect rect;
 		for (size_t i = 0; i < 8; ++i) {
 			Vector3 projected = projection * vertices[i];
-			rect.Merge(Vector2(projected.x, projected.y));
+			rect.Merge(Vector2 {projected.x, projected.y});
 		}
 
 		return rect;
@@ -242,10 +224,5 @@ namespace Turso3D
 			return OUTSIDE;
 		}
 		return INSIDE;
-	}
-
-	std::string BoundingBox::ToString() const
-	{
-		return min.ToString() + " " + max.ToString();
 	}
 }

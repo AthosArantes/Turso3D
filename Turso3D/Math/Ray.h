@@ -7,8 +7,8 @@ namespace Turso3D
 {
 	class BoundingBox;
 	class Frustum;
-	class Plane;
 	class Sphere;
+	class Plane;
 
 	// Infinite straight line in three-dimensional space.
 	class Ray
@@ -31,7 +31,8 @@ namespace Turso3D
 		{
 		}
 
-		// Construct from origin and direction. The direction will be normalized.
+		// Construct from origin and direction.
+		// The direction will be normalized.
 		Ray(const Vector3& origin, const Vector3& direction)
 		{
 			Define(origin, direction);
@@ -56,7 +57,8 @@ namespace Turso3D
 			return !(*this == rhs);
 		}
 
-		// Define from origin and direction. The direction will be normalized.
+		// Define from origin and direction.
+		// The direction will be normalized.
 		void Define(const Vector3& origin_, const Vector3& direction_)
 		{
 			origin = origin_;
@@ -96,7 +98,8 @@ namespace Turso3D
 		float HitDistance(const Sphere& sphere) const;
 		// Return hit distance to a triangle and optionally normal, or infinity if no hit.
 		float HitDistance(const Vector3& v0, const Vector3& v1, const Vector3& v2, Vector3* outNormal = nullptr) const;
-		// Return hit distance to non-indexed geometry data, or infinity if no hit. Optionally return normal.
+		// Return hit distance to non-indexed geometry data, or infinity if no hit.
+		// Optionally return normal.
 		float HitDistance(const void* vertexData, size_t vertexSize, size_t vertexStart, size_t vertexCount, Vector3* outNormal = nullptr) const;
 		// Return hit distance to indexed geometry data, or infinity if no hit.
 		float HitDistance(const void* vertexData, size_t vertexSize, const void* indexData, size_t indexSize, size_t indexStart, size_t indexCount, Vector3* outNormal = nullptr) const;

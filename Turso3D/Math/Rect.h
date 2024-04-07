@@ -1,6 +1,8 @@
 #pragma once
 
+#include <Turso3D/Math/Math.h>
 #include <Turso3D/Math/Vector4.h>
+#include <utility>
 
 namespace Turso3D
 {
@@ -8,15 +10,10 @@ namespace Turso3D
 	class Rect
 	{
 	public:
-		// Minimum vector.
-		Vector2 min;
-		// Maximum vector.
-		Vector2 max;
-
 		// Construct as undefined (negative size.)
 		Rect() :
-			min(Vector2(M_INFINITY, M_INFINITY)),
-			max(Vector2(-M_INFINITY, -M_INFINITY))
+			min(Vector2 {M_INFINITY, M_INFINITY}),
+			max(Vector2 {-M_INFINITY, -M_INFINITY})
 		{
 		}
 
@@ -28,9 +25,9 @@ namespace Turso3D
 		}
 
 		// Construct from minimum and maximum vectors.
-		Rect(const Vector2& min_, const Vector2& max_) :
-			min(min_),
-			max(max_)
+		Rect(const Vector2& min, const Vector2& max) :
+			min(min),
+			max(max)
 		{
 		}
 
@@ -46,25 +43,6 @@ namespace Turso3D
 			min(vector.x, vector.y),
 			max(vector.z, vector.w)
 		{
-		}
-
-		// Construct from a float array.
-		Rect(const float* data) :
-			min(data[0], data[1]),
-			max(data[2], data[3])
-		{
-		}
-
-		// Construct by parsing a string.
-		Rect(const std::string& str)
-		{
-			FromString(str.c_str());
-		}
-
-		// Construct by parsing a C string.
-		Rect(const char* str)
-		{
-			FromString(str);
 		}
 
 		// Assign from another rect.
@@ -94,10 +72,10 @@ namespace Turso3D
 		}
 
 		// Define from minimum and maximum vectors.
-		void Define(const Vector2& min_, const Vector2& max_)
+		void Define(const Vector2& min, const Vector2& max)
 		{
-			min = min_;
-			max = max_;
+			this->min = min;
+			this->max = max;
 		}
 
 		// Define from a point.
@@ -155,44 +133,62 @@ namespace Turso3D
 		// Set as undefined to allow the next merge to set initial size.
 		void Undefine()
 		{
-			min = Vector2(M_INFINITY, M_INFINITY);
+			min = Vector2 {M_INFINITY, M_INFINITY};
 			max = -min;
 		}
 
 		// Clip with another rect.
-		void Clip(const Rect& rect);
-		// Parse from a string. Return true on success.
-		bool FromString(const std::string& str)
+		void Clip(const Rect& rect)
 		{
-			return FromString(str.c_str());
+			if (rect.min.x > min.x) {
+				min.x = rect.min.x;
+			}
+			if (rect.max.x < max.x) {
+				max.x = rect.max.x;
+			}
+			if (rect.min.y > min.y) {
+				min.y = rect.min.y;
+			}
+			if (rect.max.y < max.y) {
+				max.y = rect.max.y;
+			}
+
+			if (min.x > max.x) {
+				std::swap(min.x, max.x);
+			}
+			if (min.y > max.y) {
+				std::swap(min.y, max.y);
+			}
 		}
-		// Parse from a C string. Return true on success.
-		bool FromString(const char* string);
 
 		// Return whether has non-negative size.
 		bool IsDefined() const
 		{
 			return (min.x <= max.x);
 		}
+
 		// Return center.
 		Vector2 Center() const
 		{
 			return (max + min) * 0.5f;
 		}
+
 		// Return size.
 		Vector2 Size() const
 		{
 			return max - min;
 		}
+
 		// Return half-size.
 		Vector2 HalfSize() const
 		{
 			return (max - min) * 0.5f;
 		}
+
 		// Test for equality with another rect with epsilon.
-		bool Equals(const Rect& rhs) const
+		bool Equals(const Rect& rhs, float epsilon = M_EPSILON) const
 		{
-			return min.Equals(rhs.min) && max.Equals(rhs.max);
+			return min.Equals(rhs.min, epsilon) && max.Equals(rhs.max, epsilon);
 		}
 
 		// Test whether a point is inside.
@@ -204,24 +200,39 @@ namespace Turso3D
 			return INSIDE;
 		}
 
-		// Return float data.
-		const void* Data() const
-		{
-			return &min.x;
-		}
 		// Return as a vector.
 		Vector4 ToVector4() const
 		{
 			return Vector4(min.x, min.y, max.x, max.y);
 		}
-		// Return as string.
-		std::string ToString() const;
 
 		// Rect in the range (-1, -1) - (1, 1)
-		static const Rect FULL;
+		static Rect FULL();
 		// Rect in the range (0, 0) - (1, 1)
-		static const Rect POSITIVE;
+		static Rect POSITIVE();
 		// Zero-sized rect.
-		static const Rect ZERO;
+		static Rect ZERO();
+
+	public:
+		// Minimum vector.
+		Vector2 min;
+		// Maximum vector.
+		Vector2 max;
 	};
+
+	// ==========================================================================================
+	inline Rect Rect::FULL()
+	{
+		return Rect {-1.0f, -1.0f, 1.0f, 1.0f};
+	}
+
+	inline Rect Rect::POSITIVE()
+	{
+		return Rect {0.0f, 0.0f, 1.0f, 1.0f};
+	}
+
+	inline Rect Rect::ZERO()
+	{
+		return Rect {0.0f, 0.0f, 0.0f, 0.0f};
+	}
 }

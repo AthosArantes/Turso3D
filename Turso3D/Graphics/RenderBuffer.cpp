@@ -9,7 +9,7 @@ namespace Turso3D
 {
 	RenderBuffer::RenderBuffer() :
 		buffer(0),
-		size(IntVector2::ZERO),
+		size(IntVector2::ZERO()),
 		format(FORMAT_NONE),
 		multisample(0)
 	{
@@ -39,7 +39,7 @@ namespace Turso3D
 
 		glGenRenderbuffers(1, &buffer);
 		if (!buffer) {
-			size = IntVector2::ZERO;
+			size = IntVector2::ZERO();
 			format = FORMAT_NONE;
 			multisample = 0;
 
@@ -66,7 +66,7 @@ namespace Turso3D
 		// If we have an error now, the buffer was not created correctly
 		if (glGetError() != GL_NO_ERROR) {
 			Release();
-			size = IntVector2::ZERO;
+			size = IntVector2::ZERO();
 			format = FORMAT_NONE;
 
 			LOG_ERROR("Failed to create renderbuffer");

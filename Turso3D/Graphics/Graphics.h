@@ -5,6 +5,7 @@
 #include <Turso3D/Math/Matrix3x4.h>
 #include <Turso3D/Graphics/GraphicsDefs.h>
 #include <vector>
+#include <string>
 #include <memory>
 
 struct GLFWwindow;
@@ -124,7 +125,7 @@ namespace Turso3D
 		// Set depth bias.
 		void SetDepthBias(float constantBias = 0.0f, float slopeScaleBias = 0.0f);
 		// Clear the current framebuffer.
-		void Clear(bool clearColor = true, bool clearDepth = true, const IntRect& clearRect = IntRect::ZERO, const Color& backgroundColor = Color::BLACK);
+		void Clear(bool clearColor = true, bool clearDepth = true, const IntRect& clearRect = IntRect::ZERO(), const Color& backgroundColor = Color::BLACK());
 		
 		// Blit from one framebuffer to another.
 		// The destination framebuffer will be left bound for rendering.

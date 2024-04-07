@@ -8,9 +8,9 @@ namespace Turso3D
 
 	SpatialNode::SpatialNode()
 	{
-		position = Vector3::ZERO;
-		rotation = Quaternion::IDENTITY;
-		scale = Vector3::ONE;
+		position = Vector3::ZERO();
+		rotation = Quaternion::IDENTITY();
+		scale = Vector3::ONE();
 
 		SetFlag(FLAG_SPATIAL | FLAG_WORLDTRANSFORMDIRTY, true);
 	}
@@ -34,7 +34,7 @@ namespace Turso3D
 
 	void SpatialNode::SetDirection(const Vector3& newDirection)
 	{
-		rotation = Quaternion(Vector3::FORWARD, newDirection);
+		rotation = Quaternion(Vector3::FORWARD(), newDirection);
 		OnTransformChanged();
 	}
 
@@ -226,17 +226,17 @@ namespace Turso3D
 
 	void SpatialNode::Yaw(float angle, TransformSpace space)
 	{
-		Rotate(Quaternion(angle, Vector3::UP), space);
+		Rotate(Quaternion(angle, Vector3::UP()), space);
 	}
 
 	void SpatialNode::Pitch(float angle, TransformSpace space)
 	{
-		Rotate(Quaternion(angle, Vector3::RIGHT), space);
+		Rotate(Quaternion(angle, Vector3::RIGHT()), space);
 	}
 
 	void SpatialNode::Roll(float angle, TransformSpace space)
 	{
-		Rotate(Quaternion(angle, Vector3::FORWARD), space);
+		Rotate(Quaternion(angle, Vector3::FORWARD()), space);
 	}
 
 	bool SpatialNode::LookAt(const Vector3& target, const Vector3& up, TransformSpace space)
@@ -260,7 +260,7 @@ namespace Turso3D
 
 		Vector3 lookDir = worldSpaceTarget - WorldPosition();
 		// Check if target is very close, in that case can not reliably calculate lookat direction
-		if (lookDir.Equals(Vector3::ZERO)) {
+		if (lookDir.Equals(Vector3::ZERO())) {
 			return false;
 		}
 		Quaternion newRotation;

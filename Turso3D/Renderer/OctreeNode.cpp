@@ -62,7 +62,7 @@ namespace Turso3D
 
 	void Drawable::OnRenderDebug(DebugRenderer* debug)
 	{
-		debug->AddBoundingBox(WorldBoundingBox(), Color::GREEN, false);
+		debug->AddBoundingBox(WorldBoundingBox(), Color::GREEN(), false);
 	}
 
 	void Drawable::SetOwner(OctreeNodeBase* owner_)

@@ -81,7 +81,7 @@ void main()
 	vec4 sAoRoughMetal = texture(aoRoughMetalTex1, vTexCoord);
 
 	float ao = sAoRoughMetal.r * AoRoughMetal.r;
-	float roughness = sAoRoughMetal.g * AoRoughMetal.g;
+	float roughness = clamp(sAoRoughMetal.g * AoRoughMetal.g, 0.01, 0.99);
 	float metallic = sAoRoughMetal.b * AoRoughMetal.b;
 
 #ifdef TINTMASK

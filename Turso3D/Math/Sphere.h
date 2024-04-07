@@ -11,14 +11,9 @@ namespace Turso3D
 	class Sphere
 	{
 	public:
-		// Sphere center.
-		Vector3 center;
-		// Sphere radius.
-		float radius;
-
 		// Construct as undefined (negative radius.)
 		Sphere() :
-			center(Vector3::ZERO),
+			center(Vector3::ZERO()),
 			radius(-M_INFINITY)
 		{
 		}
@@ -221,5 +216,11 @@ namespace Turso3D
 		{
 			return std::max((point - center).Length() - radius, 0.0f);
 		}
+
+	public:
+		// Sphere center.
+		Vector3 center;
+		// Sphere radius.
+		float radius;
 	};
 }

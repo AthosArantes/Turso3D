@@ -11,6 +11,6 @@
 	</textures>
 	<uniforms>
 		<uniform name="BaseColor" value="1 1 1 1" />
-		<uniform name="AoRoughMetal" value="1 1 1 1" />
+		<uniform name="AoRoughMetal" value="1 0.3 0 1" />
 	</uniforms>
 </material>

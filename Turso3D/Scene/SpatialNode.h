@@ -69,7 +69,7 @@ namespace Turso3D
 		// Look at a target position in the chosen transform space.
 		// Note that the up vector is always specified in world space.
 		// Return true if successful, or false if resulted in an illegal rotation, in which case the current rotation remains.
-		bool LookAt(const Vector3& target, const Vector3& up = Vector3::UP, TransformSpace space = TS_WORLD);
+		bool LookAt(const Vector3& target, const Vector3& up = Vector3::UP(), TransformSpace space = TS_WORLD);
 		// Apply a scale change.
 		void ApplyScale(const Vector3& delta);
 		// Apply an uniform scale change.
@@ -82,7 +82,7 @@ namespace Turso3D
 		// Return rotation in parent space.
 		const Quaternion& Rotation() const { return rotation; }
 		// Return forward direction in parent space.
-		Vector3 Direction() const { return rotation * Vector3::FORWARD; }
+		Vector3 Direction() const { return rotation * Vector3::FORWARD(); }
 		// Return scale in parent space.
 		const Vector3& Scale() const { return scale; }
 		// Return transform matrix in parent space.
@@ -92,7 +92,7 @@ namespace Turso3D
 		// Return rotation in world space.
 		Quaternion WorldRotation() const { return WorldTransform().Rotation(); }
 		// Return forward direction in world space.
-		Vector3 WorldDirection() const { return WorldRotation() * Vector3::FORWARD; }
+		Vector3 WorldDirection() const { return WorldRotation() * Vector3::FORWARD(); }
 		// Return scale in world space.
 		// As it is calculated from the world transform matrix, it may not be meaningful or accurate in all cases.
 		Vector3 WorldScale() const { return WorldTransform().Scale(); }

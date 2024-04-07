@@ -38,7 +38,7 @@ namespace Turso3D
 	{
 		// Default construct.
 		ShadowView() :
-			lastViewport(IntRect::ZERO)
+			lastViewport(IntRect::ZERO())
 		{
 		}
 
@@ -139,7 +139,7 @@ namespace Turso3D
 		Sphere WorldSphere() const;
 
 		// Set shadow map and viewport within it. Called by Renderer.
-		void SetShadowMap(Texture* shadowMap, const IntRect& shadowRect = IntRect::ZERO);
+		void SetShadowMap(Texture* shadowMap, const IntRect& shadowRect = IntRect::ZERO());
 		// Init the correct number of shadow views but do not setup them yet.
 		// Called by Renderer.
 		// Must be called from the same thread for all lights because new Camera nodes are allocated on first call,

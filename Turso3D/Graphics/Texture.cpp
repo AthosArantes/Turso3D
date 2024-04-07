@@ -135,7 +135,7 @@ namespace Turso3D
 	// ==========================================================================================
 	ImageLevel::ImageLevel() :
 		data(nullptr),
-		size(IntVector3::ZERO),
+		size(IntVector3::ZERO()),
 		dataSize(0)
 	{
 	}
@@ -181,7 +181,7 @@ namespace Turso3D
 		texture(0),
 		target(0),
 		type(TEX_2D),
-		size(IntVector3::ZERO),
+		size(IntVector3::ZERO()),
 		format(FORMAT_NONE),
 		multisample(0),
 		numLevels(0),
@@ -193,7 +193,7 @@ namespace Turso3D
 		texture(0),
 		target(0),
 		type(TEX_2D),
-		size(IntVector3::ZERO),
+		size(IntVector3::ZERO()),
 		format(FORMAT_NONE),
 		multisample(0),
 		numLevels(0),
@@ -437,7 +437,7 @@ namespace Turso3D
 
 		glGenTextures(1, &texture);
 		if (!texture) {
-			size = IntVector3::ZERO;
+			size = IntVector3::ZERO();
 			format = FORMAT_NONE;
 			numLevels = 0;
 			multisample = 0;
@@ -509,7 +509,7 @@ namespace Turso3D
 		// If we have an error now, the texture was not created correctly
 		if (glGetError() != GL_NO_ERROR) {
 			Release();
-			size = IntVector3::ZERO;
+			size = IntVector3::ZERO();
 			format = FORMAT_NONE;
 			numLevels = 0;
 

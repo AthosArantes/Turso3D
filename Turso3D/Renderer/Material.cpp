@@ -476,7 +476,8 @@ namespace Turso3D
 				return uniformValues[i];
 			}
 		}
-		return Vector4::ZERO;
+		static Vector4 zero {Vector4::ZERO()};
+		return zero;
 	}
 
 	// ==========================================================================================
@@ -493,7 +494,7 @@ namespace Turso3D
 			mtl->SetName(mtlName);
 
 			std::vector<std::pair<std::string, Vector4>> defaultUniforms;
-			defaultUniforms.push_back(std::make_pair("BaseColor", Vector4::ONE));
+			defaultUniforms.push_back(std::make_pair("BaseColor", Vector4::ONE()));
 			defaultUniforms.push_back(std::make_pair("AoRoughMetal", Vector4 {1.0f, 0.3f, 0.0f, 1.0f}));
 			mtl->DefineUniforms(defaultUniforms);
 

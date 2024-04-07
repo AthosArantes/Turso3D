@@ -1,7 +1,6 @@
 #pragma once
 
 #include <Turso3D/Math/Vector3.h>
-#include <string>
 
 namespace Turso3D
 {
@@ -9,11 +8,6 @@ namespace Turso3D
 	class Matrix3
 	{
 	public:
-		// Matrix values.
-		float m00, m01, m02;
-		float m10, m11, m12;
-		float m20, m21, m22;
-
 		// Construct undefined.
 		Matrix3()
 		{
@@ -43,18 +37,6 @@ namespace Turso3D
 			m10(data[3]), m11(data[4]), m12(data[5]),
 			m20(data[6]), m21(data[7]), m22(data[8])
 		{
-		}
-
-		// Construct by parsing a string.
-		Matrix3(const std::string& str)
-		{
-			FromString(str.c_str());
-		}
-
-		// Construct by parsing a C string.
-		Matrix3(const char* str)
-		{
-			FromString(str);
 		}
 
 		// Assign from another matrix.
@@ -159,14 +141,6 @@ namespace Turso3D
 			m22 = scale;
 		}
 
-		// Parse from a string. Return true on success.
-		bool FromString(const std::string& str)
-		{
-			return FromString(str.c_str());
-		}
-		// Parse from a C string. Return true on success.
-		bool FromString(const char* string);
-
 		// Return the scaling part.
 		Vector3 Scale() const
 		{
@@ -242,18 +216,41 @@ namespace Turso3D
 		{
 			return &m00;
 		}
-		// Return as string.
-		std::string ToString() const;
 
 		// Zero matrix.
-		static const Matrix3 ZERO;
+		static Matrix3 ZERO();
 		// Identity matrix.
-		static const Matrix3 IDENTITY;
+		static Matrix3 IDENTITY();
+
+	public:
+		// Matrix values.
+		float m00, m01, m02;
+		float m10, m11, m12;
+		float m20, m21, m22;
 	};
 
+	// ==========================================================================================
 	// Multiply a 3x3 matrix with a scalar.
 	inline Matrix3 operator * (float lhs, const Matrix3& rhs)
 	{
 		return rhs * lhs;
+	}
+
+	inline Matrix3 Matrix3::ZERO()
+	{
+		return Matrix3 {
+			0.0f, 0.0f, 0.0f,
+			0.0f, 0.0f, 0.0f,
+			0.0f, 0.0f, 0.0f
+		};
+	}
+
+	inline Matrix3 Matrix3::IDENTITY()
+	{
+		return Matrix3 {
+			1.0f, 0.0f, 0.0f,
+			0.0f, 1.0f, 0.0f,
+			0.0f, 0.0f, 1.0f
+		};
 	}
 }

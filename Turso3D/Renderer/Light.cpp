@@ -171,7 +171,7 @@ namespace Turso3D
 		if (maxDistance > 0.0f) {
 			float scaledDistance = distance / maxDistance;
 			if (scaledDistance >= shadowFadeStart) {
-				return color.Lerp(Color::BLACK, (scaledDistance - fadeStart) / (1.0f - fadeStart));
+				return color.Lerp(Color::BLACK(), (scaledDistance - fadeStart) / (1.0f - fadeStart));
 			}
 		}
 		return color;
@@ -390,7 +390,7 @@ namespace Turso3D
 			viewOffset.z = 0.5f;
 			viewScale.z = 0.5f;
 
-			Matrix4 texAdjust(Matrix4::IDENTITY);
+			Matrix4 texAdjust(Matrix4::IDENTITY());
 			texAdjust.SetTranslation(viewOffset);
 			texAdjust.SetScale(viewScale);
 

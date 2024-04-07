@@ -18,7 +18,7 @@ namespace Turso3D
 		// Construct.
 		AnimationKeyFrame() :
 			time(0.0f),
-			scale(Vector3::ONE)
+			scale(Vector3::ONE())
 		{
 		}
 

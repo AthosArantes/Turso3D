@@ -8,15 +8,6 @@ namespace Turso3D
 	class Vector4
 	{
 	public:
-		// X coordinate.
-		float x;
-		// Y coordinate.
-		float y;
-		// Z coordinate.
-		float z;
-		// W coordinate.
-		float w;
-
 		// Construct undefined.
 		Vector4()
 		{
@@ -32,20 +23,20 @@ namespace Turso3D
 		}
 
 		// Construct from a 3-dimensional vector and the W coordinate.
-		Vector4(const Vector3& vector, float w_) :
+		Vector4(const Vector3& vector, float w) :
 			x(vector.x),
 			y(vector.y),
 			z(vector.z),
-			w(w_)
+			w(w)
 		{
 		}
 
 		// Construct from coordinates.
-		Vector4(float x_, float y_, float z_, float w_) :
-			x(x_),
-			y(y_),
-			z(z_),
-			w(w_)
+		Vector4(float x, float y, float z, float w) :
+			x(x),
+			y(y),
+			z(z),
+			w(w)
 		{
 		}
 
@@ -66,18 +57,6 @@ namespace Turso3D
 			z = rhs.z;
 			w = rhs.w;
 			return *this;
-		}
-
-		// Construct by parsing a string.
-		Vector4(const std::string& str)
-		{
-			FromString(str.c_str());
-		}
-
-		// Construct by parsing a C string.
-		Vector4(const char* str)
-		{
-			FromString(str);
 		}
 
 		// Test for equality with another vector without epsilon.
@@ -187,14 +166,6 @@ namespace Turso3D
 			return *this;
 		}
 
-		// Parse from a string. Return true on success.
-		bool FromString(const std::string& str)
-		{
-			return FromString(str.c_str());
-		}
-		// Parse from a C string. Return true on success.
-		bool FromString(const char* string);
-
 		// Calculate dot product.
 		float DotProduct(const Vector4& rhs) const
 		{
@@ -231,18 +202,36 @@ namespace Turso3D
 		{
 			return &x;
 		}
-		// Return as string.
-		std::string ToString() const;
 
 		// Zero vector.
-		static const Vector4 ZERO;
+		static Vector4 ZERO();
 		// (1,1,1) vector.
-		static const Vector4 ONE;
+		static Vector4 ONE();
+
+	public:
+		// X coordinate.
+		float x;
+		// Y coordinate.
+		float y;
+		// Z coordinate.
+		float z;
+		// W coordinate.
+		float w;
 	};
 
+	// ==========================================================================================
 	// Multiply Vector4 with a scalar.
 	inline Vector4 operator * (float lhs, const Vector4& rhs)
 	{
 		return rhs * lhs;
+	}
+
+	inline Vector4 Vector4::ZERO()
+	{
+		return Vector4 {0.0f, 0.0f, 0.0f, 0.0f};
+	}
+	inline Vector4 Vector4::ONE()
+	{
+		return Vector4 {1.0f, 1.0f, 1.0f, 1.0f};
 	}
 }

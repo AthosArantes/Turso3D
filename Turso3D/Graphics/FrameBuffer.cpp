@@ -29,7 +29,7 @@ namespace Turso3D
 
 		Bind();
 
-		IntVector2 size = IntVector2::ZERO;
+		IntVector2 size = IntVector2::ZERO();
 
 		if (colorBuffer) {
 			size = colorBuffer->Size();
@@ -41,7 +41,7 @@ namespace Turso3D
 		}
 
 		if (depthStencilBuffer) {
-			if (size != IntVector2::ZERO && size != depthStencilBuffer->Size()) {
+			if (size != IntVector2::ZERO() && size != depthStencilBuffer->Size()) {
 				LOG_WARNING("Framebuffer color and depth dimensions don't match");
 			} else {
 				size = depthStencilBuffer->Size();
@@ -65,7 +65,7 @@ namespace Turso3D
 
 		Bind();
 
-		IntVector2 size = IntVector2::ZERO;
+		IntVector2 size = IntVector2::ZERO();
 
 		if (colorTexture && colorTexture->TexType() == TEX_2D) {
 			size = colorTexture->Size2D();
@@ -77,7 +77,7 @@ namespace Turso3D
 		}
 
 		if (depthStencilTexture) {
-			if (size != IntVector2::ZERO && size != depthStencilTexture->Size2D()) {
+			if (size != IntVector2::ZERO() && size != depthStencilTexture->Size2D()) {
 				LOG_WARNING("Framebuffer color and depth dimensions don't match");
 			} else {
 				size = depthStencilTexture->Size2D();
@@ -101,7 +101,7 @@ namespace Turso3D
 
 		Bind();
 
-		IntVector2 size = IntVector2::ZERO;
+		IntVector2 size = IntVector2::ZERO();
 
 		if (colorTexture && colorTexture->TexType() == TEX_CUBE) {
 			size = colorTexture->Size2D();
@@ -113,7 +113,7 @@ namespace Turso3D
 		}
 
 		if (depthStencilTexture) {
-			if (size != IntVector2::ZERO && size != depthStencilTexture->Size2D()) {
+			if (size != IntVector2::ZERO() && size != depthStencilTexture->Size2D()) {
 				LOG_WARNING("Framebuffer color and depth dimensions don't match");
 			} else {
 				size = depthStencilTexture->Size2D();
@@ -137,12 +137,12 @@ namespace Turso3D
 
 		Bind();
 
-		IntVector2 size = IntVector2::ZERO;
+		IntVector2 size = IntVector2::ZERO();
 
 		std::vector<GLenum> drawBufferIds;
 		for (size_t i = 0; i < countColorTextures; ++i) {
 			if (colorTextures[i] && colorTextures[i]->TexType() == TEX_2D) {
-				if (size != IntVector2::ZERO && size != colorTextures[i]->Size2D()) {
+				if (size != IntVector2::ZERO() && size != colorTextures[i]->Size2D()) {
 					LOG_WARNING("Framebuffer color dimensions don't match");
 				} else {
 					size = colorTextures[i]->Size2D();
@@ -161,7 +161,7 @@ namespace Turso3D
 		}
 
 		if (depthStencilTexture) {
-			if (size != IntVector2::ZERO && size != depthStencilTexture->Size2D()) {
+			if (size != IntVector2::ZERO() && size != depthStencilTexture->Size2D()) {
 				LOG_WARNING("Framebuffer color and depth dimensions don't match");
 			} else {
 				size = depthStencilTexture->Size2D();

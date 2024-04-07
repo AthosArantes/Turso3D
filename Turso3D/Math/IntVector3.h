@@ -1,7 +1,6 @@
 #pragma once
 
 #include <Turso3D/Math/Math.h>
-#include <string>
 
 namespace Turso3D
 {
@@ -9,13 +8,6 @@ namespace Turso3D
 	class IntVector3
 	{
 	public:
-		// X coordinate.
-		int x;
-		// Y coordinate.
-		int y;
-		// Z coordinate.
-		int z;
-
 		// Construct undefined.
 		IntVector3()
 		{
@@ -30,10 +22,10 @@ namespace Turso3D
 		}
 
 		// Construct from coordinates.
-		IntVector3(int x_, int y_, int z_) :
-			x(x_),
-			y(y_),
-			z(z_)
+		IntVector3(int x, int y, int z) :
+			x(x),
+			y(y),
+			z(z)
 		{
 		}
 
@@ -43,18 +35,6 @@ namespace Turso3D
 			y(data[1]),
 			z(data[2])
 		{
-		}
-
-		// Construct by parsing a string.
-		IntVector3(const std::string& str)
-		{
-			FromString(str);
-		}
-
-		// Construct by parsing a C string.
-		IntVector3(const char* str)
-		{
-			FromString(str);
 		}
 
 		// Add-assign a vector.
@@ -108,20 +88,30 @@ namespace Turso3D
 		// Divide by a scalar.
 		IntVector3 operator / (int rhs) const { return IntVector3(x / rhs, y / rhs, z / rhs); }
 
-		// Parse from a string. Return true on success.
-		bool FromString(const std::string& string);
-		// Parse from a C string. Return true on success.
-		bool FromString(const char* str);
-
 		// Return integer data.
 		const int* Data() const { return &x; }
-		// Return as string.
-		std::string ToString() const;
 
 		// Zero vector.
-		static const IntVector3 ZERO;
+		static IntVector3 ZERO();
+
+	public:
+		// X coordinate.
+		int x;
+		// Y coordinate.
+		int y;
+		// Z coordinate.
+		int z;
 	};
 
+	// ==========================================================================================
 	// Multiply IntVector2 with a scalar.
-	inline IntVector3 operator * (int lhs, const IntVector3& rhs) { return rhs * lhs; }
+	inline IntVector3 operator * (int lhs, const IntVector3& rhs)
+	{
+		return rhs * lhs;
+	}
+
+	inline IntVector3 IntVector3::ZERO()
+	{
+		return IntVector3 {0, 0, 0};
+	}
 }

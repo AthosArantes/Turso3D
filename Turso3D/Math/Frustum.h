@@ -7,6 +7,10 @@
 
 namespace Turso3D
 {
+	constexpr size_t NUM_FRUSTUM_PLANES = 6;
+	constexpr size_t NUM_FRUSTUM_VERTICES = 8;
+	constexpr size_t NUM_SAT_AXES = 3 + 5 + 3 * 6;
+
 	// Frustum planes.
 	enum FrustumPlane
 	{
@@ -18,11 +22,8 @@ namespace Turso3D
 		PLANE_FAR,
 	};
 
-	constexpr size_t NUM_FRUSTUM_PLANES = 6;
-	constexpr size_t NUM_FRUSTUM_VERTICES = 8;
-	constexpr size_t NUM_SAT_AXES = 3 + 5 + 3 * 6;
-
-	// Helper data for speeding up SAT tests of bounding boxes against a frustum. This needs to be calculated once for a given frustum.
+	// Helper data for speeding up SAT tests of bounding boxes against a frustum.
+	// This needs to be calculated once for a given frustum.
 	struct SATData
 	{
 		// Calculate from a frustum.
@@ -38,11 +39,6 @@ namespace Turso3D
 	class Frustum
 	{
 	public:
-		// Frustum planes.
-		Plane planes[NUM_FRUSTUM_PLANES];
-		// Frustum vertices.
-		Vector3 vertices[NUM_FRUSTUM_VERTICES];
-
 		// Construct a degenerate frustum with all points at origin.
 		Frustum();
 		// Copy-construct.
@@ -52,13 +48,13 @@ namespace Turso3D
 		Frustum& operator = (const Frustum& rhs);
 
 		// Define with projection parameters and a transform matrix.
-		void Define(float fov, float aspectRatio, float zoom, float nearZ, float farZ, const Matrix3x4& transform = Matrix3x4::IDENTITY);
+		void Define(float fov, float aspectRatio, float zoom, float nearZ, float farZ, const Matrix3x4& transform = Matrix3x4::IDENTITY());
 		// Define with near and far dimension vectors and a transform matrix.
-		void Define(const Vector3& near, const Vector3& far, const Matrix3x4& transform = Matrix3x4::IDENTITY);
+		void Define(const Vector3& near, const Vector3& far, const Matrix3x4& transform = Matrix3x4::IDENTITY());
 		// Define with a bounding box and a transform matrix.
-		void Define(const BoundingBox& box, const Matrix3x4& transform = Matrix3x4::IDENTITY);
+		void Define(const BoundingBox& box, const Matrix3x4& transform = Matrix3x4::IDENTITY());
 		// Define with orthographic projection parameters and a transform matrix.
-		void DefineOrtho(float orthoSize, float aspectRatio, float zoom, float nearZ, float farZ, const Matrix3x4& transform = Matrix3x4::IDENTITY);
+		void DefineOrtho(float orthoSize, float aspectRatio, float zoom, float nearZ, float farZ, const Matrix3x4& transform = Matrix3x4::IDENTITY());
 		// Transform by a 3x3 matrix.
 		void Transform(const Matrix3& transform);
 		// Transform by a 3x4 matrix.
@@ -194,7 +190,9 @@ namespace Turso3D
 			return INSIDE;
 		}
 
-		// Test if a bounding box is (partially) inside or outside using SAT. Is slower but correct. The SAT helper data needs to be calculated beforehand to speed up.
+		// Test if a bounding box is (partially) inside or outside using SAT.
+		// Is slower but correct.
+		// The SAT helper data needs to be calculated beforehand to speed up.
 		Intersection IsInsideSAT(const BoundingBox& box, const SATData& data) const
 		{
 			for (size_t i = 0; i < NUM_SAT_AXES; ++i) {
@@ -227,5 +225,11 @@ namespace Turso3D
 
 		// Update the planes. Called internally.
 		void UpdatePlanes();
+
+	public:
+		// Frustum planes.
+		Plane planes[NUM_FRUSTUM_PLANES];
+		// Frustum vertices.
+		Vector3 vertices[NUM_FRUSTUM_VERTICES];
 	};
 }

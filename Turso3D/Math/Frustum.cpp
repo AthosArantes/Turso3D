@@ -28,8 +28,8 @@ namespace Turso3D
 		// Project, perspective divide and merge
 		Vector3 tV0(projection * v0);
 		Vector3 tV1(projection * v1);
-		rect.Merge(Vector2(tV0.x, tV0.y));
-		rect.Merge(Vector2(tV1.x, tV1.y));
+		rect.Merge(Vector2 {tV0.x, tV0.y});
+		rect.Merge(Vector2 {tV1.x, tV1.y});
 	}
 
 	// SAT test code inspired by https://github.com/juj/MathGeoLib/
@@ -38,11 +38,12 @@ namespace Turso3D
 	{
 		// Add box normals (constant)
 		size_t idx = 0;
-		axes[idx++] = Vector3::RIGHT;
-		axes[idx++] = Vector3::UP;
-		axes[idx++] = Vector3::FORWARD;
+		axes[idx++] = Vector3::RIGHT();
+		axes[idx++] = Vector3::UP();
+		axes[idx++] = Vector3::FORWARD();
 
-		// Add frustum normals. Disregard the near plane as it only points the other way from the far plane
+		// Add frustum normals.
+		// Disregard the near plane as it only points the other way from the far plane
 		for (size_t i = 1; i < NUM_FRUSTUM_PLANES; ++i) {
 			axes[idx++] = frustum.planes[i].normal;
 		}
@@ -73,7 +74,7 @@ namespace Turso3D
 	Frustum::Frustum()
 	{
 		for (size_t i = 0; i < NUM_FRUSTUM_VERTICES; ++i) {
-			vertices[i] = Vector3::ZERO;
+			vertices[i] = Vector3::ZERO();
 		}
 		UpdatePlanes();
 	}

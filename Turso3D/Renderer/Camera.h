@@ -134,38 +134,38 @@ namespace Turso3D
 
 	private:
 		// Cached view matrix.
-		mutable Matrix3x4 viewMatrix = Matrix3x4::IDENTITY;
+		mutable Matrix3x4 viewMatrix;
 		// View matrix dirty flag.
-		mutable bool viewMatrixDirty = false;
+		mutable bool viewMatrixDirty;
 		// Orthographic mode flag.
-		bool orthographic = false;
+		bool orthographic;
 		// Flip vertical flag.
-		bool flipVertical = false;
+		bool flipVertical;
 		// Near clip distance.
-		float nearClip = 0.1f;
+		float nearClip;
 		// Far clip distance.
-		float farClip = 1000.0f;
+		float farClip;
 		// Field of view.
-		float fov = 45.0f;
+		float fov;
 		// Orthographic view size.
-		float orthoSize = 20.0f;
+		float orthoSize;
 		// Aspect ratio.
-		float aspectRatio = 1.0f;
+		float aspectRatio;
 		// Zoom.
-		float zoom = 1.0f;
+		float zoom;
 		// LOD bias.
-		float lodBias = 1.0f;
+		float lodBias;
 		// View layer mask.
-		unsigned viewMask = M_MAX_UNSIGNED;
+		unsigned viewMask;
 		// Reflection plane.
-		Plane reflectionPlane = Plane::UP;
+		Plane reflectionPlane;
 		// Clipping plane.
-		Plane clipPlane = Plane::UP;
+		Plane clipPlane;
 		// Reflection matrix calculated from the plane.
 		Matrix3x4 reflectionMatrix;
 		// Reflection mode enabled flag.
-		bool useReflection = false;
+		bool useReflection;
 		// Use custom clip plane flag.
-		bool useClipping = false;
+		bool useClipping;
 	};
 }

@@ -1,7 +1,8 @@
 #pragma once
 
+#include <Turso3D/Math/Math.h>
 #include <Turso3D/Math/IntVector2.h>
-#include <string>
+#include <Turso3D/Math/IntVector3.h>
 
 namespace Turso3D
 {
@@ -9,15 +10,6 @@ namespace Turso3D
 	class IntRect
 	{
 	public:
-		// Left coordinate.
-		int left;
-		// Top coordinate.
-		int top;
-		// Right coordinate.
-		int right;
-		// Bottom coordinate.
-		int bottom;
-
 		// Construct undefined.
 		IntRect()
 		{
@@ -33,47 +25,36 @@ namespace Turso3D
 		}
 
 		// Construct from coordinates.
-		IntRect(int left_, int top_, int right_, int bottom_) :
-			left(left_),
-			top(top_),
-			right(right_),
-			bottom(bottom_)
+		IntRect(int left, int top, int right, int bottom) :
+			left(left),
+			top(top),
+			right(right),
+			bottom(bottom)
 		{
 		}
 
-		// Construct from an int array.
-		IntRect(const int* data) :
-			left(data[0]),
-			top(data[1]),
-			right(data[2]),
-			bottom(data[3])
+		IntRect& operator = (const IntRect& rhs)
 		{
-		}
-
-		// Construct by parsing a string.
-		IntRect(const std::string& str)
-		{
-			FromString(str.c_str());
-		}
-
-		// Construct by parsing a C string.
-		IntRect(const char* str)
-		{
-			FromString(str);
+			left = rhs.left;
+			top = rhs.top;
+			right = rhs.right;
+			bottom = rhs.bottom;
+			return *this;
 		}
 
 		// Test for equality with another rect.
-		bool operator == (const IntRect& rhs) const { return left == rhs.left && top == rhs.top && right == rhs.right && bottom == rhs.bottom; }
+		bool operator == (const IntRect& rhs) const
+		{
+			return !(left != rhs.left || top != rhs.top || right != rhs.right || bottom != rhs.bottom);
+		}
 		// Test for inequality with another rect.
-		bool operator != (const IntRect& rhs) const { return !(*this == rhs); }
+		bool operator != (const IntRect& rhs) const
+		{
+			return !(*this == rhs);
+		}
 
-		// Parse from a string. Return true on success.
-		bool FromString(const std::string& str) { return FromString(str.c_str()); }
-		// Parse from a C string. Return true on success.
-		bool FromString(const char* string);
-
-		// Return size.
-		IntVector2 Size() const { return IntVector2(Width(), Height()); }
+		// Return size
+		IntVector2 Size() const { return IntVector2 {right - left, bottom - top}; }
 		// Return width.
 		int Width() const { return right - left; }
 		// Return height.
@@ -82,29 +63,35 @@ namespace Turso3D
 		// Test whether a point is inside.
 		Intersection IsInside(const IntVector2& point) const
 		{
-			if (point.x < left || point.y < top || point.x >= right || point.y >= bottom)
+			if (point.x < left || point.y < top || point.x >= right || point.y >= bottom) {
 				return OUTSIDE;
-			else
-				return INSIDE;
+			}
+			return INSIDE;
 		}
 
 		// Test whether another rect is inside or intersects.
 		Intersection IsInside(const IntRect& rect) const
 		{
-			if (rect.right <= left || rect.left >= right || rect.bottom <= top || rect.top >= bottom)
+			if (rect.right <= left || rect.left >= right || rect.bottom <= top || rect.top >= bottom) {
 				return OUTSIDE;
-			else if (rect.left >= left && rect.right <= right && rect.top >= top && rect.bottom <= bottom)
+			} else if (rect.left >= left && rect.right <= right && rect.top >= top && rect.bottom <= bottom) {
 				return INSIDE;
-			else
-				return INTERSECTS;
+			}
+			return INTERSECTS;
 		}
 
-		// Return integer data.
-		const int* Data() const { return &left; }
-		// Return as string.
-		std::string ToString() const;
+		static IntRect ZERO();
 
-		// Zero-sized rect.
-		static const IntRect ZERO;
+	public:
+		int left;
+		int top;
+		int right;
+		int bottom;
 	};
+
+	// ==========================================================================================
+	inline IntRect IntRect::ZERO()
+	{
+		return IntRect {0, 0, 0, 0};
+	}
 }

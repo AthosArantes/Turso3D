@@ -1,4 +1,4 @@
-#include "Renderer.h"
+#include <Turso3D/Renderer/Renderer.h>
 #include <Turso3D/Core/WorkQueue.h>
 #include <Turso3D/Graphics/FrameBuffer.h>
 #include <Turso3D/Graphics/Graphics.h>
@@ -465,7 +465,7 @@ namespace Turso3D
 		lightDataBuffer->Bind(UB_LIGHTDATA);
 
 		if (clear) {
-			graphics->Clear(true, true, IntRect::ZERO, lightEnvironment->FogColor());
+			graphics->Clear(true, true, IntRect::ZERO(), lightEnvironment->FogColor());
 		}
 
 		if (Texture* tex = lightEnvironment->GetIEMTexture(); tex) {
@@ -804,9 +804,9 @@ namespace Turso3D
 
 			// Set directional light data if exists and is the main view
 			if (!dirLight || camera_ != camera) {
-				perViewData.dirLightDirection = Vector4::ZERO;
-				perViewData.dirLightColor = Color::BLACK;
-				perViewData.dirLightShadowParameters = Vector4::ONE;
+				perViewData.dirLightDirection = Vector4::ZERO();
+				perViewData.dirLightColor = Color::BLACK();
+				perViewData.dirLightShadowParameters = Vector4::ONE();
 				dataSize -= 2 * sizeof(Matrix4); // Leave out shadow matrices
 			} else {
 				perViewData.dirLightDirection = Vector4(-dirLight->WorldDirection(), 0.0f);
@@ -824,7 +824,7 @@ namespace Turso3D
 						perViewData.dirLightShadowMatrices[1] = dirLight->ShadowViews()[1].shadowMatrix;
 					}
 				} else {
-					perViewData.dirLightShadowParameters = Vector4::ONE;
+					perViewData.dirLightShadowParameters = Vector4::ONE();
 					dataSize -= 2 * sizeof(Matrix4); // Leave out shadow matrices
 				}
 			}
@@ -926,13 +926,13 @@ namespace Turso3D
 			return;
 		}
 
-		Matrix3x4 boxMatrix(Matrix3x4::IDENTITY);
+		Matrix3x4 boxMatrix(Matrix3x4::IDENTITY());
 		float nearClip = camera->NearClip();
 
 		// Use camera's motion since last frame to enlarge the bounding boxes. Use multiplied movement speed to account for latency in query results
 		Vector3 cameraPosition = camera->WorldPosition();
 		Vector3 cameraMove = cameraPosition - previousCameraPosition;
-		Vector3 enlargement = (OCCLUSION_MARGIN + 4.0f * cameraMove.Length()) * Vector3::ONE;
+		Vector3 enlargement = (OCCLUSION_MARGIN + 4.0f * cameraMove.Length()) * Vector3::ONE();
 
 		boundingBoxVertexBuffer->Bind(MASK_POSITION);
 		boundingBoxIndexBuffer->Bind();
@@ -1168,7 +1168,7 @@ namespace Turso3D
 			LightDrawable* light = *it;
 			if (shadowMapsDirty) {
 				light->SetShadowMap(nullptr);
-			} else if (drawShadows && light->ShadowStrength() < 1.0f && light->ShadowRect() != IntRect::ZERO) {
+			} else if (drawShadows && light->ShadowStrength() < 1.0f && light->ShadowRect() != IntRect::ZERO()) {
 				AllocateShadowMap(light);
 			}
 		}
@@ -1197,7 +1197,7 @@ namespace Turso3D
 			lightData[i + 1].direction = Vector4(-light->WorldDirection(), 0.0f);
 			lightData[i + 1].attenuation = Vector4(1.0f / std::max(light->Range(), M_EPSILON), cutoff, 1.0f / (1.0f - cutoff), 1.0f);
 			lightData[i + 1].color = light->EffectiveColor();
-			lightData[i + 1].shadowParameters = Vector4::ONE; // Assume unshadowed
+			lightData[i + 1].shadowParameters = Vector4::ONE(); // Assume unshadowed
 
 			// Check if not shadowcasting or beyond shadow range
 			if (!drawShadows || light->ShadowStrength() >= 1.0f) {
@@ -1392,8 +1392,8 @@ namespace Turso3D
 
 				if (!frustum.IsInsideFast(BoundingBox(view.shadowFrustum))) {
 					view.renderMode = RENDER_STATIC_LIGHT_CACHED;
-					view.viewport = IntRect::ZERO;
-					view.lastViewport = IntRect::ZERO;
+					view.viewport = IntRect::ZERO();
+					view.lastViewport = IntRect::ZERO();
 				}
 			}
 
@@ -1488,14 +1488,14 @@ namespace Turso3D
 			// Focus directional light shadow camera to the visible geometry combined bounds, and query for shadowcasters late
 			if (lightType == LIGHT_DIRECTIONAL) {
 				if (!light->SetupShadowView(viewIdx, camera, light->AutoFocus() ? &geometryBounds : nullptr)) {
-					view.viewport = IntRect::ZERO;
+					view.viewport = IntRect::ZERO();
 				} else {
 					splitMinZ = std::max(splitMinZ, view.splitMinZ);
 					splitMaxZ = std::min(splitMaxZ, view.splitMaxZ);
 
 					// Before querying (which is potentially expensive), check for degenerate depth range or frustum outside split
 					if (splitMinZ >= splitMaxZ || splitMinZ > view.splitMaxZ || splitMaxZ < view.splitMinZ) {
-						view.viewport = IntRect::ZERO;
+						view.viewport = IntRect::ZERO();
 					} else {
 						octree->FindDrawablesMasked(shadowMap.shadowCasters[view.casterListIdx], view.shadowFrustum, Drawable::FLAG_GEOMETRY | Drawable::FLAG_CAST_SHADOWS);
 					}
@@ -1503,9 +1503,9 @@ namespace Turso3D
 			}
 
 			// Skip view? (no geometry, out of range or point light face not in view)
-			if (view.viewport == IntRect::ZERO) {
+			if (view.viewport == IntRect::ZERO()) {
 				view.renderMode = RENDER_STATIC_LIGHT_CACHED;
-				view.lastViewport = IntRect::ZERO;
+				view.lastViewport = IntRect::ZERO();
 			} else {
 				const Frustum& shadowFrustum = view.shadowFrustum;
 				const Matrix3x4& lightView = view.shadowCamera->ViewMatrix();

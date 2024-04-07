@@ -1,7 +1,6 @@
 #pragma once
 
 #include <Turso3D/Math/IntVector3.h>
-#include <string>
 
 namespace Turso3D
 {
@@ -9,19 +8,6 @@ namespace Turso3D
 	class IntBox
 	{
 	public:
-		// Left coordinate.
-		int left;
-		// Top coordinate.
-		int top;
-		// Near coordinate.
-		int near;
-		// Right coordinate.
-		int right;
-		// Bottom coordinate.
-		int bottom;
-		// Far coordinate.
-		int far;
-
 		// Construct undefined.
 		IntBox()
 		{
@@ -39,51 +25,29 @@ namespace Turso3D
 		}
 
 		// Construct from coordinates.
-		IntBox(int left_, int top_, int near_, int right_, int bottom_, int far_) :
-			left(left_),
-			top(top_),
-			near(near_),
-			right(right_),
-			bottom(bottom_),
-			far(far_)
+		IntBox(int left, int top, int near, int right, int bottom, int far) :
+			left(left),
+			top(top),
+			near(near),
+			right(right),
+			bottom(bottom),
+			far(far)
 		{
-		}
-
-		// Construct from an int array.
-		IntBox(const int* data) :
-			left(data[0]),
-			top(data[1]),
-			near(data[2]),
-			right(data[3]),
-			bottom(data[4]),
-			far(data[5])
-		{
-		}
-
-		// Construct by parsing a string.
-		IntBox(const std::string& str)
-		{
-			FromString(str.c_str());
-		}
-
-		// Construct by parsing a C string.
-		IntBox(const char* str)
-		{
-			FromString(str);
 		}
 
 		// Test for equality with another box.
-		bool operator == (const IntBox& rhs) const { return left == rhs.left && top == rhs.top && right == rhs.right && bottom == rhs.bottom && near == rhs.near && far == rhs.far; }
+		bool operator == (const IntBox& rhs) const
+		{
+			return left == rhs.left && top == rhs.top && right == rhs.right && bottom == rhs.bottom && near == rhs.near && far == rhs.far;
+		}
 		// Test for inequality with another box.
-		bool operator != (const IntBox& rhs) const { return !(*this == rhs); }
-
-		// Parse from a string. Return true on success.
-		bool FromString(const std::string& str) { return FromString(str.c_str()); }
-		// Parse from a C string. Return true on success.
-		bool FromString(const char* string);
+		bool operator != (const IntBox& rhs) const
+		{
+			return !(*this == rhs);
+		}
 
 		// Return size.
-		IntVector3 Size() const { return IntVector3(Width(), Height(), Depth()); }
+		IntVector3 Size() const { return IntVector3 {Width(), Height(), Depth()}; }
 		// Return width.
 		int Width() const { return right - left; }
 		// Return height.
@@ -91,32 +55,54 @@ namespace Turso3D
 		// Return depth.
 		int Depth() const { return far - near; }
 
+		void SetSize(int width, int height, int depth)
+		{
+			right = left + width;
+			bottom = top + height;
+			far = near + depth;
+		}
+
 		// Test whether a point is inside.
 		Intersection IsInside(const IntVector3& point) const
 		{
-			if (point.x < left || point.y < top || point.z < near || point.x >= right || point.y >= bottom || point.z >= far)
+			if (point.x < left || point.y < top || point.z < near || point.x >= right || point.y >= bottom || point.z >= far) {
 				return OUTSIDE;
-			else
-				return INSIDE;
+			}
+			return INSIDE;
 		}
 
 		// Test whether another box is inside or intersects.
 		Intersection IsInside(const IntBox& box) const
 		{
-			if (box.right <= left || box.left >= right || box.bottom <= top || box.top >= bottom || box.far <= near || box.near >= far)
+			if (box.right <= left || box.left >= right || box.bottom <= top || box.top >= bottom || box.far <= near || box.near >= far) {
 				return OUTSIDE;
-			else if (box.left >= left && box.right <= right && box.top >= top && box.bottom <= bottom && box.near >= near && box.far <= far)
+			} else if (box.left >= left && box.right <= right && box.top >= top && box.bottom <= bottom && box.near >= near && box.far <= far) {
 				return INSIDE;
-			else
-				return INTERSECTS;
+			}
+			return INTERSECTS;
 		}
 
-		// Return integer data.
-		const int* Data() const { return &left; }
-		// Return as string.
-		std::string ToString() const;
-
 		// Zero-sized box.
-		static const IntBox ZERO;
+		static IntBox ZERO();
+
+	public:
+		// Left coordinate.
+		int left;
+		// Top coordinate.
+		int top;
+		// Near coordinate.
+		int near;
+		// Right coordinate.
+		int right;
+		// Bottom coordinate.
+		int bottom;
+		// Far coordinate.
+		int far;
 	};
+
+	// ==========================================================================================
+	inline IntBox IntBox::ZERO()
+	{
+		return IntBox {0, 0, 0, 0, 0, 0};
+	}
 }

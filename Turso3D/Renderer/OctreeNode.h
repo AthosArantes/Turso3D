@@ -115,7 +115,7 @@ namespace Turso3D
 		// Return rotation in world space.
 		Quaternion WorldRotation() const { return WorldTransform().Rotation(); }
 		// Return forward direction in world space.
-		Vector3 WorldDirection() const { return WorldRotation() * Vector3::FORWARD; }
+		Vector3 WorldDirection() const { return WorldRotation() * Vector3::FORWARD(); }
 		// Return scale in world space.
 		// As it is calculated from the world transform matrix, it may not be meaningful or accurate in all cases.
 		Vector3 WorldScale() const { return WorldTransform().Scale(); }

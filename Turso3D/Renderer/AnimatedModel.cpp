@@ -189,13 +189,13 @@ namespace Turso3D
 
 	void AnimatedModelDrawable::OnRenderDebug(DebugRenderer* debug)
 	{
-		debug->AddBoundingBox(WorldBoundingBox(), Color::GREEN, false);
+		debug->AddBoundingBox(WorldBoundingBox(), Color::GREEN(), false);
 
 		for (size_t i = 0; i < numBones; ++i) {
 			// Skip the root bone, as it has no sensible connection point
 			Bone* bone = bones[i];
 			if (bone != rootBone) {
-				debug->AddLine(bone->WorldPosition(), bone->SpatialParent()->WorldPosition(), Color::WHITE, false);
+				debug->AddLine(bone->WorldPosition(), bone->SpatialParent()->WorldPosition(), Color::WHITE(), false);
 			}
 		}
 	}

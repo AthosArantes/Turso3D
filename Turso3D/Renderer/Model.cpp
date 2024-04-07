@@ -93,10 +93,10 @@ namespace Turso3D
 
 	// ==========================================================================================
 	ModelBone::ModelBone() :
-		initialPosition(Vector3::ZERO),
-		initialRotation(Quaternion::IDENTITY),
-		initialScale(Vector3::ONE),
-		offsetMatrix(Matrix3x4::IDENTITY),
+		initialPosition(Vector3::ZERO()),
+		initialRotation(Quaternion::IDENTITY()),
+		initialScale(Vector3::ONE()),
+		offsetMatrix(Matrix3x4::IDENTITY()),
 		radius(0.0f),
 		boundingBox(0.0f, 0.0f),
 		parentIndex(0),

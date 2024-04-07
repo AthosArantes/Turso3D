@@ -2,7 +2,6 @@
 
 #include <Turso3D/Math/Rect.h>
 #include <Turso3D/Math/Vector3.h>
-#include <string>
 
 namespace Turso3D
 {
@@ -74,18 +73,6 @@ namespace Turso3D
 		BoundingBox(const Sphere& sphere)
 		{
 			Define(sphere);
-		}
-
-		// Construct by parsing a string.
-		BoundingBox(const std::string& str)
-		{
-			FromString(str.c_str());
-		}
-
-		// Construct by parsing a C string.
-		BoundingBox(const char* str)
-		{
-			FromString(str);
 		}
 
 		// Assign from another bounding box.
@@ -206,11 +193,6 @@ namespace Turso3D
 		// Transform with a 3x4 matrix.
 		void Transform(const Matrix3x4& transform);
 
-		// Parse from a string. Return true on success.
-		bool FromString(const std::string& str) { return FromString(str.c_str()); }
-		// Parse from a C string. Return true on success.
-		bool FromString(const char* string);
-
 		// Return whether has non-negative size.
 		bool IsDefined() const { return (min.x <= max.x); }
 		// Return center.
@@ -291,9 +273,6 @@ namespace Turso3D
 
 			return std::make_pair(centerProj - edgeProj, centerProj + edgeProj);
 		}
-
-		// Return as string.
-		std::string ToString() const;
 
 	public:
 		// Minimum vector.

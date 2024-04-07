@@ -8,13 +8,6 @@ namespace Turso3D
 	class Vector3
 	{
 	public:
-		// X coordinate.
-		float x;
-		// Y coordinate.
-		float y;
-		// Z coordinate.
-		float z;
-
 		// Construct undefined.
 		Vector3()
 		{
@@ -29,10 +22,10 @@ namespace Turso3D
 		}
 
 		// Construct from a two-dimensional vector and the Z coordinate.
-		Vector3(const Vector2& vector, float z_) :
+		Vector3(const Vector2& vector, float z) :
 			x(vector.x),
 			y(vector.y),
-			z(z_)
+			z(z)
 		{
 		}
 
@@ -45,17 +38,17 @@ namespace Turso3D
 		}
 
 		// Construct from coordinates.
-		Vector3(float x_, float y_, float z_) :
-			x(x_),
-			y(y_),
-			z(z_)
+		Vector3(float x, float y, float z) :
+			x(x),
+			y(y),
+			z(z)
 		{
 		}
 
 		// Construct from two-dimensional coordinates, with Z coordinate left zero.
-		Vector3(float x_, float y_) :
-			x(x_),
-			y(y_),
+		Vector3(float x, float y) :
+			x(x),
+			y(y),
 			z(0.0f)
 		{
 		}
@@ -66,18 +59,6 @@ namespace Turso3D
 			y(data[1]),
 			z(data[2])
 		{
-		}
-
-		// Construct by parsing a string.
-		Vector3(const std::string& str)
-		{
-			FromString(str.c_str());
-		}
-
-		// Construct by parsing a C string.
-		Vector3(const char* str)
-		{
-			FromString(str);
 		}
 
 		// Assign from another vector.
@@ -202,14 +183,6 @@ namespace Turso3D
 			}
 		}
 
-		// Parse from a string. Return true on success.
-		bool FromString(const std::string& str)
-		{
-			return FromString(str.c_str());
-		}
-		// Parse from a C string. Return true on success.
-		bool FromString(const char* string);
-
 		// Return length.
 		float Length() const
 		{
@@ -283,30 +256,77 @@ namespace Turso3D
 		{
 			return &x;
 		}
-		// Return as string.
-		std::string ToString() const;
 
 		// Zero vector.
-		static const Vector3 ZERO;
+		static Vector3 ZERO();
 		// (-1,0,0) vector.
-		static const Vector3 LEFT;
+		static Vector3 LEFT();
 		// (1,0,0) vector.
-		static const Vector3 RIGHT;
+		static Vector3 RIGHT();
 		// (0,1,0) vector.
-		static const Vector3 UP;
+		static Vector3 UP();
 		// (0,-1,0) vector.
-		static const Vector3 DOWN;
+		static Vector3 DOWN();
 		// (0,0,1) vector.
-		static const Vector3 FORWARD;
+		static Vector3 FORWARD();
 		// (0,0,-1) vector.
-		static const Vector3 BACK;
+		static Vector3 BACK();
 		// (1,1,1) vector.
-		static const Vector3 ONE;
+		static Vector3 ONE();
+
+	public:
+		// X coordinate.
+		float x;
+		// Y coordinate.
+		float y;
+		// Z coordinate.
+		float z;
 	};
 
+	// ==========================================================================================
 	// Multiply Vector3 with a scalar.
 	inline Vector3 operator * (float lhs, const Vector3& rhs)
 	{
 		return rhs * lhs;
+	}
+
+	inline Vector3 Vector3::ZERO()
+	{
+		return Vector3 {0.0f, 0.0f, 0.0f};
+	}
+
+	inline Vector3 Vector3::LEFT()
+	{
+		return Vector3 {-1.0f, 0.0f, 0.0f};
+	}
+
+	inline Vector3 Vector3::RIGHT()
+	{
+		return Vector3 {1.0f, 0.0f, 0.0f};
+	}
+
+	inline Vector3 Vector3::UP()
+	{
+		return Vector3 {0.0f, 1.0f, 0.0f};
+	}
+
+	inline Vector3 Vector3::DOWN()
+	{
+		return Vector3 {0.0f, -1.0f, 0.0f};
+	}
+
+	inline Vector3 Vector3::FORWARD()
+	{
+		return Vector3 {0.0f, 0.0f, 1.0f};
+	}
+
+	inline Vector3 Vector3::BACK()
+	{
+		return Vector3 {0.0f, 0.0f, -1.0f};
+	}
+
+	inline Vector3 Vector3::ONE()
+	{
+		return Vector3 {1.0f, 1.0f, 1.0f};
 	}
 }

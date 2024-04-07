@@ -1,7 +1,6 @@
 #pragma once
 
 #include <Turso3D/Math/Math.h>
-#include <string>
 
 namespace Turso3D
 {
@@ -9,11 +8,6 @@ namespace Turso3D
 	class Vector2
 	{
 	public:
-		// X coordinate.
-		float x;
-		// Y coordinate.
-		float y;
-
 		// Construct undefined.
 		Vector2()
 		{
@@ -38,18 +32,6 @@ namespace Turso3D
 			x(data[0]),
 			y(data[1])
 		{
-		}
-
-		// Construct by parsing a string.
-		Vector2(const std::string& str)
-		{
-			FromString(str.c_str());
-		}
-
-		// Construct by parsing a C string.
-		Vector2(const char* str)
-		{
-			FromString(str);
 		}
 
 		// Assign from another vector.
@@ -119,14 +101,6 @@ namespace Turso3D
 				y *= invLen;
 			}
 		}
-
-		// Parse from a string. Return true on success.
-		bool FromString(const std::string& str)
-		{
-			return FromString(str.c_str());
-		}
-		// Parse from a C string. Return true on success.
-		bool FromString(const char* string);
 
 		// Test for equality with another vector without epsilon.
 		bool operator == (const Vector2& rhs) const
@@ -204,6 +178,7 @@ namespace Turso3D
 		{
 			return *this * (1.0f - t) + rhs * t;
 		}
+
 		// Test for equality with another vector with epsilon.
 		bool Equals(const Vector2& rhs, float epsilon = M_EPSILON) const
 		{
@@ -231,26 +206,56 @@ namespace Turso3D
 		{
 			return &x;
 		}
-		// Return as string.
-		std::string ToString() const;
 
 		// Zero vector.
-		static const Vector2 ZERO;
+		static Vector2 ZERO();
 		// (-1,0) vector.
-		static const Vector2 LEFT;
+		static Vector2 LEFT();
 		// (1,0) vector.
-		static const Vector2 RIGHT;
+		static Vector2 RIGHT();
 		// (0,1) vector.
-		static const Vector2 UP;
+		static Vector2 UP();
 		// (0,-1) vector.
-		static const Vector2 DOWN;
+		static Vector2 DOWN();
 		// (1,1) vector.
-		static const Vector2 ONE;
+		static Vector2 ONE();
+
+	public:
+		// X coordinate.
+		float x;
+		// Y coordinate.
+		float y;
 	};
 
+	// ==========================================================================================
 	// Multiply Vector2 with a scalar
 	inline Vector2 operator * (float lhs, const Vector2& rhs)
 	{
 		return rhs * lhs;
+	}
+
+	inline Vector2 Vector2::ZERO()
+	{
+		return Vector2 {0.0f, 0.0f};
+	}
+	inline Vector2 Vector2::LEFT()
+	{
+		return Vector2 {-1.0f, 0.0f};
+	}
+	inline Vector2 Vector2::RIGHT()
+	{
+		return Vector2 {1.0f, 0.0f};
+	}
+	inline Vector2 Vector2::UP()
+	{
+		return Vector2 {0.0f, 1.0f};
+	}
+	inline Vector2 Vector2::DOWN()
+	{
+		return Vector2 {0.0f, -1.0f};
+	}
+	inline Vector2 Vector2::ONE()
+	{
+		return Vector2 {1.0f, 1.0f};
 	}
 }

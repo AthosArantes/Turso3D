@@ -1,7 +1,7 @@
 #pragma once
 
+#include <Turso3D/Math/Matrix3.h>
 #include <Turso3D/Math/Matrix4.h>
-#include <string>
 
 namespace Turso3D
 {
@@ -9,11 +9,6 @@ namespace Turso3D
 	class Matrix3x4
 	{
 	public:
-		// Matrix values.
-		float m00, m01, m02, m03;
-		float m10, m11, m12, m13;
-		float m20, m21, m22, m23;
-
 		// Construct undefined.
 		Matrix3x4()
 		{
@@ -71,18 +66,6 @@ namespace Turso3D
 		Matrix3x4(const Vector3& translation, const Quaternion& rotation, const Vector3& scale)
 		{
 			SetTransform(translation, rotation, scale);
-		}
-
-		// Construct by parsing a string.
-		Matrix3x4(const std::string& str)
-		{
-			FromString(str.c_str());
-		}
-
-		// Construct by parsing a C string.
-		Matrix3x4(const char* str)
-		{
-			FromString(str);
 		}
 
 		// Assign from another matrix.
@@ -290,14 +273,6 @@ namespace Turso3D
 			m22 = scale;
 		}
 
-		// Parse from a string. Return true on success.
-		bool FromString(const std::string& str)
-		{
-			return FromString(str.c_str());
-		}
-		// Parse from a C string. Return true on success.
-		bool FromString(const char* string);
-
 		// Return the combined rotation and scaling matrix.
 		Matrix3 ToMatrix3() const
 		{
@@ -419,15 +394,20 @@ namespace Turso3D
 
 		// Return float data.
 		const float* Data() const { return &m00; }
-		// Return as string.
-		std::string ToString() const;
 
 		// Zero matrix.
-		static const Matrix3x4 ZERO;
+		static Matrix3x4 ZERO();
 		// Identity matrix.
-		static const Matrix3x4 IDENTITY;
+		static Matrix3x4 IDENTITY();
+
+	public:
+		// Matrix values.
+		float m00, m01, m02, m03;
+		float m10, m11, m12, m13;
+		float m20, m21, m22, m23;
 	};
 
+	// ==========================================================================================
 	// Multiply a 3x4 matrix with a scalar.
 	inline Matrix3x4 operator * (float lhs, const Matrix3x4& rhs)
 	{
@@ -455,5 +435,23 @@ namespace Turso3D
 			lhs.m30 * rhs.m02 + lhs.m31 * rhs.m12 + lhs.m32 * rhs.m22,
 			lhs.m30 * rhs.m03 + lhs.m31 * rhs.m13 + lhs.m32 * rhs.m23 + lhs.m33
 		);
+	}
+
+	inline Matrix3x4 Matrix3x4::ZERO()
+	{
+		return Matrix3x4 {
+			0.0f, 0.0f, 0.0f, 0.0f,
+			0.0f, 0.0f, 0.0f, 0.0f,
+			0.0f, 0.0f, 0.0f, 0.0f
+		};
+	}
+
+	inline Matrix3x4 Matrix3x4::IDENTITY()
+	{
+		return Matrix3x4 {
+			1.0f, 0.0f, 0.0f, 0.0f,
+			0.0f, 1.0f, 0.0f, 0.0f,
+			0.0f, 0.0f, 1.0f, 0.0f
+		};
 	}
 }
