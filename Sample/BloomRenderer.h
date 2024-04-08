@@ -1,3 +1,5 @@
+#pragma once
+
 #include <Turso3D/Graphics/GraphicsDefs.h>
 #include <Turso3D/Math/IntVector2.h>
 #include <Turso3D/Math/Vector2.h>

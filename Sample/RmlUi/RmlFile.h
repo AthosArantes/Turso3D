@@ -1,3 +1,5 @@
+#pragma once
+
 #include <RmlUi/Core/FileInterface.h>
 #include <vector>
 #include <memory>

@@ -1,3 +1,5 @@
+#pragma once
+
 #include <RmlUi/Core/RenderInterface.h>
 #include <Turso3D/Graphics/VertexBuffer.h>
 #include <Turso3D/Graphics/IndexBuffer.h>

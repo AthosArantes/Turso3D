@@ -36,14 +36,6 @@ namespace Turso3D
 		Quaternion(0.0f, 180.0f, 0.0f)
 	};
 
-	static const char* lightTypeNames[] =
-	{
-		"directional",
-		"point",
-		"spot",
-		0
-	};
-
 	static Allocator<LightDrawable> drawableAllocator;
 
 	// ==========================================================================================
