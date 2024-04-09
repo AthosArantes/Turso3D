@@ -60,25 +60,22 @@ namespace Turso3D
 		Log::Scope ls {"RmlRenderer::CompileGeometry"};
 
 		// Try to find a previously discarded geometry
-		for (std::unique_ptr<CompiledGeometry>& dg : discardedGeometries) {
-			if (dg->vbo.NumVertices() == num_vertices && dg->ibo.NumIndices() == num_indices) {
-				dg->vbo.SetData(0, num_vertices, vertices);
-				dg->ibo.SetData(0, num_indices, indices);
-				dg->texture = reinterpret_cast<Texture*>(texture);
+		for (auto it = discardedGeometries.begin(); it != discardedGeometries.end(); ++it) {
+			CompiledGeometry* cg = it->get();
+			if (cg->vbo.NumVertices() == num_vertices && cg->ibo.NumIndices() == num_indices) {
+				cg->vbo.SetData(0, num_vertices, vertices);
+				cg->ibo.SetData(0, num_indices, indices);
+				cg->texture = reinterpret_cast<Texture*>(texture);
 
 				// Update the current discarded mem
-				discardedGeometryMem -= dg->vbo.VertexSize() * num_vertices;
-				discardedGeometryMem -= dg->ibo.IndexSize() * num_indices;
+				discardedGeometryMem -= cg->vbo.VertexSize() * num_vertices;
+				discardedGeometryMem -= cg->ibo.IndexSize() * num_indices;
 
-				Rml::CompiledGeometryHandle handle = reinterpret_cast<Rml::CompiledGeometryHandle>(dg.get());
+				it->release();
+				discardedGeometries.erase(it);
+				geometries.emplace_back(std::unique_ptr<CompiledGeometry> {cg});
 
-				// Move to the back of the discarded vector, then move it to the current geometries and
-				// finally pop the empty unique_ptr from the discarded vector.
-				discardedGeometries.back().swap(dg);
-				geometries.emplace_back().swap(discardedGeometries.back());
-				discardedGeometries.pop_back();
-
-				return handle;
+				return reinterpret_cast<Rml::CompiledGeometryHandle>(cg);
 			}
 		}
 
@@ -116,28 +113,23 @@ namespace Turso3D
 	void RmlRenderer::ReleaseCompiledGeometry(Rml::CompiledGeometryHandle handle)
 	{
 		CompiledGeometry* cg = reinterpret_cast<CompiledGeometry*>(handle);
-		for (size_t i = 0; i < geometries.size(); ++i) {
-			if (geometries[i].get() == cg) {
-				geometries[i].swap(geometries.back());
+
+		for (auto it = geometries.begin(); it != geometries.end(); ++it) {
+			if (it->get() == cg) {
+				it->release();
+				geometries.erase(it);
 
 				// Keep the released geometry alive
-				{
-					std::unique_ptr<CompiledGeometry>& dg = discardedGeometries.emplace_back();
-					dg.swap(geometries.back());
-					geometries.pop_back();
-
-					discardedGeometryMem += dg->vbo.VertexSize() * dg->vbo.NumVertices();
-					discardedGeometryMem += dg->ibo.IndexSize() * dg->ibo.NumIndices();
-				}
+				discardedGeometries.emplace_back(std::unique_ptr<CompiledGeometry> {cg});
+				discardedGeometryMem += cg->vbo.VertexSize() * cg->vbo.NumVertices();
+				discardedGeometryMem += cg->ibo.IndexSize() * cg->ibo.NumIndices();
 
 				// Free some geometries if exceeded the memory limit
 				while (discardedGeometryMem > maxDiscardedGeometryMem && !discardedGeometries.empty()) {
 					std::unique_ptr<CompiledGeometry>& dg = discardedGeometries[0];
 					discardedGeometryMem -= dg->vbo.VertexSize() * dg->vbo.NumVertices();
 					discardedGeometryMem -= dg->ibo.IndexSize() * dg->ibo.NumIndices();
-
-					discardedGeometries.back().swap(dg);
-					discardedGeometries.pop_back();
+					discardedGeometries.erase(discardedGeometries.begin());
 				}
 				return;
 			}
@@ -208,7 +200,7 @@ namespace Turso3D
 		ResourceCache* cache = ResourceCache::Instance();
 		std::shared_ptr<Texture> tex = cache->LoadResource<Texture>(source, Texture::LOAD_FLAG_SRGB);
 		if (tex) {
-			//tex->DefineSampler(FILTER_BILINEAR, ADDRESS_CLAMP, ADDRESS_CLAMP, ADDRESS_CLAMP);
+			tex->DefineSampler(FILTER_BILINEAR, ADDRESS_CLAMP, ADDRESS_CLAMP, ADDRESS_CLAMP);
 
 			texture_dimensions.x = tex->Width();
 			texture_dimensions.y = tex->Height();
@@ -247,10 +239,9 @@ namespace Turso3D
 	void RmlRenderer::ReleaseTexture(Rml::TextureHandle texture_handle)
 	{
 		Texture* tex = reinterpret_cast<Texture*>(texture_handle);
-		for (size_t i = 0; i < textures.size(); ++i) {
-			if (textures[i].get() == tex) {
-				textures[i].swap(textures.back());
-				textures.pop_back();
+		for (auto it = textures.begin(); it != textures.end(); ++it) {
+			if (it->get() == tex) {
+				textures.erase(it);
 				return;
 			}
 		}
