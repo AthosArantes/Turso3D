@@ -39,17 +39,7 @@ namespace Turso3D
 		// LOD transition distance.
 		float lodDistance = 0.0f;
 
-		// Optional CPU-side position data.
-		std::shared_ptr<Vector3[]> cpuPositionData;
-		// Optional CPU-side index data.
-		std::shared_ptr<unsigned[]> cpuIndexData;
-
-		// Optional draw range start for the CPU index data.
-		// May be different in case combined vertex and index buffers are in use.
-		size_t cpuDrawStart = 0;
-		// Optional index size for the CPU data.
-		// May be different in case combined vertex and index buffers are in use.
-		//size_t cpuIndexSize = 0;
+		// TODO: Hull geometry vertices
 	};
 
 	// Draw call source data with optimal memory storage. 
@@ -147,7 +137,7 @@ namespace Turso3D
 		size_t NumGeometries() const { return static_cast<GeometryDrawable*>(drawable)->batches.NumGeometries(); }
 		// Return geometry by index.
 		Geometry* GetGeometry(size_t index) const { return static_cast<GeometryDrawable*>(drawable)->batches.GetGeometry(index); }
-		
+
 		// Return material by geometry index.
 		const std::shared_ptr<Material>& GetMaterial(size_t index) const { return static_cast<GeometryDrawable*>(drawable)->batches.GetMaterial(index); }
 		// Return the draw call source data for direct access.

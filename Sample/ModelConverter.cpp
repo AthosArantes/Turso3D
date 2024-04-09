@@ -14,6 +14,52 @@ namespace Turso3DUtils
 	constexpr float BONE_SIZE_THRESHOLD = 0.05f;
 
 	// ==========================================================================================
+	// Load-time description of a vertex buffer, to be uploaded on the GPU later.
+	struct VertexBufferDesc
+	{
+		// Vertex declaration.
+		std::vector<VertexElement> vertexElements;
+		// Number of vertices.
+		size_t numVertices;
+		// Size of one vertex.
+		size_t vertexSize;
+		// Vertex data.
+		std::unique_ptr<uint8_t[]> vertexData;
+
+		// Position only version of the vertex data, to be retained after load.
+		std::shared_ptr<Vector3[]> cpuPositionData;
+	};
+
+	// Load-time description of an index buffer, to be uploaded on the GPU later.
+	struct IndexBufferDesc
+	{
+		// Number of indices.
+		size_t numIndices;
+		// Index data.
+		std::unique_ptr<unsigned[]> indexData;
+		// Index size.
+		//size_t indexSize;
+
+		// Index data to be retained after load.
+		std::shared_ptr<unsigned[]> cpuIndexData;
+	};
+
+	// Load-time description of a geometry.
+	struct GeometryDesc
+	{
+		// LOD distance.
+		float lodDistance;
+		// Vertex buffer ref.
+		unsigned vbRef;
+		// Index buffer ref.
+		unsigned ibRef;
+		// Draw range start.
+		unsigned drawStart;
+		// Draw range element count.
+		unsigned drawCount;
+	};
+
+	// ==========================================================================================
 	void ApplyBoneMappings(std::vector<VertexBufferDesc>& vbDescs, std::vector<IndexBufferDesc>& ibDescs, const GeometryDesc& geomDesc, const std::vector<unsigned>& boneMappings, std::set<std::pair<unsigned, unsigned>>& processedVertices)
 	{
 		size_t blendIndicesOffset = 0;

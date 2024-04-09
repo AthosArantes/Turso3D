@@ -16,57 +16,9 @@ namespace Turso3D
 	class VertexBuffer;
 	struct Geometry;
 
-	// Load-time description of a vertex buffer, to be uploaded on the GPU later.
-	struct VertexBufferDesc
-	{
-		// Vertex declaration.
-		std::vector<VertexElement> vertexElements;
-		// Number of vertices.
-		size_t numVertices;
-		// Size of one vertex.
-		size_t vertexSize;
-		// Vertex data.
-		std::unique_ptr<uint8_t[]> vertexData;
-
-		// Position only version of the vertex data, to be retained after load.
-		std::shared_ptr<Vector3[]> cpuPositionData;
-	};
-
-	// Load-time description of an index buffer, to be uploaded on the GPU later.
-	struct IndexBufferDesc
-	{
-		// Number of indices.
-		size_t numIndices;
-		// Index data.
-		std::unique_ptr<unsigned[]> indexData;
-		// Index size.
-		//size_t indexSize;
-
-		// Index data to be retained after load.
-		std::shared_ptr<unsigned[]> cpuIndexData;
-	};
-
-	// Load-time description of a geometry.
-	struct GeometryDesc
-	{
-		// LOD distance.
-		float lodDistance;
-		// Vertex buffer ref.
-		unsigned vbRef;
-		// Index buffer ref.
-		unsigned ibRef;
-		// Draw range start.
-		unsigned drawStart;
-		// Draw range element count.
-		unsigned drawCount;
-	};
-
 	// Model's bone description.
 	struct ModelBone
 	{
-		// Default-construct.
-		ModelBone();
-
 		// Name.
 		std::string name;
 		// Name hash.
@@ -83,12 +35,14 @@ namespace Turso3D
 		float radius;
 		// Collision bounding box.
 		BoundingBox boundingBox;
-		// Parent bone index. If points to self, is the root bone.
+		// Parent bone index.
+		// If points to self, is the root bone.
 		size_t parentIndex;
 		// Whether contributes to bounding boxes.
 		bool active;
 	};
 
+	// ==========================================================================================
 	// Combined vertex and index buffers for static models.
 	class CombinedBuffer
 	{
@@ -126,14 +80,14 @@ namespace Turso3D
 		size_t usedVertices;
 		// Index buffer use count so far.
 		size_t usedIndices;
-
-		// Current buffers.
-		static std::map<unsigned, std::vector<std::weak_ptr<CombinedBuffer>>> buffers;
 	};
 
+	// ==========================================================================================
 	// 3D model resource.
 	class Model : public Resource
 	{
+		struct LoadBuffer;
+
 	public:
 		// Construct.
 		Model();
@@ -179,11 +133,7 @@ namespace Turso3D
 		// Combined buffer if in use.
 		std::shared_ptr<CombinedBuffer> combinedBuffer;
 
-		// Vertex buffer data for loading.
-		std::vector<VertexBufferDesc> vbDescs;
-		// Index buffer data for loading.
-		std::vector<IndexBufferDesc> ibDescs;
-		// Geometry descriptions for loading.
-		std::vector<std::vector<GeometryDesc>> geomDescs;
+		// Temporary buffer used for loading. Internal use only.
+		std::unique_ptr<LoadBuffer> loadBuffer;
 	};
 }

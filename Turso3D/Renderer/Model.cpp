@@ -17,7 +17,48 @@ namespace Turso3D
 	// Bone bounding box size required to contribute to bounding box recalculation
 	constexpr float BONE_SIZE_THRESHOLD = 0.05f;
 
-	std::map<unsigned, std::vector<std::weak_ptr<CombinedBuffer>>> CombinedBuffer::buffers;
+	static std::map<unsigned, std::vector<std::weak_ptr<CombinedBuffer>>> CombinedBufferMap;
+
+	// ==========================================================================================
+	struct Model::LoadBuffer
+	{
+		struct VertexDesc
+		{
+			// Vertex declaration.
+			std::vector<VertexElement> vertexElements;
+			// Number of vertices.
+			size_t numVertices;
+			// Size of one vertex.
+			size_t vertexSize;
+			// Vertex data.
+			std::unique_ptr<uint8_t[]> vertexData;
+		};
+		std::vector<VertexDesc> vertexBuffers;
+
+		struct IndexDesc
+		{
+			// Number of indices.
+			size_t numIndices;
+			// Index data.
+			std::unique_ptr<unsigned[]> indexData;
+		};
+		std::vector<IndexDesc> indexBuffers;
+
+		struct GeometryDesc
+		{
+			// Vertex buffer index.
+			unsigned vbIndex;
+			// Index buffer index.
+			unsigned ibIndex;
+			// Draw range start.
+			unsigned drawStart;
+			// Draw range element count.
+			unsigned drawCount;
+			// LOD distance.
+			float lodDistance;
+		};
+		std::vector<std::vector<GeometryDesc>> geometries;
+	};
 
 	// ==========================================================================================
 	CombinedBuffer::CombinedBuffer(const std::vector<VertexElement>& elements) :
@@ -53,8 +94,8 @@ namespace Turso3D
 	std::shared_ptr<CombinedBuffer> CombinedBuffer::Allocate(const std::vector<VertexElement>& elements, size_t numVertices, size_t numIndices)
 	{
 		unsigned key = VertexBuffer::CalculateAttributeMask(elements);
-		auto it = buffers.find(key);
-		if (it != buffers.end()) {
+		auto it = CombinedBufferMap.find(key);
+		if (it != CombinedBufferMap.end()) {
 			std::vector<std::weak_ptr<CombinedBuffer>>& keyBuffers = it->second;
 
 			for (size_t i = 0; i < keyBuffers.size();) {
@@ -79,7 +120,7 @@ namespace Turso3D
 		std::shared_ptr<CombinedBuffer> buffer = std::make_shared<CombinedBuffer>(elements);
 
 #ifdef _DEBUG
-		if (it != buffers.end()) {
+		if (it != CombinedBufferMap.end()) {
 			for (auto vIt = it->second.begin(); vIt != it->second.end(); ++vIt) {
 				std::shared_ptr<CombinedBuffer> prevBuffer = vIt->lock();
 				LOG_DEBUG("Previous buffer use {:d}/{:d} {:d}/{:d}", prevBuffer->usedVertices, prevBuffer->vertexBuffer->NumVertices(), prevBuffer->usedIndices, prevBuffer->indexBuffer->NumIndices());
@@ -87,21 +128,8 @@ namespace Turso3D
 		}
 #endif
 
-		buffers[key].push_back(buffer);
+		CombinedBufferMap[key].push_back(buffer);
 		return buffer;
-	}
-
-	// ==========================================================================================
-	ModelBone::ModelBone() :
-		initialPosition(Vector3::ZERO()),
-		initialRotation(Quaternion::IDENTITY()),
-		initialScale(Vector3::ONE()),
-		offsetMatrix(Matrix3x4::IDENTITY()),
-		radius(0.0f),
-		boundingBox(0.0f, 0.0f),
-		parentIndex(0),
-		active(true)
-	{
 	}
 
 	// ==========================================================================================
@@ -123,15 +151,13 @@ namespace Turso3D
 			return false;
 		}
 
-		vbDescs.clear();
-		ibDescs.clear();
-		geomDescs.clear();
+		loadBuffer.reset(new LoadBuffer());
 
 		// Read vertex buffers
 		unsigned numVertexBuffers = source.Read<unsigned>();
-		vbDescs.resize(numVertexBuffers);
+		loadBuffer->vertexBuffers.resize(numVertexBuffers);
 		for (unsigned i = 0; i < numVertexBuffers; ++i) {
-			VertexBufferDesc& vbDesc = vbDescs[i];
+			LoadBuffer::VertexDesc& vbDesc = loadBuffer->vertexBuffers[i];
 
 			vbDesc.numVertices = source.Read<unsigned>();
 			unsigned elementMask = source.Read<unsigned>();
@@ -181,41 +207,31 @@ namespace Turso3D
 			vbDesc.vertexSize = vertexSize;
 			vbDesc.vertexData = std::make_unique<uint8_t[]>(vbDesc.numVertices * vertexSize);
 			source.Read(vbDesc.vertexData.get(), vbDesc.numVertices * vertexSize);
-
-			if (elementMask & 1) {
-				vbDesc.cpuPositionData = std::make_unique<Vector3[]>(vbDesc.numVertices);
-				for (size_t j = 0; j < vbDesc.numVertices; ++j) {
-					vbDesc.cpuPositionData[j] = *reinterpret_cast<Vector3*>(vbDesc.vertexData.get() + j * vertexSize);
-				}
-			}
 		}
 
 		// Read index buffers
 		unsigned numIndexBuffers = source.Read<unsigned>();
-		ibDescs.resize(numIndexBuffers);
+		loadBuffer->indexBuffers.resize(numIndexBuffers);
 		for (unsigned i = 0; i < numIndexBuffers; ++i) {
-			IndexBufferDesc& ibDesc = ibDescs[i];
+			LoadBuffer::IndexDesc& ibDesc = loadBuffer->indexBuffers[i];
 
 			ibDesc.numIndices = source.Read<unsigned>();
 			ibDesc.indexData = std::make_unique<unsigned[]>(ibDesc.numIndices);
 			source.Read(&ibDesc.indexData[0], ibDesc.numIndices * sizeof(unsigned));
-
-			ibDesc.cpuIndexData = std::make_unique<unsigned[]>(ibDesc.numIndices);
-			memcpy(ibDesc.cpuIndexData.get(), ibDesc.indexData.get(), ibDesc.numIndices * sizeof(unsigned));
 		}
 
 		// Read geometries
 		unsigned numGeometries = source.Read<unsigned>();
-		geomDescs.resize(numGeometries);
+		loadBuffer->geometries.resize(numGeometries);
 		for (unsigned i = 0; i < numGeometries; ++i) {
 			unsigned numLodLevels = source.Read<unsigned>();
-			geomDescs[i].resize(numLodLevels);
+			loadBuffer->geometries[i].resize(numLodLevels);
 
 			for (unsigned j = 0; j < numLodLevels; ++j) {
-				GeometryDesc& geomDesc = geomDescs[i][j];
+				LoadBuffer::GeometryDesc& geomDesc = loadBuffer->geometries[i][j];
 				geomDesc.lodDistance = source.Read<float>();
-				geomDesc.vbRef = source.Read<unsigned>();
-				geomDesc.ibRef = source.Read<unsigned>();
+				geomDesc.vbIndex = source.Read<unsigned>();
+				geomDesc.ibIndex = source.Read<unsigned>();
 				geomDesc.drawStart = source.Read<unsigned>();
 				geomDesc.drawCount = source.Read<unsigned>();
 			}
@@ -233,6 +249,7 @@ namespace Turso3D
 			bone.initialRotation = source.Read<Quaternion>();
 			bone.initialScale = source.Read<Vector3>();
 			bone.offsetMatrix = source.Read<Matrix3x4>();
+			bone.active = true;
 
 			unsigned char boneCollisionType = source.Read<unsigned char>();
 			if (boneCollisionType & 1) {
@@ -257,16 +274,19 @@ namespace Turso3D
 
 	bool Model::EndLoad()
 	{
-		bool hasWeights = false;
-		size_t totalIndices = 0;
-
-		for (size_t i = 0; i < ibDescs.size(); ++i) {
-			totalIndices += ibDescs[i].numIndices;
+		if (!loadBuffer) {
+			return false;
 		}
 
-		for (auto it = vbDescs.begin(); it != vbDescs.end(); ++it) {
-			for (auto vIt = it->vertexElements.begin(); vIt != it->vertexElements.end(); ++vIt) {
-				if (vIt->semantic == SEM_BLENDWEIGHTS || vIt->semantic == SEM_BLENDINDICES) {
+		size_t totalIndices = 0;
+		for (const LoadBuffer::IndexDesc& ib : loadBuffer->indexBuffers) {
+			totalIndices += ib.numIndices;
+		}
+
+		bool hasWeights = false;
+		for (const LoadBuffer::VertexDesc& vb : loadBuffer->vertexBuffers) {
+			for (const VertexElement& elem : vb.vertexElements) {
+				if (elem.semantic == SEM_BLENDWEIGHTS || elem.semantic == SEM_BLENDINDICES) {
 					hasWeights = true;
 					break;
 				}
@@ -276,105 +296,109 @@ namespace Turso3D
 			}
 		}
 
-		// Create the geometry structure early and fill the CPU-side data first.
-		// Fill actual vertex and index buffers later
-		geometries.resize(geomDescs.size());
-		for (size_t i = 0; i < geomDescs.size(); ++i) {
-			geometries[i].resize(geomDescs[i].size());
-			for (size_t j = 0; j < geomDescs[i].size(); ++j) {
-				const GeometryDesc& geomDesc = geomDescs[i][j];
+		// Determine if the model can use a combined buffer
+		bool useCombinedBuffer = !hasWeights &&
+			(loadBuffer->vertexBuffers.size() == 1) &&
+			(loadBuffer->vertexBuffers[0].numVertices < COMBINEDBUFFER_VERTICES) &&
+			(totalIndices < COMBINEDBUFFER_INDICES);
+
+		if (useCombinedBuffer) {
+			const LoadBuffer::VertexDesc& vbDesc = loadBuffer->vertexBuffers[0];
+
+			combinedBuffer = CombinedBuffer::Allocate(vbDesc.vertexElements, vbDesc.numVertices, totalIndices);
+
+			// Take the current vertex count to be used as offset for the indices, then fill the vertices.
+			unsigned vertexStart = (unsigned)combinedBuffer->UsedVertices();
+			combinedBuffer->FillVertices(vbDesc.numVertices, vbDesc.vertexData.get());
+
+			// Offset the index values by the current combined buffer vertex count,
+			// Store the starting index offset in the combined buffer, then then fill the indices.
+			std::vector<size_t> indexStarts;
+			indexStarts.resize(loadBuffer->indexBuffers.size());
+
+			for (size_t i = 0; i < loadBuffer->indexBuffers.size(); ++i) {
+				LoadBuffer::IndexDesc& ibDesc = loadBuffer->indexBuffers[i];
+
+				unsigned* indexData = ibDesc.indexData.get();
+				for (size_t j = 0; j < ibDesc.numIndices; ++j) {
+					indexData[j] += vertexStart;
+				}
+
+				indexStarts[i] = combinedBuffer->UsedIndices();
+				combinedBuffer->FillIndices(ibDesc.numIndices, ibDesc.indexData.get());
+			}
+
+			// Set GPU buffers
+			geometries.resize(loadBuffer->geometries.size());
+			for (size_t i = 0; i < loadBuffer->geometries.size(); ++i) {
+				const std::vector<LoadBuffer::GeometryDesc>& lodGeometries = loadBuffer->geometries[i];
+
+				geometries[i].resize(lodGeometries.size());
+				for (size_t j = 0; j < lodGeometries.size(); ++j) {
+					const LoadBuffer::GeometryDesc& geomDesc = lodGeometries[j];
+
+					std::shared_ptr<Geometry> geom = std::make_shared<Geometry>();
+					geom->vertexBuffer = combinedBuffer->GetVertexBuffer();
+					geom->indexBuffer = combinedBuffer->GetIndexBuffer();
+					geom->drawStart = geomDesc.drawStart + indexStarts[geomDesc.ibIndex];
+					geom->drawCount = geomDesc.drawCount;
+					geom->lodDistance = geomDesc.lodDistance;
+
+					geometries[i][j].swap(geom);
+				}
+			}
+
+			loadBuffer.reset();
+			return true;
+		}
+
+		// Create all vertex buffers
+		std::vector<std::shared_ptr<VertexBuffer>> vbs;
+		vbs.resize(loadBuffer->vertexBuffers.size());
+
+		for (size_t i = 0; i < loadBuffer->vertexBuffers.size(); ++i) {
+			const LoadBuffer::VertexDesc& vbDesc = loadBuffer->vertexBuffers[i];
+
+			std::shared_ptr<VertexBuffer> vb = std::make_shared<VertexBuffer>();
+			vb->Define(USAGE_DEFAULT, vbDesc.numVertices, vbDesc.vertexElements, vbDesc.vertexData.get());
+
+			vbs[i].swap(vb);
+		}
+
+		// Create all index buffers
+		std::vector<std::shared_ptr<IndexBuffer>> ibs;
+		ibs.resize(loadBuffer->indexBuffers.size());
+
+		for (size_t i = 0; i < loadBuffer->indexBuffers.size(); ++i) {
+			const LoadBuffer::IndexDesc& ibDesc = loadBuffer->indexBuffers[i];
+
+			std::shared_ptr<IndexBuffer> ib = std::make_shared<IndexBuffer>();
+			ib->Define(USAGE_DEFAULT, ibDesc.numIndices, sizeof(unsigned), ibDesc.indexData.get());
+
+			ibs[i].swap(ib);
+		}
+
+		// Set the buffers for each geometry
+		geometries.resize(loadBuffer->geometries.size());
+		for (size_t i = 0; i < loadBuffer->geometries.size(); ++i) {
+			const std::vector<LoadBuffer::GeometryDesc>& lodGeometries = loadBuffer->geometries[i];
+
+			geometries[i].resize(lodGeometries.size());
+			for (size_t j = 0; j < lodGeometries.size(); ++j) {
+				const LoadBuffer::GeometryDesc& geomDesc = lodGeometries[j];
 
 				std::shared_ptr<Geometry> geom = std::make_shared<Geometry>();
-				geom->lodDistance = geomDesc.lodDistance;
+				geom->vertexBuffer = vbs[geomDesc.vbIndex];
+				geom->indexBuffer = ibs[geomDesc.ibIndex];
 				geom->drawStart = geomDesc.drawStart;
 				geom->drawCount = geomDesc.drawCount;
-
-				geom->cpuPositionData = vbDescs[geomDesc.vbRef].cpuPositionData;
-				geom->cpuIndexData = ibDescs[geomDesc.ibRef].cpuIndexData;
-				//geom->cpuIndexSize = ibDescs[geomDesc.ibRef].indexSize;
-				geom->cpuDrawStart = geomDesc.drawStart;
+				geom->lodDistance = geomDesc.lodDistance;
 
 				geometries[i][j].swap(geom);
 			}
 		}
 
-		// Check if can use combined vertex / index buffers
-		if (vbDescs.size() == 1 && vbDescs[0].numVertices < COMBINEDBUFFER_VERTICES && totalIndices < COMBINEDBUFFER_INDICES && !hasWeights) {
-			combinedBuffer = CombinedBuffer::Allocate(vbDescs[0].vertexElements, vbDescs[0].numVertices, totalIndices);
-			unsigned vertexStart = (unsigned)combinedBuffer->UsedVertices();
-
-			// Offset the index values by the current combined buffer vertex count.
-			for (size_t i = 0; i < ibDescs.size(); ++i) {
-				IndexBufferDesc& ibDesc = ibDescs[i];
-				unsigned* indexData = ibDesc.indexData.get();
-				for (size_t j = 0; j < ibDescs[i].numIndices; ++j) {
-					indexData[j] += vertexStart;
-				}
-			}
-
-			// Store the starting index offset in the combined buffer.
-			std::vector<size_t> indexStarts;
-			indexStarts.resize(ibDescs.size());
-
-			// Fill GPU buffers
-			combinedBuffer->FillVertices(vbDescs[0].numVertices, vbDescs[0].vertexData.get());
-			for (size_t i = 0; i < ibDescs.size(); ++i) {
-				indexStarts[i] = combinedBuffer->UsedIndices();
-				combinedBuffer->FillIndices(ibDescs[i].numIndices, ibDescs[i].indexData.get());
-			}
-
-			// Set GPU buffers
-			for (size_t i = 0; i < geomDescs.size(); ++i) {
-				for (size_t j = 0; j < geomDescs[i].size(); ++j) {
-					const GeometryDesc& geomDesc = geomDescs[i][j];
-					Geometry* geom = geometries[i][j].get();
-
-					geom->vertexBuffer = combinedBuffer->GetVertexBuffer();
-					geom->indexBuffer = combinedBuffer->GetIndexBuffer();
-					geom->drawStart = geomDesc.drawStart + indexStarts[geomDesc.ibRef];
-				}
-			}
-
-			std::vector<VertexBufferDesc>().swap(vbDescs);
-			std::vector<IndexBufferDesc>().swap(ibDescs);
-			std::vector<std::vector<GeometryDesc>>().swap(geomDescs);
-
-			return true;
-		}
-
-		// If not, create individual buffers for this model and set them to the geometries
-		std::vector<std::shared_ptr<VertexBuffer>> vbs;
-		for (size_t i = 0; i < vbDescs.size(); ++i) {
-			std::shared_ptr<VertexBuffer>& vb = vbs.emplace_back(std::make_shared<VertexBuffer>());
-
-			const VertexBufferDesc& vbDesc = vbDescs[i];
-			vb->Define(USAGE_DEFAULT, vbDesc.numVertices, vbDesc.vertexElements, vbDesc.vertexData.get());
-		}
-
-		std::vector<std::shared_ptr<IndexBuffer>> ibs;
-		for (size_t i = 0; i < ibDescs.size(); ++i) {
-			std::shared_ptr<IndexBuffer>& ib = ibs.emplace_back(std::make_shared<IndexBuffer>());
-
-			const IndexBufferDesc& ibDesc = ibDescs[i];
-			ib->Define(USAGE_DEFAULT, ibDesc.numIndices, sizeof(unsigned), ibDesc.indexData.get());
-		}
-
-		geometries.resize(geomDescs.size());
-		for (size_t i = 0; i < geomDescs.size(); ++i) {
-			geometries[i].resize(geomDescs[i].size());
-			for (size_t j = 0; j < geomDescs[i].size(); ++j) {
-				const GeometryDesc& geomDesc = geomDescs[i][j];
-				Geometry* geom = geometries[i][j].get();
-
-				geom->vertexBuffer = vbs[geomDesc.vbRef];
-				geom->indexBuffer = ibs[geomDesc.ibRef];
-			}
-		}
-
-		std::vector<VertexBufferDesc>().swap(vbDescs);
-		std::vector<IndexBufferDesc>().swap(ibDescs);
-		std::vector<std::vector<GeometryDesc>>().swap(geomDescs);
-
+		loadBuffer.reset();
 		return true;
 	}
 

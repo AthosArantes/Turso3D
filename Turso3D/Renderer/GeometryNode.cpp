@@ -26,6 +26,9 @@ namespace Turso3D
 	// ==========================================================================================
 	float Geometry::HitDistance(const Ray& ray, Vector3* outNormal) const
 	{
+		// TODO: use a hull geometry
+		return M_INFINITY;
+#if 0
 		if (!cpuPositionData) {
 			return M_INFINITY;
 		}
@@ -35,6 +38,7 @@ namespace Turso3D
 		} else {
 			return ray.HitDistance(cpuPositionData.get(), sizeof(Vector3), cpuDrawStart, drawCount, outNormal);
 		}
+#endif
 	}
 
 	// ==========================================================================================
