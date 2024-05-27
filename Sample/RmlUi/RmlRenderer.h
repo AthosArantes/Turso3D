@@ -13,7 +13,6 @@ namespace Turso3D
 	class FrameBuffer;
 	class ShaderProgram;
 	class Texture;
-	class IntVector2;
 
 	class RmlRenderer : public Rml::RenderInterface
 	{
@@ -29,6 +28,13 @@ namespace Turso3D
 			VertexBuffer vbo;
 			IndexBuffer ibo;
 			Texture* texture;
+		};
+
+		struct ShaderProgramGroup
+		{
+			std::shared_ptr<ShaderProgram> program;
+			int translateIndex; // Translation uniform location.
+			int transformIndex; // Transform uniform location.
 		};
 
 	public:
@@ -56,27 +62,17 @@ namespace Turso3D
 		void BeginRender();
 		void EndRender();
 
-		FrameBuffer* GetFramebuffer() { return fbo[0].get(); }
 		Texture* GetTexture() { return buffer[0].get(); }
 
 	private:
 		// Cached graphics subsystem
 		Graphics* graphics;
 
-		std::shared_ptr<ShaderProgram> texProgram;
-		int uTexTranslate; // Translation uniform for textured program.
-		int uTexTransform; // Transform uniform for textured program.
+		ShaderProgramGroup programs[2];
 
-		std::shared_ptr<ShaderProgram> colorProgram;
-		int uTranslate; // Translation uniform for color program.
-		int uTransform; // Transform uniform for color program.
-
-		// Multisampled/Resolved buffers
+		// Multisampled/Resolved textures
 		std::unique_ptr<Texture> buffer[2];
 		std::unique_ptr<FrameBuffer> fbo[2];
-
-		IntVector2 viewSize;
-		unsigned multisample;
 
 		// Textures in use by RmlUi
 		std::vector<std::shared_ptr<Texture>> textures;
@@ -90,10 +86,13 @@ namespace Turso3D
 		// Current memory of discarded geometries
 		size_t discardedGeometryMem;
 
-		ScissorState scissorState;
-
 		Rml::Matrix4f projection;
 		Rml::Matrix4f transform;
 		bool usingTransform;
+
+		ScissorState scissorState;
+
+		IntVector2 viewSize;
+		int multisample;
 	};
 }

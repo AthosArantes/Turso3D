@@ -28,11 +28,11 @@ void main()
 // Remember to use a floating-point texture format (for HDR)!
 // Remember to use edge clamping for this texture!
 
+in vec2 texCoord;
+out vec4 upsample;
+
 uniform sampler2D srcTex0;
 uniform float filterRadius;
-
-in vec2 texCoord;
-layout (location = 0) out vec4 upsample;
 
 void main()
 {

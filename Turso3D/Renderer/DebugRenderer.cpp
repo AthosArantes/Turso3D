@@ -314,7 +314,11 @@ namespace Turso3D
 		}
 
 		shaderProgram->Bind();
-		graphics->SetUniform(shaderProgram.get(), "viewProjMatrix", projection * view);
+
+		constexpr StringHash viewProjMatrixHash {"viewProjMatrix"};
+		int location = shaderProgram->Uniform(viewProjMatrixHash);
+		graphics->SetUniform(location, projection * view);
+
 		graphics->SetVertexBuffer(vertexBuffer.get(), shaderProgram.get());
 		graphics->SetIndexBuffer(indexBuffer.get());
 

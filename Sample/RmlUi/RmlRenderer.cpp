@@ -4,6 +4,7 @@
 #include <Turso3D/Graphics/Shader.h>
 #include <Turso3D/Graphics/ShaderProgram.h>
 #include <Turso3D/Graphics/Texture.h>
+#include <Turso3D/Math/Matrix3x4.h>
 #include <Turso3D/IO/Log.h>
 #include <Turso3D/Resource/ResourceCache.h>
 #include <GLEW/glew.h>
@@ -11,6 +12,12 @@
 
 namespace Turso3D
 {
+	enum ProgramGroupIndex
+	{
+		COLOR_PROGRAM,
+		TEXTURED_PROGRAM
+	};
+
 	static VertexElement VertexElementArray[] = {
 		VertexElement {ELEM_VECTOR2, SEM_POSITION},
 		VertexElement {ELEM_UBYTE4, SEM_COLOR},
@@ -26,16 +33,18 @@ namespace Turso3D
 			fbo[i] = std::make_unique<FrameBuffer>();
 		}
 
-		constexpr StringHash uniformTranslate {"uTranslate"};
-		constexpr StringHash uniformTransform {"uTransform"};
+		constexpr const char* defines[] = {
+			"",
+			"TEXTURED"
+		};
+		constexpr StringHash uniformTranslateHash {"translate"};
+		constexpr StringHash uniformTransformHash {"transform"};
 
-		texProgram = graphics->CreateProgram("RmlUi.glsl", "TEXTURED", "TEXTURED");
-		uTexTranslate = texProgram->Uniform(uniformTranslate);
-		uTexTransform = texProgram->Uniform(uniformTransform);
-
-		colorProgram = graphics->CreateProgram("RmlUi.glsl", "", "");
-		uTranslate = colorProgram->Uniform(uniformTranslate);
-		uTransform = colorProgram->Uniform(uniformTransform);
+		for (unsigned i = 0; i < 2; ++i) {
+			programs[i].program = graphics->CreateProgram("RmlUi.glsl", defines[i], defines[i]);
+			programs[i].translateIndex = programs[i].program->Uniform(uniformTranslateHash);
+			programs[i].transformIndex = programs[i].program->Uniform(uniformTransformHash);
+		}
 
 		maxDiscardedGeometryMem = 8 * 1000 * 1000; // 8 MB
 		discardedGeometryMem = 0;
@@ -91,20 +100,17 @@ namespace Turso3D
 	{
 		CompiledGeometry* cg = reinterpret_cast<CompiledGeometry*>(handle);
 
-		if (cg->texture) {
-			texProgram->Bind();
-			glUniform2f(uTexTranslate, translation.x, translation.y);
-			glUniformMatrix4fv(uTexTransform, 1, GL_FALSE, transform.data());
-			cg->vbo.Bind(texProgram->Attributes());
-			cg->ibo.Bind();
-			cg->texture->Bind(0);
+		ShaderProgramGroup& program_group = programs[(cg->texture != nullptr) ? TEXTURED_PROGRAM : COLOR_PROGRAM];
 
-		} else {
-			colorProgram->Bind();
-			glUniform2f(uTranslate, translation.x, translation.y);
-			glUniformMatrix4fv(uTransform, 1, GL_FALSE, transform.data());
-			cg->vbo.Bind(colorProgram->Attributes());
-			cg->ibo.Bind();
+		program_group.program->Bind();
+		glUniform2f(program_group.translateIndex, translation.x, translation.y);
+		glUniformMatrix4fv(program_group.transformIndex, 1, GL_FALSE, transform.data());
+
+		cg->vbo.Bind(program_group.program->Attributes());
+		cg->ibo.Bind();
+
+		if (cg->texture) {
+			cg->texture->Bind(0);
 		}
 
 		graphics->DrawIndexed(PT_TRIANGLE_LIST, 0, cg->ibo.NumIndices());
@@ -258,65 +264,45 @@ namespace Turso3D
 		Log::Scope ls {"RmlRenderer::UpdateBuffers"};
 
 		viewSize = size;
-		multisample = multisample_;
+		multisample = std::max(multisample_, 1);
 
 		for (int i = 0; i < 2; ++i) {
 			buffer[i]->Define(TARGET_2D, size, FORMAT_RGBA8_SRGB_PACK32, multisample * i);
 			buffer[i]->DefineSampler(FILTER_BILINEAR, ADDRESS_CLAMP, ADDRESS_CLAMP, ADDRESS_CLAMP);
 			fbo[i]->Define(buffer[i].get(), nullptr);
 
-			if (multisample <= 1) {
-				multisample = 1;
+			if (multisample == 1) {
 				break;
 			}
 		}
 
-		projection = Rml::Matrix4f::ProjectOrtho(0, (float)viewSize.x, (float)viewSize.y, 0, -10000, 10000);
+		projection = Rml::Matrix4f::ProjectOrtho(0, (float)size.x, (float)size.y, 0, -10000, 10000);
 		SetTransform(nullptr);
 	}
 
 	void RmlRenderer::BeginRender()
 	{
-#ifdef _DEBUG
-		glPushDebugGroup(GL_DEBUG_SOURCE_APPLICATION, 0, -1, "RmlUi Render");
-#endif
-
-		if (multisample > 1) {
-			graphics->SetFrameBuffer(fbo[1].get());
-		} else {
-			graphics->SetFrameBuffer(fbo[0].get());
-		}
-
-		// IMPROVE: better organize this
+		fbo[(multisample > 1) ? 1 : 0]->Bind();
 
 		glClearStencil(0);
 		glClearColor(0, 0, 0, 0);
 		glClear(GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
-		glDisable(GL_CULL_FACE);
+		graphics->SetRenderState(BLEND_ALPHA, CULL_NONE, CMP_ALWAYS, true, false);
 
 		glEnable(GL_STENCIL_TEST);
 		glStencilFunc(GL_ALWAYS, 1, GLuint(-1));
 		glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
-
-		glEnable(GL_BLEND);
-		glBlendEquation(GL_FUNC_ADD);
-		glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE);
 	}
 
 	void RmlRenderer::EndRender()
 	{
 		glDisable(GL_STENCIL_TEST);
-		glDisable(GL_BLEND);
 
 		// Resolve multisampled buffer
 		if (multisample > 1) {
-			IntRect rc {0, 0, viewSize.x, viewSize.y};
+			IntRect rc {IntVector2::ZERO(), viewSize};
 			graphics->Blit(fbo[0].get(), rc, fbo[1].get(), rc, true, false, FILTER_BILINEAR);
 		}
-
-#ifdef _DEBUG
-		glPopDebugGroup();
-#endif
 	}
 }

@@ -75,7 +75,9 @@ void main()
 #endif
 
 	// Add environment fog
-	fragColor[0] = vec4(mix(fogColor, color, GetFogFactor(vWorldPos.w)), BaseColor.a);
+	color = mix(fogColor, color, GetFogFactor(vWorldPos.w));
+
+	fragColor[0] = vec4(color, BaseColor.a);
 	fragColor[1] = vec4(vViewNormal, 1.0);
 }
 

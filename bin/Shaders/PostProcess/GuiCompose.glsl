@@ -21,12 +21,12 @@ void main()
 // ================================================================================================
 #ifdef COMPILE_FS
 
+in vec2 texCoord;
+out vec4 fragColor;
+
 uniform sampler2D srcTex0; // ui
 uniform sampler2D sceneTex1; // scene
 uniform sampler2D sceneBlurTex2; // blurred scene
-
-in vec2 texCoord;
-out vec4 fragColor;
 
 void main()
 {

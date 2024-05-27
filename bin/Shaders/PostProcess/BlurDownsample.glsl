@@ -30,11 +30,11 @@ void main()
 // Remember to use a floating-point texture format (for HDR)!
 // Remember to use edge clamping for this texture!
 
+in vec2 texCoord;
+out vec4 downsample;
+
 uniform sampler2D srcTex0;
 uniform vec2 invSrcSize;
-
-in vec2 texCoord;
-layout (location = 0) out vec4 downsample;
 
 void main()
 {
@@ -78,10 +78,13 @@ void main()
 	// contribute 0.5 to the final color output. The code below is written
 	// to effectively yield this sum. We get:
 	// 0.125*5 + 0.03125*4 + 0.0625*4 = 1
+
 	downsample = e*0.125;
 	downsample += (a+c+g+i)*0.03125;
 	downsample += (b+d+f+h)*0.0625;
 	downsample += (j+k+l+m)*0.125;
+
+	downsample = max(downsample, 0.0001);
 }
 
 #endif

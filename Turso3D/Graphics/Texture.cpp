@@ -340,7 +340,11 @@ namespace Turso3D
 				case TARGET_CUBE_ARRAY:
 					break;
 				default:
-					LOG_ERROR("Multisample not supported for {:s}", TextureTargetName(type));
+#ifdef _DEBUG
+					LOG_ERROR("Multisample not supported for texture type ({:s})", TextureTargetName(type));
+#else
+					LOG_ERROR("Multisample not supported for texture type ({:d})", type);
+#endif
 					return false;
 			}
 		}
@@ -436,7 +440,11 @@ namespace Turso3D
 						break;
 					}
 					default:
-						LOG_ERROR("{:s} is not supported.", TextureTargetName(type));
+#ifdef _DEBUG
+						LOG_ERROR("Texture type ({:s}) is not supported.", TextureTargetName(type));
+#else
+						LOG_ERROR("Texture type ({:d}) is not supported.", type);
+#endif
 						Release();
 						return false;
 				}
@@ -444,13 +452,38 @@ namespace Turso3D
 		}
 
 #ifdef _DEBUG
+		const char* target_name = TextureTargetName(type);
+		const char* format_name = ImageFormatName(format);
+
 		if (glGetError() != GL_NO_ERROR) {
-			LOG_ERROR("Failed to create {:s} ({:s})", TextureTargetName(type), Name());
+			LOG_ERROR("Failed to create {:s} ({:s})", target_name, Name());
 			return false;
 		}
+
+		std::string name;
+		if (!Name().empty()) {
+			name = fmt::format(" ({:s})", Name());
+		}
+
+		switch (type) {
+			case TARGET_1D:
+				LOG_DEBUG("Created {:s}{:s} {:s} [{:d}] [Mips:{:d}]", target_name, name, format_name, size.x, numLevels);
+				break;
+			case TARGET_1D_ARRAY:
+			case TARGET_2D:
+			case TARGET_CUBE:
+				LOG_DEBUG("Created {:s}{:s} {:s} [{:d} x {:d}] [Mips:{:d}]", target_name, name, format_name, size.x, size.y, numLevels);
+				break;
+			case TARGET_2D_ARRAY:
+			case TARGET_3D:
+			case TARGET_CUBE_ARRAY:
+				LOG_DEBUG("Created {:s}{:s} {:s} [{:d} x {:d} x {:d}] [Mips:{:d}]", target_name, name, format_name, size.x, size.y, size.z, numLevels);
+				break;
+		}
+#else
+		LOG_INFO("Created texture ({:s}) [Type:{:d}] [Format:{:d}] [{:d} x {:d} x {:d}] [Mips:{:d}]", Name(), (int)type, (int)format, size.x, size.y, size.z, numLevels);
 #endif
 
-		LOG_DEBUG("Created {:s} ({:s}) [{:d} x {:d}] depth {:d} format {:d} numLevels {:d}", TextureTargetName(type), Name(), size.x, size.y, size.z, (int)format, numLevels);
 		return true;
 	}
 

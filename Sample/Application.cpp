@@ -1,6 +1,5 @@
 #include "Application.h"
 #include "BloomRenderer.h"
-#include "BlurRenderer.h"
 #include "SSAORenderer.h"
 #include "ModelConverter.h"
 #include "RmlUi/RmlSystem.h"
@@ -29,7 +28,6 @@
 #include <Turso3D/Renderer/StaticModel.h>
 #include <Turso3D/Resource/ResourceCache.h>
 #include <Turso3D/Scene/Scene.h>
-#include <glew/glew.h>
 #include <GLFW/glfw3.h>
 #include <RmlUi/Core.h>
 #include <filesystem>
@@ -47,11 +45,11 @@ inline Application* GetAppFromWindow(GLFWwindow* window)
 
 // ==========================================================================================
 Application::Application() :
-	multiSample(8),
+	multiSample(1),
 	timestamp(0),
 	deltaTime(0),
 	deltaTimeAccumulator(0),
-	frameLimit(60),
+	frameLimit(0),
 	cursorInside(false),
 	camYaw(0),
 	camPitch(0)
@@ -103,7 +101,6 @@ Application::Application() :
 
 	bloomRenderer = std::make_unique<BloomRenderer>();
 	ssaoRenderer = std::make_unique<SSAORenderer>();
-	blurRenderer = std::make_unique<BlurRenderer>();
 }
 
 Application::~Application()
@@ -120,16 +117,17 @@ bool Application::Initialize()
 	if (!graphics) {
 		return false;
 	}
-	graphics->SetVSync(false);
+	graphics->SetVSync(true);
 
 	// Create subsystems that depend on the application window / OpenGL
 	renderer = std::make_unique<Renderer>(workQueue.get(), graphics.get());
 	renderer->SetupShadowMaps(DIRECTIONAL_LIGHT_SIZE, LIGHT_ATLAS_SIZE, FORMAT_D32_SFLOAT_PACK32);
 	debugRenderer = std::make_unique<DebugRenderer>(graphics.get());
 
+	blurRenderer.Initialize(graphics.get());
+
 	bloomRenderer->Initialize(graphics.get());
 	ssaoRenderer->Initialize(graphics.get());
-	blurRenderer->Initialize(graphics.get());
 
 	tonemapProgram = graphics->CreateProgram("PostProcess/Tonemap.glsl", "", "");
 	uTonemapExposure = tonemapProgram->Uniform(StringHash {"exposure"});
@@ -529,7 +527,7 @@ void Application::OnFramebufferSize(int width, int height)
 		hdrBuffer[i]->Define(TARGET_2D, sz, FORMAT_RG11B10_UFLOAT_PACK32, multiSample * i);
 		hdrBuffer[i]->DefineSampler(FILTER_BILINEAR, ADDRESS_CLAMP, ADDRESS_CLAMP, ADDRESS_CLAMP);
 
-		normalBuffer[i]->Define(TARGET_2D, sz, FORMAT_RG16_SNORM_PACK16, multiSample * i);
+		normalBuffer[i]->Define(TARGET_2D, sz, FORMAT_RGB16_SNORM_PACK16, multiSample * i);
 		normalBuffer[i]->DefineSampler(FILTER_BILINEAR, ADDRESS_CLAMP, ADDRESS_CLAMP, ADDRESS_CLAMP);
 
 		depthStencilBuffer[i]->Define(TARGET_2D, sz, FORMAT_D32_SFLOAT_PACK32, multiSample * i);
@@ -554,6 +552,9 @@ void Application::OnFramebufferSize(int width, int height)
 	guiTexture->DefineSampler(FILTER_BILINEAR, ADDRESS_CLAMP, ADDRESS_CLAMP, ADDRESS_CLAMP);
 	guiFbo->Define(guiTexture.get(), nullptr);
 
+	sceneBlurPasses.clear();
+	BlurRenderer::CreateMips(sceneBlurPasses, sz / 2, ldrBuffer->Format(), IntVector2::ZERO(), 4);
+
 	// Bloom resources
 	if (bloomRenderer) {
 		bloomRenderer->UpdateBuffers(sz, hdrBuffer[0]->Format());
@@ -563,8 +564,6 @@ void Application::OnFramebufferSize(int width, int height)
 	if (ssaoRenderer) {
 		ssaoRenderer->UpdateBuffers(sz);
 	}
-
-	blurRenderer->UpdateBuffers(sz, ldrBuffer->Format(), 3);
 
 	if (rmlRenderer) {
 		rmlRenderer->UpdateBuffers(sz, multiSample);
@@ -672,17 +671,14 @@ void Application::Render(double dt)
 	graphics->SetViewport(viewRect);
 
 	// The default opaque shaders can write both color (first RT) and view-space normals (second RT).
-	if (multiSample > 1) {
-		graphics->SetFrameBuffer(mrtFbo[1].get());
-		renderer->RenderOpaque();
+	mrtFbo[(multiSample > 1) ? 1 : 0]->Bind();
+	renderer->RenderOpaque();
+	renderer->RenderAlpha();
 
-		// Resolve MSAA
+	// Resolve MSAA
+	if (multiSample > 1) {
 		graphics->Blit(mrtFbo[0].get(), viewRect, mrtFbo[1].get(), viewRect, true, false, FILTER_BILINEAR);
 		graphics->Blit(mrtFbo[0].get(), viewRect, mrtFbo[1].get(), viewRect, false, true, FILTER_POINT);
-
-	} else {
-		graphics->SetFrameBuffer(mrtFbo[0].get());
-		renderer->RenderOpaque();
 	}
 
 	Texture* color = hdrBuffer[0].get(); // Resolved HDR color texture
@@ -691,27 +687,31 @@ void Application::Render(double dt)
 
 	// Apply hdr bloom
 	if (bloomRenderer) {
-		//bloomRenderer->Render(color);
-		//color = bloomRenderer->GetResultTexture();
+		TURSO3D_GL_MARKER("Bloom");
+
+		bloomRenderer->Render(&blurRenderer, color);
+		color = bloomRenderer->GetResultTexture();
 	}
 
 	// Apply tonemap
 	{
 		TURSO3D_GL_MARKER("Tonemap");
 
-		graphics->SetFrameBuffer(ldrFbo.get());
+		ldrFbo->Bind();
 		graphics->SetViewport(viewRect);
 		tonemapProgram->Bind();
-		glUniform1f(uTonemapExposure, 1.0f);
+		graphics->SetUniform(uTonemapExposure, 1.0f);
 		color->Bind(0);
 		graphics->SetRenderState(BLEND_REPLACE, CULL_NONE, CMP_ALWAYS, true, false);
 		graphics->DrawQuad();
 	}
 
-	// Render alpha geometry.
-	// Now only the color rendertarget is needed
-	graphics->SetFrameBuffer(ldrFbo.get());
-	renderer->RenderAlpha();
+	// SSAO
+	if (ssaoRenderer) {
+		TURSO3D_GL_MARKER("SSAO");
+
+		ssaoRenderer->Render(camera.get(), normal, depth, ldrFbo.get(), viewRect);
+	}
 
 	// Optional render of debug geometry
 	bool drawDebug = false;
@@ -732,28 +732,36 @@ void Application::Render(double dt)
 		debugRenderer->Render();
 	}
 
-	if (ssaoRenderer) {
-		//ssaoRenderer->Render(camera.get(), normal, depth, ldrFbo.get(), viewRect);
+	// Blur scene for UI transparent backgrounds
+	{
+		TURSO3D_GL_MARKER("Scene Blur");
+
+		blurRenderer.Render(sceneBlurPasses, ldrBuffer.get());
 	}
 
-	blurRenderer->Render(ldrBuffer.get());
-
-	graphics->SetViewport(viewRect);
-	rmlRenderer->BeginRender();
-	mainContext->Render();
-	rmlRenderer->EndRender();
-
-	// Compose GUI
+	// RmlUi
 	{
-		TURSO3D_GL_MARKER("GUI Compose");
+		TURSO3D_GL_MARKER("RmlUi");
 
+		graphics->SetViewport(IntRect {IntVector2::ZERO(), ldrBuffer->Size2D()});
+
+		rmlRenderer->BeginRender();
+		mainContext->Render();
+		rmlRenderer->EndRender();
+	}
+
+	// Compose UI
+	{
+		TURSO3D_GL_MARKER("UI Compose");
+
+		guiFbo->Bind();
 		guiProgram->Bind();
-		graphics->SetFrameBuffer(guiFbo.get());
+
 		graphics->Clear();
 
 		rmlRenderer->GetTexture()->Bind(0);
 		ldrBuffer->Bind(1);
-		blurRenderer->GetResultTexture()->Bind(2);
+		sceneBlurPasses[0].buffer->Bind(2);
 
 		graphics->SetRenderState(BLEND_REPLACE, CULL_NONE, CMP_ALWAYS, true, false);
 		graphics->DrawQuad();

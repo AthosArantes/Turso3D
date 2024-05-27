@@ -6,7 +6,6 @@
 #ifdef COMPILE_VS
 
 in vec3 position;
-
 out vec2 vTexCoord;
 
 void main()
@@ -24,12 +23,13 @@ void main()
 
 const float GAMMA = 2.2f;
 
-uniform sampler2D diffuseTex0;
-uniform float exposure;
-
 in vec2 vTexCoord;
 out vec4 fragColor;
 
+uniform sampler2D diffuseTex0;
+uniform float exposure;
+
+//-------------------------------------------------------------------------------------------------
 float ColorToLuminance(vec3 color)
 {
 	return dot(color, vec3(0.2126f, 0.7152f, 0.0722f));
@@ -78,15 +78,13 @@ vec3 HableToneMapping(vec3 color)
 	return color;
 }
 
-//=================================================================================================
-//
+//-------------------------------------------------------------------------------------------------
 //  Baking Lab
 //  by MJP and David Neubelt
 //  http://mynameismjp.wordpress.com/
 //
 //  All code licensed under the MIT license
-//
-//=================================================================================================
+//-------------------------------------------------------------------------------------------------
 
 // The code in this file was originally written by Stephen Hill (@self_shadow), who deserves all
 // credit for coming up with this fit and implementing it. Buy him a beer next time you see him. :)
@@ -126,7 +124,7 @@ vec3 ACESFitted(vec3 color)
     return color;
 }
 
-// ====================================================================================================
+//-------------------------------------------------------------------------------------------------
 void main()
 {
 	vec3 hdr = texture(diffuseTex0, vTexCoord).rgb;

@@ -110,10 +110,11 @@ void main()
 
 	vec3 baseNormal = BC5NormalMap(texture(normalTex2, vTexCoord));
 	vec3 detailNormal = BC5NormalMap(texture(detailNormalTex4, vTexCoord * DetailParams.x)) * DetailParams.y;
-	vec3 normal = BlendNormalMap(baseNormal * 0.5 + 0.5, detailNormal * 0.5 + 0.5);
+	vec3 blendedNormal = BlendNormalMap(baseNormal * 0.5 + 0.5, detailNormal * 0.5 + 0.5);
+	vec3 normal = TangentSpaceNormal(blendedNormal, vTangent, vBiTangent, vNormal)
 
 	// BRDF Shading
-	vec3 color = CalculateLighting(vWorldPos, vScreenPos, TangentSpaceNormal(normal, vTangent, vBiTangent, vNormal), albedo, metallic, roughness);
+	vec3 color = CalculateLighting(vWorldPos, vScreenPos, normal, albedo, metallic, roughness);
 	color *= ao;
 
 #ifdef EMISSIVE
@@ -122,8 +123,10 @@ void main()
 #endif
 
 	// Add environment fog
-	fragColor[0] = vec4(mix(fogColor, color, GetFogFactor(vWorldPos.w)), alpha);
-	fragColor[1] = vec4(vViewNormal, 1.0);
+	color = mix(fogColor, color, GetFogFactor(vWorldPos.w));
+
+	fragColor[0] = vec4(color, alpha);
+	fragColor[1] = vec4(vec4(normal, 0.0) * viewMatrix * 0.5 + 0.5, 0.0);
 }
 
 #endif

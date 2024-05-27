@@ -197,24 +197,19 @@ namespace Turso3D
 #ifdef _DEBUG
 		glEnable(GL_DEBUG_OUTPUT);
 
-		if (GLEW_KHR_debug)
-		{
+		if (GLEW_KHR_debug) {
 			LOG_DEBUG("KHR_debug extension found");
 			GLDEBUGPROC p = &(GLDebugCallback);
 			glDebugMessageCallback(p, nullptr);
 			glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
 			LOG_DEBUG("debug callback enabled.");
-		}
-		else if (GL_ARB_debug_output)
-		{
+		} else if (GL_ARB_debug_output) {
 			LOG_DEBUG("GL_ARB_debug_output extension found.");
 			GLDEBUGPROC p = &(GLDebugCallback);
 			glDebugMessageCallbackARB(p, nullptr);
 			LOG_DEBUG("debug callback enabled.");
 			glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS_ARB);
-		}
-		else
-		{
+		} else {
 			LOG_DEBUG("KHR_debug extension NOT found.");
 		}
 
@@ -233,9 +228,7 @@ namespace Turso3D
 		glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 		glDepthMask(GL_TRUE);
 
-		GLuint defaultVao;
-		glGenVertexArrays(1, &defaultVao);
-		glBindVertexArray(defaultVao);
+		defaultVAO.Define();
 
 		// Use texcoords 3-5 for instancing if supported
 		if (glVertexAttribDivisorARB) {
@@ -326,124 +319,39 @@ namespace Turso3D
 		return {};
 	}
 
-	void Graphics::SetUniform(ShaderProgram* program, PresetUniform uniform, float value)
+	void Graphics::SetUniform(int location, float value)
 	{
-		if (program) {
-			int location = program->Uniform(uniform);
-			if (location >= 0) {
-				glUniform1f(location, value);
-			}
-		}
+		glUniform1f(location, value);
 	}
 
-	void Graphics::SetUniform(ShaderProgram* program, PresetUniform uniform, const Vector2& value)
+	void Graphics::SetUniform(int location, const Vector2& value)
 	{
-		if (program) {
-			int location = program->Uniform(uniform);
-			if (location >= 0) {
-				glUniform2fv(location, 1, value.Data());
-			}
-		}
+		glUniform2fv(location, 1, value.Data());
 	}
 
-	void Graphics::SetUniform(ShaderProgram* program, PresetUniform uniform, const Vector3& value)
+	void Graphics::SetUniform(int location, const Vector3& value)
 	{
-		if (program) {
-			int location = program->Uniform(uniform);
-			if (location >= 0) {
-				glUniform3fv(location, 1, value.Data());
-			}
-		}
+		glUniform3fv(location, 1, value.Data());
 	}
 
-	void Graphics::SetUniform(ShaderProgram* program, PresetUniform uniform, const Vector4& value)
+	void Graphics::SetUniform(int location, const Vector4& value)
 	{
-		if (program) {
-			int location = program->Uniform(uniform);
-			if (location >= 0) {
-				glUniform4fv(location, 1, value.Data());
-			}
-		}
+		glUniform4fv(location, 1, value.Data());
 	}
 
-	void Graphics::SetUniform(ShaderProgram* program, PresetUniform uniform, const Matrix3x4& value)
+	void Graphics::SetUniform(int location, const Matrix3& value)
 	{
-		if (program) {
-			int location = program->Uniform(uniform);
-			if (location >= 0) {
-				glUniformMatrix3x4fv(location, 1, GL_FALSE, value.Data());
-			}
-		}
+		glUniformMatrix3fv(location, 1, GL_FALSE, value.Data());
 	}
 
-	void Graphics::SetUniform(ShaderProgram* program, PresetUniform uniform, const Matrix4& value)
+	void Graphics::SetUniform(int location, const Matrix3x4& value)
 	{
-		if (program) {
-			int location = program->Uniform(uniform);
-			if (location >= 0) {
-				glUniformMatrix4fv(location, 1, GL_FALSE, value.Data());
-			}
-		}
+		glUniformMatrix3x4fv(location, 1, GL_FALSE, value.Data());
 	}
 
-	void Graphics::SetUniform(ShaderProgram* program, const char* name, float value)
+	void Graphics::SetUniform(int location, const Matrix4& value)
 	{
-		if (program) {
-			int location = program->Uniform(name);
-			if (location >= 0) {
-				glUniform1f(location, value);
-			}
-		}
-	}
-
-	void Graphics::SetUniform(ShaderProgram* program, const char* name, const Vector2& value)
-	{
-		if (program) {
-			int location = program->Uniform(name);
-			if (location >= 0) {
-				glUniform2fv(location, 1, value.Data());
-			}
-		}
-	}
-
-	void Graphics::SetUniform(ShaderProgram* program, const char* name, const Vector3& value)
-	{
-		if (program) {
-			int location = program->Uniform(name);
-			if (location >= 0) {
-				glUniform3fv(location, 1, value.Data());
-			}
-		}
-	}
-
-	void Graphics::SetUniform(ShaderProgram* program, const char* name, const Vector4& value)
-	{
-		if (program) {
-			int location = program->Uniform(name);
-			if (location >= 0) {
-				glUniform4fv(location, 1, value.Data());
-			}
-		}
-	}
-
-	void Graphics::SetUniform(ShaderProgram* program, const char* name, const Matrix3x4& value)
-	{
-		if (program) {
-			int location = program->Uniform(name);
-			if (location >= 0) {
-				glUniformMatrix3x4fv(location, 1, GL_FALSE, value.Data());
-			}
-		}
-	}
-
-	void Graphics::SetUniform(ShaderProgram* program, const char* name, const Matrix4& value)
-	{
-		if (program) {
-			int location = program->Uniform(name);
-			if (location >= 0) {
-				glUniformMatrix4fv(location, 1, GL_FALSE, value.Data());
-			}
-		}
+		glUniformMatrix4fv(location, 1, GL_FALSE, value.Data());
 	}
 
 	void Graphics::SetUniformBuffer(size_t index, UniformBuffer* buffer)
@@ -539,18 +447,18 @@ namespace Turso3D
 #if 0
 	void Graphics::SetScissor(const IntRect& scissor)
 	{
-		 if (scissor == IntRect::ZERO) {
-			 if (lastScissor) {
+		if (scissor == IntRect::ZERO) {
+			if (lastScissor) {
 				glDisable(GL_SCISSOR_TEST);
 				lastScissor = false;
-			 }
-		 } else {
-			 if (!lastScissor) {
-				 glEnable(GL_SCISSOR_TEST);
-				 lastScissor = true;
-			 }
-			 glScissor(scissor.left, scissor.top, scissor.Width(), scissor.Height());
-		 }
+			}
+		} else {
+			if (!lastScissor) {
+				glEnable(GL_SCISSOR_TEST);
+				lastScissor = true;
+			}
+			glScissor(scissor.left, scissor.top, scissor.Width(), scissor.Height());
+		}
 	}
 #endif
 

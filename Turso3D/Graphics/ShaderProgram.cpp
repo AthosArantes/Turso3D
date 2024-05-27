@@ -3,7 +3,6 @@
 #include <Turso3D/IO/Log.h>
 #include <glew/glew.h>
 #include <cctype>
-#include <cassert>
 #include <algorithm>
 
 namespace Turso3D
@@ -180,22 +179,6 @@ namespace Turso3D
 		return true;
 	}
 
-	int ShaderProgram::Uniform(const std::string& name) const
-	{
-		return Uniform(StringHash(name));
-	}
-
-	int ShaderProgram::Uniform(const char* name) const
-	{
-		return Uniform(StringHash(name));
-	}
-
-	int ShaderProgram::Uniform(StringHash name) const
-	{
-		auto it = uniforms.find(name);
-		return it != uniforms.end() ? it->second : -1;
-	}
-
 	bool ShaderProgram::Bind()
 	{
 		if (!program) {
@@ -212,6 +195,57 @@ namespace Turso3D
 	void ShaderProgram::SetName(const std::string& newName)
 	{
 		name = newName;
+	}
+
+	int ShaderProgram::Uniform(const std::string& name) const
+	{
+		return Uniform(StringHash(name));
+	}
+
+	int ShaderProgram::Uniform(const char* name) const
+	{
+		return Uniform(StringHash(name));
+	}
+
+	int ShaderProgram::Uniform(StringHash name) const
+	{
+		auto it = uniforms.find(name);
+		return it != uniforms.end() ? it->second : -1;
+	}
+
+	void ShaderProgram::SetUniform(PresetUniform uniform, float value)
+	{
+		glUniform1f(Uniform(uniform), value);
+	}
+
+	void ShaderProgram::SetUniform(PresetUniform uniform, const Vector2& value)
+	{
+		glUniform2fv(Uniform(uniform), 1, value.Data());
+	}
+
+	void ShaderProgram::SetUniform(PresetUniform uniform, const Vector3& value)
+	{
+		glUniform3fv(Uniform(uniform), 1, value.Data());
+	}
+
+	void ShaderProgram::SetUniform(PresetUniform uniform, const Vector4& value)
+	{
+		glUniform4fv(Uniform(uniform), 1, value.Data());
+	}
+
+	void ShaderProgram::SetUniform(PresetUniform uniform, const Matrix3& value)
+	{
+		glUniformMatrix3fv(Uniform(uniform), 1, GL_FALSE, value.Data());
+	}
+
+	void ShaderProgram::SetUniform(PresetUniform uniform, const Matrix3x4& value)
+	{
+		glUniformMatrix3x4fv(Uniform(uniform), 1, GL_FALSE, value.Data());
+	}
+
+	void ShaderProgram::SetUniform(PresetUniform uniform, const Matrix4& value)
+	{
+		glUniformMatrix4fv(Uniform(uniform), 1, GL_FALSE, value.Data());
 	}
 
 	unsigned ShaderProgram::CompileShader(ShaderType type, const std::string& code, const std::vector<std::string>& defines)
@@ -239,7 +273,7 @@ namespace Turso3D
 				shaderCode += "#define COMPILE_FS\n";
 				break;
 			default:
-				LOG_ERROR("Shader type {:d} not implemented.", type);
+				LOG_ERROR("Shader type {:d} not implemented.", (int)type);
 				return 0;
 		}
 

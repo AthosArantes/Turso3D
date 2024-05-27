@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Turso3D/Graphics/GraphicsDefs.h>
+#include <Turso3D/Graphics/VertexArrayObject.h>
 #include <Turso3D/Math/Color.h>
 #include <Turso3D/Math/IntRect.h>
 #include <Turso3D/Math/Matrix3x4.h>
@@ -66,6 +67,7 @@ namespace Turso3D
 		void SetFrameBuffer(FrameBuffer* buffer);
 		// Set the viewport rectangle.
 		void SetViewport(const IntRect& viewRect);
+
 		// Bind a shader program for use.
 		// Return pointer on success or null otherwise.
 		// Low performance, provided for convenience.
@@ -73,42 +75,27 @@ namespace Turso3D
 		// Create a shader program, but do not bind immediately.
 		// Return pointer on success or null otherwise.
 		std::shared_ptr<ShaderProgram> CreateProgram(const std::string& shaderName, const std::string& vsDefines, const std::string& fsDefines);
-		
-		// Set float preset uniform.
-		void SetUniform(ShaderProgram* program, PresetUniform uniform, float value);
-		// Set a Vector2 preset uniform.
-		void SetUniform(ShaderProgram* program, PresetUniform uniform, const Vector2& value);
-		// Set a Vector3 preset uniform.
-		void SetUniform(ShaderProgram* program, PresetUniform uniform, const Vector3& value);
-		// Set a Vector4 preset uniform.
-		void SetUniform(ShaderProgram* program, PresetUniform uniform, const Vector4& value);
-		// Set a Matrix3x4 preset uniform.
-		void SetUniform(ShaderProgram* program, PresetUniform uniform, const Matrix3x4& value);
-		// Set a Matrix4 preset uniform.
-		void SetUniform(ShaderProgram* program, PresetUniform uniform, const Matrix4& value);
-		
-		// Set float uniform.
-		// Low performance, provided for convenience.
-		void SetUniform(ShaderProgram* program, const char* name, float value);
+
+		// Set a float uniform.
+		void SetUniform(int location, float value);
 		// Set a Vector2 uniform.
-		// Low performance, provided for convenience.
-		void SetUniform(ShaderProgram* program, const char* name, const Vector2& value);
+		void SetUniform(int location, const Vector2& value);
 		// Set a Vector3 uniform.
-		// Low performance, provided for convenience.
-		void SetUniform(ShaderProgram* program, const char* name, const Vector3& value);
+		void SetUniform(int location, const Vector3& value);
 		// Set a Vector4 uniform.
-		// Low performance, provided for convenience.
-		void SetUniform(ShaderProgram* program, const char* name, const Vector4& value);
+		void SetUniform(int location, const Vector4& value);
+		// Set a Matrix3 uniform.
+		void SetUniform(int location, const Matrix3& value);
 		// Set a Matrix3x4 uniform.
-		// Low performance, provided for convenience.
-		void SetUniform(ShaderProgram* program, const char* name, const Matrix3x4& value);
+		void SetUniform(int location, const Matrix3x4& value);
 		// Set a Matrix4 uniform.
-		// Low performance, provided for convenience.
-		void SetUniform(ShaderProgram* program, const char* name, const Matrix4& value);
+		void SetUniform(int location, const Matrix4& value);
+
 		// Bind a uniform buffer for use in slot index.
 		// Null buffer parameter to unbind.
 		// Provided for convenience.
 		void SetUniformBuffer(size_t index, UniformBuffer* buffer);
+
 		// Bind a texture for use in texture unit.
 		// Null texture parameter to unbind.
 		// Provided for convenience.
@@ -119,18 +106,18 @@ namespace Turso3D
 		// Bind an index buffer for use.
 		// Provided for convenience.
 		void SetIndexBuffer(IndexBuffer* buffer);
-		
+
 		// Set basic renderstates.
 		void SetRenderState(BlendMode blendMode, CullMode cullMode = CULL_BACK, CompareMode depthTest = CMP_LESS, bool colorWrite = true, bool depthWrite = true);
 		// Set depth bias.
 		void SetDepthBias(float constantBias = 0.0f, float slopeScaleBias = 0.0f);
 		// Clear the current framebuffer.
 		void Clear(bool clearColor = true, bool clearDepth = true, const IntRect& clearRect = IntRect::ZERO(), const Color& backgroundColor = Color::BLACK());
-		
+
 		// Blit from one framebuffer to another.
 		// The destination framebuffer will be left bound for rendering.
 		void Blit(FrameBuffer* dest, const IntRect& destRect, FrameBuffer* src, const IntRect& srcRect, bool blitColor, bool blitDepth, TextureFilterMode filter);
-		
+
 		// Draw non-indexed geometry with the currently bound vertex buffer.
 		void Draw(PrimitiveType type, size_t drawStart, size_t drawCount);
 		// Draw indexed geometry with the currently bound vertex and index buffer.
@@ -168,7 +155,7 @@ namespace Turso3D
 		int Width() const { return Size().x; }
 		// Return current window height.
 		int Height() const { return Size().y; }
-		
+
 		// Return window render size, which can be different if the OS is doing resolution scaling.
 		IntVector2 RenderSize() const;
 		// Return window render width.
@@ -185,6 +172,9 @@ namespace Turso3D
 		int FullscreenRefreshRate() const;
 		// Return the OS-level window.
 		GLFWwindow* Window() const { return window; }
+
+		// Return the default VAO.
+		VertexArrayObject& DefaultVao() { return defaultVAO; }
 
 	private:
 		// Set up the vertex buffer for quad rendering.
@@ -220,6 +210,8 @@ namespace Turso3D
 		// Free occlusion queries.
 		std::vector<unsigned> freeQueries;
 
+		VertexArrayObject defaultVAO;
+
 		// The window position before going full screen.
 		IntVector2 lastWindowPos;
 		// The window size before going full screen.
@@ -228,7 +220,7 @@ namespace Turso3D
 }
 
 #ifdef _DEBUG
-	#define TURSO3D_GL_MARKER(name) Turso3D::Graphics::Marker glscope__ {name}
+#define TURSO3D_GL_MARKER(name) Turso3D::Graphics::Marker glscope__ {name}
 #else
-	#define TURSO3D_GL_MARKER(name)
+#define TURSO3D_GL_MARKER(name)
 #endif

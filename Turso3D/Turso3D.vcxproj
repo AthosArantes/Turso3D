@@ -117,6 +117,7 @@
 		<ClInclude Include="Graphics\ShaderProgram.h" />
 		<ClInclude Include="Graphics\Texture.h" />
 		<ClInclude Include="Graphics\UniformBuffer.h" />
+		<ClInclude Include="Graphics\VertexArrayObject.h" />
 		<ClInclude Include="Graphics\VertexBuffer.h" />
 		<ClInclude Include="IO\FileStream.h" />
 		<ClInclude Include="IO\Log.h" />
@@ -177,6 +178,7 @@
 		<ClCompile Include="Graphics\ShaderProgram.cpp" />
 		<ClCompile Include="Graphics\Texture.cpp" />
 		<ClCompile Include="Graphics\UniformBuffer.cpp" />
+		<ClCompile Include="Graphics\VertexArrayObject.cpp" />
 		<ClCompile Include="Graphics\VertexBuffer.cpp" />
 		<ClCompile Include="IO\FileStream.cpp" />
 		<ClCompile Include="IO\Log.cpp" />

@@ -845,7 +845,7 @@ namespace Turso3D
 			unsigned char geometryBits = batch.programBits & SP_GEOMETRYBITS;
 
 			ShaderProgram* program = batch.pass->GetShaderProgram(batch.programBits);
-			if (!program->Bind()) {
+			if (!program || !program->Bind()) {
 				continue;
 			}
 
@@ -896,7 +896,7 @@ namespace Turso3D
 				it += batch.instanceCount - 1;
 			} else {
 				if (!geometryBits) {
-					graphics->SetUniform(program, U_WORLDMATRIX, *batch.worldTransform);
+					program->SetUniform(U_WORLDMATRIX, *batch.worldTransform);
 				} else {
 					batch.drawable->OnRender(program, batch.geomIndex);
 				}
@@ -967,7 +967,7 @@ namespace Turso3D
 				boxMatrix.m13 = center.y;
 				boxMatrix.m23 = center.z;
 
-				graphics->SetUniform(boundingBoxShaderProgram.get(), U_WORLDMATRIX, boxMatrix);
+				boundingBoxShaderProgram->SetUniform(U_WORLDMATRIX, boxMatrix);
 
 				unsigned queryId = graphics->BeginOcclusionQuery(octant);
 				graphics->DrawIndexed(PT_TRIANGLE_LIST, 0, NUM_BOX_INDICES);

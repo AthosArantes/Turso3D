@@ -174,17 +174,6 @@ namespace Turso3D
 		boundVertexAttribSource = this;
 	}
 
-	unsigned VertexBuffer::CalculateAttributeMask(const std::vector<VertexElement>& elements)
-	{
-		unsigned attributes = 0;
-		for (size_t i = 0; i < elements.size(); ++i) {
-			unsigned attributeIdx = baseAttributeIndex[elements[i].semantic] + elements[i].index;
-			unsigned attributeBit = 1 << attributeIdx;
-			attributes |= attributeBit;
-		}
-		return attributes;
-	}
-
 	bool VertexBuffer::Create(const void* data)
 	{
 		glGenBuffers(1, &buffer);
@@ -216,5 +205,25 @@ namespace Turso3D
 				boundVertexAttribSource = nullptr;
 			}
 		}
+	}
+
+	// ==========================================================================================
+	unsigned VertexBuffer::CalculateAttributeMask(const std::vector<VertexElement>& elements)
+	{
+		unsigned attributes = 0;
+		for (size_t i = 0; i < elements.size(); ++i) {
+			unsigned attributeIdx = baseAttributeIndex[elements[i].semantic] + elements[i].index;
+			unsigned attributeBit = 1 << attributeIdx;
+			attributes |= attributeBit;
+		}
+		return attributes;
+	}
+
+	void VertexBuffer::Unbind()
+	{
+		glBindBuffer(GL_ARRAY_BUFFER, 0);
+		boundVertexBuffer = nullptr;
+		boundVertexAttribSource = nullptr;
+		boundAttributes = 0;
 	}
 }

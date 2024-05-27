@@ -280,7 +280,7 @@ namespace Turso3D
 		OnTransformChanged();
 	}
 
-	void SpatialNode::OnParentSet(Node* newParent, Node*)
+	void SpatialNode::OnParentSet(Node* newParent, Node* oldParent)
 	{
 		SetFlag(FLAG_SPATIALPARENT, newParent != nullptr && newParent->TestFlag(FLAG_SPATIAL));
 		OnTransformChanged();

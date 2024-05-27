@@ -1,18 +1,14 @@
 #include "BloomRenderer.h"
-#include "BlurRenderer.h"
 #include <Turso3D/Graphics/Graphics.h>
 #include <Turso3D/Graphics/ShaderProgram.h>
 #include <Turso3D/Graphics/FrameBuffer.h>
 #include <Turso3D/Graphics/Texture.h>
 #include <Turso3D/IO/Log.h>
-#include <glew/glew.h>
 
 namespace Turso3D
 {
 	BloomRenderer::BloomRenderer()
 	{
-		blurRenderer = std::make_unique<BlurRenderer>();
-
 		resultTexture = std::make_unique<Texture>();
 		resultFbo = std::make_unique<FrameBuffer>();
 	}
@@ -25,56 +21,39 @@ namespace Turso3D
 	{
 		graphics = graphics_;
 
-		programBrightness = graphics->CreateProgram("PostProcess/Brightness.glsl", "", "");
-		uBrightThreshold = programBrightness->Uniform(StringHash {"threshold"});
+		constexpr StringHash intensityHash {"intensity"};
 
-		programCompose = graphics->CreateProgram("PostProcess/BloomCompose.glsl", "", "");
-		uIntensity = programCompose->Uniform(StringHash {"intensity"});
-
-		blurRenderer->Initialize(graphics);
+		bloomProgram = graphics->CreateProgram("PostProcess/BloomCompose.glsl", "", "");
+		uIntensity = bloomProgram->Uniform(intensityHash);
 	}
 
 	void BloomRenderer::UpdateBuffers(const IntVector2& size, ImageFormat format)
 	{
 		Log::Scope logScope {"BloomRenderer::UpdateBuffers"};
-		blurRenderer->UpdateBuffers(size, format);
 
 		resultTexture->Define(TARGET_2D, size, format);
-		resultTexture->DefineSampler(FILTER_POINT, ADDRESS_CLAMP, ADDRESS_CLAMP, ADDRESS_CLAMP);
+		resultTexture->DefineSampler(FILTER_BILINEAR, ADDRESS_CLAMP, ADDRESS_CLAMP, ADDRESS_CLAMP);
 		resultFbo->Define(resultTexture.get(), nullptr);
+
+		blurPasses.clear();
+		BlurRenderer::CreateMips(blurPasses, size / 2, format, IntVector2 {8, 8}, 0);
 	}
 
-	void BloomRenderer::Render(Texture* hdrColor, float brightThreshold, float intensity)
+	void BloomRenderer::Render(BlurRenderer* blurRenderer, Texture* hdrColor, float intensity)
 	{
-		IntRect viewRect {0, 0, resultTexture->Width(), resultTexture->Height()};
-
-		FrameBuffer* fbo = blurRenderer->GetResultFramebuffer();
-		Texture* tex = blurRenderer->GetResultTexture();
-
-		graphics->SetFrameBuffer(fbo);
-		graphics->SetViewport(viewRect);
-
-		// Sample bright areas
-		programBrightness->Bind();
-		glUniform1f(uBrightThreshold, brightThreshold);
-		hdrColor->Bind(0);
-		Texture::Unbind(1);
-		Texture::Unbind(2);
 		graphics->SetRenderState(BLEND_REPLACE, CULL_NONE, CMP_ALWAYS, true, false);
-		graphics->DrawQuad();
 
-		// Perform blur
-		blurRenderer->Render(tex);
+		blurRenderer->Render(blurPasses, hdrColor);
 
 		// Compose
-		graphics->SetFrameBuffer(resultFbo.get());
-		graphics->SetViewport(viewRect);
+		resultFbo->Bind();
+		graphics->SetViewport(IntRect {IntVector2::ZERO(), resultTexture->Size2D()});
 
-		programCompose->Bind();
-		glUniform1f(uIntensity, intensity);
+		bloomProgram->Bind();
+		graphics->SetUniform(uIntensity, intensity);
 		hdrColor->Bind(0);
-		tex->Bind(1);
-		graphics->SetRenderState(BLEND_REPLACE, CULL_NONE, CMP_ALWAYS, true, false);
+		blurPasses[0].buffer->Bind(1);
+
 		graphics->DrawQuad();
 	}
 }

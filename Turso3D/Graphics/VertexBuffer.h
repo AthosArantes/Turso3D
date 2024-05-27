@@ -52,6 +52,8 @@ namespace Turso3D
 		// Calculate a vertex attribute mask from elements.
 		static unsigned CalculateAttributeMask(const std::vector<VertexElement>& elements);
 
+		static void Unbind();
+
 	private:
 		// Create the GPU-side vertex buffer. Return true on success.
 		bool Create(const void* data);

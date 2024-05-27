@@ -8,6 +8,13 @@
 
 namespace Turso3D
 {
+	class Vector2;
+	class Vector3;
+	class Vector4;
+	class Matrix3;
+	class Matrix3x4;
+	class Matrix4;
+
 	// Linked shader program consisting of vertex and fragment shaders.
 	class ShaderProgram
 	{
@@ -42,6 +49,21 @@ namespace Turso3D
 		int Uniform(StringHash name) const;
 		// Return preset uniform location or negative if not found.
 		int Uniform(PresetUniform uniform) const { return presetUniforms[uniform]; }
+
+		// Set a float preset uniform.
+		void SetUniform(PresetUniform uniform, float value);
+		// Set a Vector2 preset uniform.
+		void SetUniform(PresetUniform uniform, const Vector2& value);
+		// Set a Vector3 preset uniform.
+		void SetUniform(PresetUniform uniform, const Vector3& value);
+		// Set a Vector4 preset uniform.
+		void SetUniform(PresetUniform uniform, const Vector4& value);
+		// Set a Matrix3 preset uniform.
+		void SetUniform(PresetUniform uniform, const Matrix3& value);
+		// Set a Matrix3x4 preset uniform.
+		void SetUniform(PresetUniform uniform, const Matrix3x4& value);
+		// Set a Matrix4 preset uniform.
+		void SetUniform(PresetUniform uniform, const Matrix4& value);
 
 		// Return the OpenGL shader program identifier.
 		// Zero if not successfully compiled and linked.

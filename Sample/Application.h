@@ -1,5 +1,6 @@
 #pragma once
 
+#include "BlurRenderer.h"
 #include <Turso3D/Math/Vector2.h>
 #include <map>
 #include <memory>
@@ -28,7 +29,6 @@ namespace Turso3D
 
 	class BloomRenderer;
 	class SSAORenderer;
-	class BlurRenderer;
 
 	class RmlFile;
 	class RmlSystem;
@@ -104,7 +104,6 @@ private:
 
 	std::unique_ptr<Turso3D::BloomRenderer> bloomRenderer;
 	std::unique_ptr<Turso3D::SSAORenderer> ssaoRenderer;
-	std::unique_ptr<Turso3D::BlurRenderer> blurRenderer;
 
 	std::shared_ptr<Turso3D::Camera> camera;
 	std::shared_ptr<Turso3D::Scene> scene;
@@ -113,6 +112,9 @@ private:
 	std::unique_ptr<Turso3D::RmlSystem> rmlSystem;
 	std::unique_ptr<Turso3D::RmlRenderer> rmlRenderer;
 	Rml::Context* mainContext;
+
+	Turso3D::BlurRenderer blurRenderer;
+	std::vector<Turso3D::BlurRenderer::MipPass> sceneBlurPasses;
 
 	int multiSample;
 

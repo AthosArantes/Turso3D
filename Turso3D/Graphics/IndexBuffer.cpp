@@ -80,12 +80,6 @@ namespace Turso3D
 		boundIndexSize = indexSize;
 	}
 
-	size_t IndexBuffer::BoundIndexSize()
-	{
-		return boundIndexSize;
-	}
-
-
 	bool IndexBuffer::Create(const void* data)
 	{
 		glGenBuffers(1, &buffer);
@@ -112,5 +106,18 @@ namespace Turso3D
 				boundIndexSize = 0;
 			}
 		}
+	}
+
+	// ==========================================================================================
+	size_t IndexBuffer::BoundIndexSize()
+	{
+		return boundIndexSize;
+	}
+
+	void IndexBuffer::Unbind()
+	{
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+		boundIndexBuffer = nullptr;
+		boundIndexSize = 0;
 	}
 }

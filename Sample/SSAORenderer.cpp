@@ -3,15 +3,16 @@
 #include <Turso3D/Graphics/ShaderProgram.h>
 #include <Turso3D/Graphics/FrameBuffer.h>
 #include <Turso3D/Graphics/Texture.h>
+#include <Turso3D/Graphics/UniformBuffer.h>
 #include <Turso3D/Math/Random.h>
 #include <Turso3D/Renderer/Camera.h>
 #include <Turso3D/IO/Log.h>
-#include <glew/glew.h>
 
 namespace Turso3D
 {
 	SSAORenderer::SSAORenderer()
 	{
+		ssaoUniformBuffer = std::make_unique<UniformBuffer>();
 		noiseTexture = std::make_unique<Texture>();
 		resultTexture = std::make_unique<Texture>();
 		resultFbo = std::make_unique<FrameBuffer>();
@@ -25,15 +26,16 @@ namespace Turso3D
 	{
 		graphics = graphics_;
 
-		program = graphics->CreateProgram("PostProcess/SSAO.glsl", "", "");
-		uNoiseInvSize = program->Uniform(StringHash {"noiseInvSize"});
-		uAoParameters = program->Uniform(StringHash {"aoParameters"});
-		uScreenInvSize = program->Uniform(StringHash {"screenInvSize"});
-		uFrustumSize = program->Uniform(StringHash {"frustumSize"});
-		uDepthReconstruct = program->Uniform(StringHash {"depthReconstruct"});
+		constexpr StringHash blurInvSizeHash {"blurInvSize"};
+		ssaoProgram = graphics->CreateProgram("PostProcess/SSAO.glsl", "", "");
 
-		programBlur = graphics->CreateProgram("PostProcess/SSAOBlur.glsl", "", "");
-		uBlurInvSize = programBlur->Uniform(StringHash {"blurInvSize"});
+		blurProgram = graphics->CreateProgram("PostProcess/SSAOBlur.glsl", "", "");
+		uBlurInvSize = blurProgram->Uniform(blurInvSizeHash);
+
+		ssaoUniformBuffer->Define(USAGE_DYNAMIC, sizeof(UniformDataBlock), &uniformData);
+
+		// Default AO parameters
+		uniformData.aoParams = Vector4 {0.15f, 1.0f, 0.025f, 0.15f};
 
 		GenerateNoiseTexture();
 	}
@@ -43,52 +45,66 @@ namespace Turso3D
 		Log::Scope logScope {"SSAORenderer::UpdateBuffers"};
 		IntVector2 texSize {size.x / 2, size.y / 2};
 
-		resultTexture->Define(TARGET_2D, texSize, FORMAT_RGBA8_UNORM_PACK32);
+		resultTexture->Define(TARGET_2D, texSize, FORMAT_RGB8_UNORM_PACK8);
 		resultTexture->DefineSampler(FILTER_BILINEAR, ADDRESS_CLAMP, ADDRESS_CLAMP, ADDRESS_CLAMP);
 		resultFbo->Define(resultTexture.get(), nullptr);
+
+		uniformDataDirty = true;
 	}
 
 	void SSAORenderer::Render(Camera* camera, Texture* normal, Texture* depth, FrameBuffer* dst, const IntRect& viewRect)
 	{
-		//IntRect screenRect {0, 0, screenSize.x, screenSize.y};
-		IntVector2 ssaoSize {resultTexture->Width(), resultTexture->Height()};
+		// Update uniforms
+		Vector3 near, far;
+		camera->FrustumSize(near, far);
+		Vector4 frustumSize {far.x, far.y, far.z, (float)viewRect.Height() / (float)viewRect.Width()};
+		if (frustumSize != uniformData.frustumSize) {
+			uniformData.frustumSize = frustumSize;
+			uniformDataDirty = true;
+		}
 
-		// First sample the normals and depth buffer, then apply a blurred SSAO result that darkens the opaque geometry
-		float farClip = camera->FarClip();
-		float nearClip = camera->NearClip();
-		Vector3 nearVec, farVec;
-		camera->FrustumSize(nearVec, farVec);
+		Vector2 clipParams {camera->NearClip(), camera->FarClip()};
+		Vector2 depthReconstruct {
+			clipParams.y / (clipParams.y - clipParams.x),
+			-clipParams.x / (clipParams.y - clipParams.x)
+		};
+		if (depthReconstruct != uniformData.depthReconstruct) {
+			uniformData.depthReconstruct = depthReconstruct;
+			uniformDataDirty = true;
+		}
+
+		if (uniformDataDirty) {
+			uniformData.noiseInvSize = Vector2 {(float)resultTexture->Width() / noiseTexture->Width(), (float)resultTexture->Height() / noiseTexture->Height()};
+			uniformData.screenInvSize = Vector2 {1.0f / viewRect.Width(), 1.0f / viewRect.Height()};
+
+			ssaoUniformBuffer->SetData(0, sizeof(UniformDataBlock), &uniformData, false);
+			uniformDataDirty = false;
+		}
 
 		// SSAO pass
-		program->Bind();
-		graphics->SetFrameBuffer(resultFbo.get());
-		graphics->SetViewport(IntRect {0, 0, ssaoSize.x, ssaoSize.y});
+		resultFbo->Bind();
+		ssaoProgram->Bind();
+		graphics->SetViewport(IntRect {IntVector2::ZERO(), resultTexture->Size2D()});
 
 		depth->Bind(0);
 		normal->Bind(1);
 		noiseTexture->Bind(2);
 
-		glUniform2f(uNoiseInvSize, ssaoSize.x / 4.0f, ssaoSize.y / 4.0f);
-		glUniform4f(uAoParameters, 0.15f, 1.0f, 0.025f, 0.15f);
-		glUniform2f(uScreenInvSize, 1.0f / viewRect.Width(), 1.0f / viewRect.Height());
-
-		glUniform4f(uFrustumSize, farVec.x, farVec.y, farVec.z, (float)viewRect.Height() / (float)viewRect.Width());
-		glUniform2f(uDepthReconstruct,
-			farClip / (farClip - nearClip),
-			-nearClip / (farClip - nearClip)
-		);
+		ssaoUniformBuffer->Bind(UB_CUSTOM);
 
 		graphics->SetRenderState(BLEND_REPLACE, CULL_NONE, CMP_ALWAYS, true, false);
 		graphics->DrawQuad();
 
+		//UniformBuffer::Unbind(UB_CUSTOM);
+
 		// Blur pass
-		programBlur->Bind();
-		graphics->SetFrameBuffer(dst);
+		dst->Bind();
+		blurProgram->Bind();
 		graphics->SetViewport(viewRect);
 
 		resultTexture->Bind(0);
-		glUniform2f(uBlurInvSize, 1.0f / ssaoSize.x, 1.0f / ssaoSize.y);
-		
+		graphics->SetUniform(uBlurInvSize, Vector2 {1.0f / resultTexture->Width(), 1.0f / resultTexture->Height()});
+
 		graphics->SetRenderState(BLEND_SUBTRACT, CULL_NONE, CMP_ALWAYS, true, false);
 		graphics->DrawQuad();
 	}
@@ -111,5 +127,7 @@ namespace Turso3D
 		noiseTexture->Define(TARGET_2D, IntVector3 {4, 4, 1}, FORMAT_RGBA8_UNORM_PACK32, 1, 1);
 		noiseTexture->DefineSampler(FILTER_POINT);
 		noiseTexture->SetData(noiseDataLevel);
+
+		uniformDataDirty = true;
 	}
 }

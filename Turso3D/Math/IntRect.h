@@ -33,6 +33,15 @@ namespace Turso3D
 		{
 		}
 
+		// Construct from coordinates.
+		IntRect(const IntVector2& leftTop, const IntVector2& rightBottom) :
+			left(leftTop.x),
+			top(leftTop.y),
+			right(rightBottom.x),
+			bottom(rightBottom.y)
+		{
+		}
+
 		IntRect& operator = (const IntRect& rhs)
 		{
 			left = rhs.left;

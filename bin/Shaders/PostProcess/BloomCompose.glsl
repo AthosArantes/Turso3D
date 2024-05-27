@@ -21,12 +21,12 @@ void main()
 // ================================================================================================
 #ifdef COMPILE_FS
 
+in vec2 texCoord;
+out vec3 fragColor;
+
 uniform sampler2D srcTex0;
 uniform sampler2D bloomTex1;
 uniform float intensity;
-
-in vec2 texCoord;
-out vec3 fragColor;
 
 void main()
 {
