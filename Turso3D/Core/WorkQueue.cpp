@@ -76,13 +76,9 @@ namespace Turso3D
 			threads.clear();
 		}
 
-		if (numThreads == 0) {
-			numThreads = std::thread::hardware_concurrency();
-			// Avoid completely excessive core count
-			if (numThreads > 16) {
-				numThreads = 16;
-			}
-		}
+		// Limit work threads
+		unsigned max_threads = std::thread::hardware_concurrency();
+		numThreads = std::min(std::min(numThreads, max_threads), 8u);
 
 		LOG_INFO("Creating {} worker threads.", numThreads);
 
@@ -90,19 +86,19 @@ namespace Turso3D
 			std::thread& worker = threads.emplace_back(std::thread(&WorkQueue::WorkerLoop, this, i + 1));
 
 #ifdef _WIN32
-			// Do Windows-specific thread setup:
+			// Do Windows-specific thread setup
 			HANDLE handle = (HANDLE)worker.native_handle();
 
-			// Put each thread on to dedicated core:
-			DWORD_PTR affinityMask = (DWORD_PTR)(1ull << i);
-			DWORD_PTR affinity_result = SetThreadAffinityMask(handle, affinityMask);
-			assert(affinity_result > 0);
+			// Put each thread on to dedicated core
+			//DWORD_PTR affinityMask = (DWORD_PTR)(1ull << i);
+			//DWORD_PTR affinity_result = SetThreadAffinityMask(handle, affinityMask);
+			//assert(affinity_result > 0);
 
-			//// Increase thread priority:
+			// Increase thread priority
 			//BOOL priority_result = SetThreadPriority(handle, THREAD_PRIORITY_HIGHEST);
 			//assert(priority_result != 0);
 
-			// Name the thread:
+			// Name the thread
 			std::wstring wthreadname = L"WorkQueue_" + std::to_wstring(i);
 			HRESULT hr = SetThreadDescription(handle, wthreadname.c_str());
 			assert(SUCCEEDED(hr));

@@ -81,8 +81,6 @@ namespace Turso3D
 		GL_FUNC_REVERSE_SUBTRACT
 	};
 
-	unsigned occlusionQueryType = GL_SAMPLES_PASSED;
-
 #ifdef _DEBUG
 	const char* GLSeverity(GLenum severity)
 	{
@@ -158,6 +156,7 @@ namespace Turso3D
 #endif
 
 		glfwWindowHint(GLFW_SRGB_CAPABLE, GLFW_TRUE);
+		glfwWindowHint(GLFW_DOUBLEBUFFER, GLFW_TRUE);
 
 		glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
 		glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
@@ -182,11 +181,6 @@ namespace Turso3D
 		if (err != GLEW_OK || !GLEW_VERSION_3_3) {
 			LOG_ERROR("Could not initialize OpenGL 3.3");
 			return false;
-		}
-
-		// "Any samples passed" is potentially faster if supported
-		if (GLEW_VERSION_3_3) {
-			occlusionQueryType = GL_ANY_SAMPLES_PASSED;
 		}
 
 		if (!GLEW_VERSION_4_0 && !GLEW_ARB_texture_cube_map_array) {
@@ -597,7 +591,7 @@ namespace Turso3D
 			glGenQueries(1, &queryId);
 		}
 
-		glBeginQuery(occlusionQueryType, queryId);
+		glBeginQuery(GL_ANY_SAMPLES_PASSED, queryId);
 		pendingQueries.push_back(std::make_pair(queryId, object));
 
 		return queryId;
@@ -605,7 +599,7 @@ namespace Turso3D
 
 	void Graphics::EndOcclusionQuery()
 	{
-		glEndQuery(occlusionQueryType);
+		glEndQuery(GL_ANY_SAMPLES_PASSED);
 	}
 
 	void Graphics::FreeOcclusionQuery(unsigned queryId)

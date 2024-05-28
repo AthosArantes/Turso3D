@@ -912,15 +912,13 @@ namespace Turso3D
 
 	void Renderer::CheckOcclusionQueries()
 	{
-		static std::vector<OcclusionQueryResult> results;
-		results.clear();
+		constexpr float target_rate = 1.0f / 60.0f;
 
-		graphics->CheckOcclusionQueryResults(results, lastFrameTime < (1.0f / 60.0f));
-		{
-			for (auto it = results.begin(); it != results.end(); ++it) {
-				Octant* octant = static_cast<Octant*>(it->object);
-				octant->OnOcclusionQueryResult(it->visible);
-			}
+		occlusionQueryResults.clear();
+		graphics->CheckOcclusionQueryResults(occlusionQueryResults, lastFrameTime < target_rate);
+		for (OcclusionQueryResult& result : occlusionQueryResults) {
+			Octant* octant = static_cast<Octant*>(result.object);
+			octant->OnOcclusionQueryResult(result.visible);
 		}
 	}
 

@@ -29,6 +29,7 @@ namespace Turso3D
 	class VertexBuffer;
 	class IndexBuffer;
 	class WorkQueue;
+	struct OcclusionQueryResult;
 	struct CollectOctantsTask;
 	struct CollectBatchesTask;
 	struct CollectShadowBatchesTask;
@@ -298,6 +299,8 @@ namespace Turso3D
 		Vector3 previousCameraPosition;
 		// Last frame time for occlusion query staggering.
 		float lastFrameTime;
+		// Container for holding occlusion query results.
+		std::vector<OcclusionQueryResult> occlusionQueryResults;
 		// Root-level octants, used as a starting point for octant and batch collection.
 		// The root octant is included if it also contains drawables.
 		std::vector<Octant*> rootLevelOctants;
