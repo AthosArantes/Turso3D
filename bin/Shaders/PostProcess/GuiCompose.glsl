@@ -24,22 +24,22 @@ void main()
 in vec2 texCoord;
 out vec4 fragColor;
 
-uniform sampler2D srcTex0; // ui
-uniform sampler2D sceneTex1; // scene
-uniform sampler2D sceneBlurTex2; // blurred scene
+uniform sampler2D sceneTex0;
+uniform sampler2D sceneBlurTex1;
+uniform sampler2D uiTex2;
+uniform sampler2D uiMaskTex3;
 
 void main()
 {
-	vec4 samplerUi = texture(srcTex0, texCoord);
-	vec4 samplerScene = texture(sceneTex1, texCoord);
-	vec4 samplerSceneBlur = texture(sceneBlurTex2, texCoord);
+	vec4 sceneColor = texture(sceneTex0, texCoord);
+	vec4 sceneColorBlur = texture(sceneBlurTex1, texCoord);
+	vec4 uiColor = texture(uiTex2, texCoord);
+	float uiMask = texture(uiMaskTex3, texCoord).r;
 
-	float alpha = samplerUi.a;
-	float mask = 1.0 - step(0.0, -alpha);
+	vec4 uiBlurredBackground = mix(sceneColor, sceneColorBlur, uiMask);
 
-	vec4 gui = mix(samplerSceneBlur, samplerUi, alpha);
-	fragColor = mix(samplerScene, gui, mask);
-	fragColor.a = clamp((samplerScene.a + gui.a), 0.0, 1.0);
+	fragColor = mix(uiBlurredBackground, uiColor, uiColor.a);
+	fragColor.a = clamp((sceneColor.a + uiBlurredBackground.a), 0.0, 1.0);
 }
 
 #endif

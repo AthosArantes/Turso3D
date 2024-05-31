@@ -1,8 +1,7 @@
 #pragma once
 
 #include <RmlUi/Core/RenderInterface.h>
-#include <Turso3D/Graphics/VertexBuffer.h>
-#include <Turso3D/Graphics/IndexBuffer.h>
+#include <Turso3D/Graphics/VertexArrayObject.h>
 #include <Turso3D/Math/IntVector2.h>
 #include <vector>
 #include <memory>
@@ -11,6 +10,7 @@ namespace Turso3D
 {
 	class Graphics;
 	class FrameBuffer;
+	class RenderBuffer;
 	class ShaderProgram;
 	class Texture;
 
@@ -23,19 +23,14 @@ namespace Turso3D
 			Scissor
 		};
 
-		struct CompiledGeometry
-		{
-			VertexBuffer vbo;
-			IndexBuffer ibo;
-			Texture* texture;
-		};
-
 		struct ShaderProgramGroup
 		{
 			std::shared_ptr<ShaderProgram> program;
 			int translateIndex; // Translation uniform location.
 			int transformIndex; // Transform uniform location.
 		};
+
+		struct CompiledGeometry;
 
 	public:
 		// Constructor
@@ -62,17 +57,28 @@ namespace Turso3D
 		void BeginRender();
 		void EndRender();
 
+		// Return the color texture.
 		Texture* GetTexture() { return buffer[0].get(); }
+		// Return the mask texture.
+		Texture* GetMaskTexture() { return buffer[1].get(); }
 
 	private:
 		// Cached graphics subsystem
 		Graphics* graphics;
 
+		VertexArrayObject vao;
 		ShaderProgramGroup programs[2];
 
-		// Multisampled/Resolved textures
+		// Color/Mask buffers.
 		std::unique_ptr<Texture> buffer[2];
-		std::unique_ptr<FrameBuffer> fbo[2];
+		// Color/Mask renderbuffers.
+		std::unique_ptr<RenderBuffer> rbo[2];
+		// Framebuffer.
+		std::unique_ptr<FrameBuffer> fbo;
+
+		// Framebuffers used to resolve multisampled renderbuffers
+		std::unique_ptr<FrameBuffer> srcFbo[2];
+		std::unique_ptr<FrameBuffer> dstFbo[2];
 
 		// Textures in use by RmlUi
 		std::vector<std::shared_ptr<Texture>> textures;

@@ -1,8 +1,11 @@
 #include "RmlRenderer.h"
 #include <Turso3D/Graphics/Graphics.h>
 #include <Turso3D/Graphics/FrameBuffer.h>
+#include <Turso3D/Graphics/RenderBuffer.h>
 #include <Turso3D/Graphics/Shader.h>
 #include <Turso3D/Graphics/ShaderProgram.h>
+#include <Turso3D/Graphics/VertexBuffer.h>
+#include <Turso3D/Graphics/IndexBuffer.h>
 #include <Turso3D/Graphics/Texture.h>
 #include <Turso3D/Math/Matrix3x4.h>
 #include <Turso3D/IO/Log.h>
@@ -25,15 +28,26 @@ namespace Turso3D
 	};
 
 	// ==========================================================================================
+	struct RmlRenderer::CompiledGeometry
+	{
+		VertexBuffer vbo;
+		IndexBuffer ibo;
+		Texture* texture;
+	};
+
+	// ==========================================================================================
 	RmlRenderer::RmlRenderer(Graphics* graphics) :
 		graphics(graphics)
 	{
 		for (int i = 0; i < 2; ++i) {
 			buffer[i] = std::make_unique<Texture>();
-			fbo[i] = std::make_unique<FrameBuffer>();
+			rbo[i] = std::make_unique<RenderBuffer>();
+			srcFbo[i] = std::make_unique<FrameBuffer>();
+			dstFbo[i] = std::make_unique<FrameBuffer>();
 		}
+		fbo = std::make_unique<FrameBuffer>();
 
-		constexpr const char* defines[] = {
+		constexpr const char* defines[] {
 			"",
 			"TEXTURED"
 		};
@@ -45,6 +59,24 @@ namespace Turso3D
 			programs[i].translateIndex = programs[i].program->Uniform(uniformTranslateHash);
 			programs[i].transformIndex = programs[i].program->Uniform(uniformTransformHash);
 		}
+
+		//*
+		vao.Define();
+
+		glEnableVertexAttribArray(ATTR_POSITION);
+		glVertexAttribFormat(ATTR_POSITION, 2, GL_FLOAT, GL_FALSE, offsetof(Rml::Vertex, position));
+		glVertexAttribBinding(ATTR_POSITION, 0);
+
+		glEnableVertexAttribArray(ATTR_VERTEXCOLOR);
+		glVertexAttribFormat(ATTR_VERTEXCOLOR, 4, GL_UNSIGNED_BYTE, GL_TRUE, offsetof(Rml::Vertex, colour));
+		glVertexAttribBinding(ATTR_VERTEXCOLOR, 0);
+
+		glEnableVertexAttribArray(ATTR_TEXCOORD);
+		glVertexAttribFormat(ATTR_TEXCOORD, 2, GL_FLOAT, GL_FALSE, offsetof(Rml::Vertex, tex_coord));
+		glVertexAttribBinding(ATTR_TEXCOORD, 0);
+
+		graphics->DefaultVao().Bind();
+		//*/
 
 		maxDiscardedGeometryMem = 8 * 1000 * 1000; // 8 MB
 		discardedGeometryMem = 0;
@@ -101,19 +133,18 @@ namespace Turso3D
 		CompiledGeometry* cg = reinterpret_cast<CompiledGeometry*>(handle);
 
 		ShaderProgramGroup& program_group = programs[(cg->texture != nullptr) ? TEXTURED_PROGRAM : COLOR_PROGRAM];
-
 		program_group.program->Bind();
 		glUniform2f(program_group.translateIndex, translation.x, translation.y);
 		glUniformMatrix4fv(program_group.transformIndex, 1, GL_FALSE, transform.data());
 
-		cg->vbo.Bind(program_group.program->Attributes());
+		glBindVertexBuffer(0, cg->vbo.GLBuffer(), 0, sizeof(Rml::Vertex));
 		cg->ibo.Bind();
 
 		if (cg->texture) {
 			cg->texture->Bind(0);
 		}
 
-		graphics->DrawIndexed(PT_TRIANGLE_LIST, 0, cg->ibo.NumIndices());
+		glDrawElements(GL_TRIANGLES, cg->ibo.NumIndices(), GL_UNSIGNED_INT, nullptr);
 	}
 
 	void RmlRenderer::ReleaseCompiledGeometry(Rml::CompiledGeometryHandle handle)
@@ -266,14 +297,28 @@ namespace Turso3D
 		viewSize = size;
 		multisample = std::max(multisample_, 1);
 
-		for (int i = 0; i < 2; ++i) {
-			buffer[i]->Define(TARGET_2D, size, FORMAT_RGBA8_SRGB_PACK32, multisample * i);
-			buffer[i]->DefineSampler(FILTER_BILINEAR, ADDRESS_CLAMP, ADDRESS_CLAMP, ADDRESS_CLAMP);
-			fbo[i]->Define(buffer[i].get(), nullptr);
+		// Color/Mask formats
+		constexpr ImageFormat formats[] = {FORMAT_RGBA8_SRGB_PACK32, FORMAT_R8_UNORM_PACK8};
 
-			if (multisample == 1) {
-				break;
+		for (int i = 0; i < 2; ++i) {
+			buffer[i]->Define(TARGET_2D, size, formats[i], 1, 1);
+			buffer[i]->DefineSampler(FILTER_POINT, ADDRESS_CLAMP, ADDRESS_CLAMP, ADDRESS_CLAMP);
+		}
+
+		if (multisample > 1) {
+			for (int i = 0; i < 2; ++i) {
+				rbo[i]->Define(size, formats[i], multisample);
+
+				srcFbo[i]->Define(rbo[i].get(), nullptr);
+				dstFbo[i]->Define(buffer[i].get(), nullptr);
 			}
+
+			RenderBuffer* const mrt[] {rbo[0].get(), rbo[1].get()};
+			fbo->Define(mrt, 2, nullptr);
+
+		} else {
+			Texture* const mrt[] {buffer[0].get(), buffer[1].get()};
+			fbo->Define(mrt, 2, nullptr);
 		}
 
 		projection = Rml::Matrix4f::ProjectOrtho(0, (float)size.x, (float)size.y, 0, -10000, 10000);
@@ -282,17 +327,19 @@ namespace Turso3D
 
 	void RmlRenderer::BeginRender()
 	{
-		fbo[(multisample > 1) ? 1 : 0]->Bind();
+		fbo->Bind();
 
 		glClearStencil(0);
 		glClearColor(0, 0, 0, 0);
 		glClear(GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
-		graphics->SetRenderState(BLEND_ALPHA, CULL_NONE, CMP_ALWAYS, true, false);
+		graphics->SetRenderState(BLEND_ADDALPHA, CULL_NONE, CMP_ALWAYS, true, false);
 
 		glEnable(GL_STENCIL_TEST);
 		glStencilFunc(GL_ALWAYS, 1, GLuint(-1));
 		glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
+
+		vao.Bind();
 	}
 
 	void RmlRenderer::EndRender()
@@ -302,7 +349,11 @@ namespace Turso3D
 		// Resolve multisampled buffer
 		if (multisample > 1) {
 			IntRect rc {IntVector2::ZERO(), viewSize};
-			graphics->Blit(fbo[0].get(), rc, fbo[1].get(), rc, true, false, FILTER_BILINEAR);
+			for (int i = 0; i < 2; ++i) {
+				graphics->Blit(dstFbo[i].get(), rc, srcFbo[i].get(), rc, true, false, FILTER_BILINEAR);
+			}
 		}
+
+		graphics->DefaultVao().Bind();
 	}
 }

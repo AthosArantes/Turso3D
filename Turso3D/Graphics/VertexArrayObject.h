@@ -8,13 +8,18 @@ namespace Turso3D
 		VertexArrayObject();
 		~VertexArrayObject();
 
-		// Create a new VAO.
+		// Create a new VAO and bind it.
+		// no-op if already defined.
 		bool Define();
 		// Bind the VAO, no-op if already bound.
 		void Bind();
 
-		operator bool() const { return vao != 0; }
+		// Return whether this VAO is defined.
+		bool IsDefined() const { return vao != 0; }
+		// Return OpenGL internal object.
+		unsigned GLObject() const { return vao; }
 
+		// Unbind current VAO.
 		static void Unbind();
 
 	private:

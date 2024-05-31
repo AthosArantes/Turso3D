@@ -20,13 +20,17 @@ namespace Turso3D
 		// Define renderbuffers to render to.
 		// Leave buffer(s) null for color-only or depth-only rendering.
 		void Define(RenderBuffer* colorBuffer, RenderBuffer* depthStencilBuffer);
+		// Define renderbuffers to render to.
+		// Leave buffer(s) null for color-only or depth-only rendering.
+		void Define(RenderBuffer* const* colorBuffer, size_t countBuffers, RenderBuffer* depthStencilBuffer);
+
 		// Define textures to render to.
 		// Leave texture(s) null for color-only or depth-only rendering.
 		void Define(Texture* colorTexture, Texture* depthStencilTexture);
 		// Define cube map face to render to.
 		void Define(Texture* colorTexture, size_t cubeMapFace, Texture* depthStencilTexture);
 		// Define MRT textures to render to.
-		void Define(Texture** colorTextures, size_t countColorTextures, Texture* depthStencilTexture);
+		void Define(Texture* const* colorTextures, size_t countColorTextures, Texture* depthStencilTexture);
 
 		// Bind as draw framebuffer.
 		// No-op if already bound.

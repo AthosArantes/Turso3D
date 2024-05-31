@@ -170,6 +170,7 @@ namespace Turso3D
 		// Return the fullscreen refresh rate.
 		// Return 0 if windowed mode.
 		int FullscreenRefreshRate() const;
+
 		// Return the OS-level window.
 		GLFWwindow* Window() const { return window; }
 

@@ -57,6 +57,54 @@ namespace Turso3D
 		LOG_DEBUG("Defined framebuffer object from render buffer: [{:d} x {:d}]", size.x, size.y);
 	}
 
+	void FrameBuffer::Define(RenderBuffer* const* colorBuffer, size_t countBuffers, RenderBuffer* depthStencilBuffer)
+	{
+		if (!buffer) {
+			Create();
+		}
+
+		Bind();
+
+		IntVector2 size = IntVector2::ZERO();
+
+		std::vector<GLenum> drawBufferIds;
+		for (size_t i = 0; i < countBuffers; ++i) {
+			if (colorBuffer[i]) {
+				if (size != IntVector2::ZERO() && size != colorBuffer[i]->Size()) {
+					LOG_WARNING("Framebuffer color dimensions don't match");
+				} else {
+					size = colorBuffer[i]->Size();
+				}
+				drawBufferIds.push_back(GL_COLOR_ATTACHMENT0 + (GLenum)i);
+				glFramebufferRenderbuffer(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + (GLenum)i, GL_RENDERBUFFER, colorBuffer[i]->GLBuffer());
+			} else {
+				glFramebufferRenderbuffer(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + (GLenum)i, GL_RENDERBUFFER, 0);
+			}
+		}
+
+		if (drawBufferIds.size()) {
+			glDrawBuffers((GLsizei)drawBufferIds.size(), &drawBufferIds[0]);
+		} else {
+			glDrawBuffer(GL_NONE);
+		}
+
+		if (depthStencilBuffer) {
+			if (size != IntVector2::ZERO() && size != depthStencilBuffer->Size()) {
+				LOG_WARNING("Framebuffer color and depth dimensions don't match");
+			} else {
+				size = depthStencilBuffer->Size();
+			}
+			unsigned stencil = Texture::IsStencil(depthStencilBuffer->Format()) ? depthStencilBuffer->GLBuffer() : 0;
+			glFramebufferRenderbuffer(GL_DRAW_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, depthStencilBuffer->GLBuffer());
+			glFramebufferRenderbuffer(GL_DRAW_FRAMEBUFFER, GL_STENCIL_ATTACHMENT, GL_RENDERBUFFER, stencil);
+		} else {
+			glFramebufferRenderbuffer(GL_DRAW_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, 0);
+			glFramebufferRenderbuffer(GL_DRAW_FRAMEBUFFER, GL_STENCIL_ATTACHMENT, GL_RENDERBUFFER, 0);
+		}
+
+		LOG_DEBUG("Defined MRT framebuffer object from render buffer: [{:d} x {:d}]", size.x, size.y);
+	}
+
 	void FrameBuffer::Define(Texture* colorTexture, Texture* depthStencilTexture)
 	{
 		if (!buffer) {
@@ -129,7 +177,7 @@ namespace Turso3D
 		LOG_DEBUG("Defined framebuffer object from cube texture: [{:d} x {:d}] Face [{:d}]", size.x, size.y, cubeMapFace);
 	}
 
-	void FrameBuffer::Define(Texture** colorTextures, size_t countColorTextures, Texture* depthStencilTexture)
+	void FrameBuffer::Define(Texture* const* colorTextures, size_t countColorTextures, Texture* depthStencilTexture)
 	{
 		if (!buffer) {
 			Create();

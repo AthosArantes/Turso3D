@@ -187,6 +187,10 @@ namespace Turso3D
 			LOG_ERROR("ARB_texture_cube_map_array not supported.");
 			return false;
 		}
+		if (!GLEW_VERSION_4_3 && !GLEW_ARB_vertex_attrib_binding) {
+			LOG_ERROR("ARB_vertex_attrib_binding not supported.");
+			return false;
+		}
 
 #ifdef _DEBUG
 		glEnable(GL_DEBUG_OUTPUT);
@@ -225,13 +229,10 @@ namespace Turso3D
 		defaultVAO.Define();
 
 		// Use texcoords 3-5 for instancing if supported
-		if (glVertexAttribDivisorARB) {
-			hasInstancing = true;
-
-			glVertexAttribDivisorARB(ATTR_TEXCOORD3, 1);
-			glVertexAttribDivisorARB(ATTR_TEXCOORD4, 1);
-			glVertexAttribDivisorARB(ATTR_TEXCOORD5, 1);
-		}
+		hasInstancing = true;
+		glVertexAttribDivisor(ATTR_TEXCOORD3, 1);
+		glVertexAttribDivisor(ATTR_TEXCOORD4, 1);
+		glVertexAttribDivisor(ATTR_TEXCOORD5, 1);
 
 		DefineQuadVertexBuffer();
 		SetVSync(vsync);

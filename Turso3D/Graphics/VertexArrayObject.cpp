@@ -1,12 +1,10 @@
 #include <Turso3D/Graphics/VertexArrayObject.h>
-#include <Turso3D/Graphics/VertexBuffer.h>
-#include <Turso3D/Graphics/IndexBuffer.h>
 #include <Turso3D/IO/Log.h>
 #include <glew/glew.h>
 
 namespace Turso3D
 {
-	static Turso3D::VertexArrayObject* BoundVAO = nullptr;
+	static VertexArrayObject* BoundVAO = nullptr;
 
 	// ==========================================================================================
 	VertexArrayObject::VertexArrayObject() :

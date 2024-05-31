@@ -525,13 +525,13 @@ void Application::OnFramebufferSize(int width, int height)
 	// Define the base rendertargets
 	for (int i = 0; i < 2; ++i) {
 		hdrBuffer[i]->Define(TARGET_2D, sz, FORMAT_RG11B10_UFLOAT_PACK32, multiSample * i);
-		hdrBuffer[i]->DefineSampler(FILTER_BILINEAR, ADDRESS_CLAMP, ADDRESS_CLAMP, ADDRESS_CLAMP);
+		hdrBuffer[i]->DefineSampler(FILTER_POINT, ADDRESS_CLAMP, ADDRESS_CLAMP, ADDRESS_CLAMP);
 
 		normalBuffer[i]->Define(TARGET_2D, sz, FORMAT_RGB16_SNORM_PACK16, multiSample * i);
-		normalBuffer[i]->DefineSampler(FILTER_BILINEAR, ADDRESS_CLAMP, ADDRESS_CLAMP, ADDRESS_CLAMP);
+		normalBuffer[i]->DefineSampler(FILTER_POINT, ADDRESS_CLAMP, ADDRESS_CLAMP, ADDRESS_CLAMP);
 
 		depthStencilBuffer[i]->Define(TARGET_2D, sz, FORMAT_D32_SFLOAT_PACK32, multiSample * i);
-		depthStencilBuffer[i]->DefineSampler(FILTER_BILINEAR, ADDRESS_CLAMP, ADDRESS_CLAMP, ADDRESS_CLAMP);
+		depthStencilBuffer[i]->DefineSampler(FILTER_POINT, ADDRESS_CLAMP, ADDRESS_CLAMP, ADDRESS_CLAMP);
 
 		Texture* colors[] = {
 			hdrBuffer[i].get(),
@@ -545,11 +545,11 @@ void Application::OnFramebufferSize(int width, int height)
 	}
 
 	ldrBuffer->Define(TARGET_2D, sz, FORMAT_RGBA8_SRGB_PACK32);
-	ldrBuffer->DefineSampler(FILTER_BILINEAR, ADDRESS_CLAMP, ADDRESS_CLAMP, ADDRESS_CLAMP);
+	ldrBuffer->DefineSampler(FILTER_POINT, ADDRESS_CLAMP, ADDRESS_CLAMP, ADDRESS_CLAMP);
 	ldrFbo->Define(ldrBuffer.get(), depthStencilBuffer[0].get());
 
 	guiTexture->Define(TARGET_2D, sz, ldrBuffer->Format());
-	guiTexture->DefineSampler(FILTER_BILINEAR, ADDRESS_CLAMP, ADDRESS_CLAMP, ADDRESS_CLAMP);
+	guiTexture->DefineSampler(FILTER_POINT, ADDRESS_CLAMP, ADDRESS_CLAMP, ADDRESS_CLAMP);
 	guiFbo->Define(guiTexture.get(), nullptr);
 
 	sceneBlurPasses.clear();
@@ -566,7 +566,7 @@ void Application::OnFramebufferSize(int width, int height)
 	}
 
 	if (rmlRenderer) {
-		rmlRenderer->UpdateBuffers(sz, multiSample);
+		rmlRenderer->UpdateBuffers(sz, 4);
 
 		mainContext->SetDimensions(Rml::Vector2i(sz.x, sz.y));
 		mainContext->Update();
@@ -685,7 +685,7 @@ void Application::Render(double dt)
 	Texture* normal = normalBuffer[0].get(); // Resolved normal texture
 	Texture* depth = depthStencilBuffer[0].get(); // Resolved Depth texture
 
-	// Apply hdr bloom
+	// HDR Bloom
 	if (bloomRenderer) {
 		TURSO3D_GL_MARKER("Bloom");
 
@@ -693,7 +693,7 @@ void Application::Render(double dt)
 		color = bloomRenderer->GetResultTexture();
 	}
 
-	// Apply tonemap
+	// Tonemap
 	{
 		TURSO3D_GL_MARKER("Tonemap");
 
@@ -741,10 +741,9 @@ void Application::Render(double dt)
 
 	// RmlUi
 	{
-		TURSO3D_GL_MARKER("RmlUi");
+		TURSO3D_GL_MARKER("Rml Ui");
 
-		graphics->SetViewport(IntRect {IntVector2::ZERO(), ldrBuffer->Size2D()});
-
+		graphics->SetViewport(viewRect);
 		rmlRenderer->BeginRender();
 		mainContext->Render();
 		rmlRenderer->EndRender();
@@ -754,19 +753,16 @@ void Application::Render(double dt)
 	{
 		TURSO3D_GL_MARKER("UI Compose");
 
-		guiFbo->Bind();
 		guiProgram->Bind();
 
-		graphics->Clear();
+		ldrBuffer->Bind(0);
+		sceneBlurPasses[0].buffer->Bind(1);
+		rmlRenderer->GetTexture()->Bind(2);
+		rmlRenderer->GetMaskTexture()->Bind(3);
 
-		rmlRenderer->GetTexture()->Bind(0);
-		ldrBuffer->Bind(1);
-		sceneBlurPasses[0].buffer->Bind(2);
-
+		FrameBuffer::Unbind();
 		graphics->SetRenderState(BLEND_REPLACE, CULL_NONE, CMP_ALWAYS, true, false);
 		graphics->DrawQuad();
-
-		graphics->Blit(nullptr, viewRect, guiFbo.get(), viewRect, true, false, FILTER_POINT);
 	}
 
 	graphics->Present();

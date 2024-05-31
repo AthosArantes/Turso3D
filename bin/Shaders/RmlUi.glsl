@@ -9,9 +9,7 @@ in vec2 position;
 in vec4 color;
 in vec2 texCoord;
 
-#ifdef TEXTURED
 out vec2 vTexCoord;
-#endif
 out vec4 vColor;
 
 uniform vec2 translate;
@@ -19,9 +17,7 @@ uniform mat4 transform;
 
 void main()
 {
-#ifdef TEXTURED
 	vTexCoord = texCoord;
-#endif
 	vColor = color;
 
 	vec2 translatedPos = position + translate.xy;
@@ -41,21 +37,26 @@ void main()
 uniform sampler2D tex0;
 #endif
 
-#ifdef TEXTURED
 in vec2 vTexCoord;
-#endif
 in vec4 vColor;
 
-out vec4 finalColor;
+layout(location = 0) out vec4 fragColor;
+layout(location = 1) out vec4 fragMask;
 
 void main()
 {
 #ifdef TEXTURED
-	vec4 texColor = texture(tex0, vTexCoord);
-	finalColor = vColor * texColor;
+	vec4 color = texture(tex0, vTexCoord);
+	color *= vColor;
+
+	float mask = 1.0 - step(0.0, -color.a);
 #else
-	finalColor = vColor;
+	vec4 color = vColor;
+	float mask = 1.0;
 #endif
+
+	fragColor = color;
+	fragMask = vec4(mask);
 }
 
 #endif
