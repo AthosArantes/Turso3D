@@ -217,7 +217,7 @@ namespace Turso3D
 
 			ibDesc.numIndices = source.Read<unsigned>();
 			ibDesc.indexData = std::make_unique<unsigned[]>(ibDesc.numIndices);
-			source.Read(&ibDesc.indexData[0], ibDesc.numIndices * sizeof(unsigned));
+			source.Read(ibDesc.indexData.get(), ibDesc.numIndices * sizeof(unsigned));
 		}
 
 		// Read geometries
@@ -251,18 +251,23 @@ namespace Turso3D
 			bone.offsetMatrix = source.Read<Matrix3x4>();
 			bone.active = true;
 
-			unsigned char boneCollisionType = source.Read<unsigned char>();
+			uint8_t boneCollisionType = source.Read<uint8_t>();
 			if (boneCollisionType & 1) {
 				bone.radius = source.Read<float>();
 				if (bone.radius < BONE_SIZE_THRESHOLD * 0.5f) {
 					bone.active = false;
 				}
+			} else {
+				bone.radius = 0.0f;
 			}
+
 			if (boneCollisionType & 2) {
 				bone.boundingBox = source.Read<BoundingBox>();
 				if (bone.boundingBox.Size().Length() < BONE_SIZE_THRESHOLD) {
 					bone.active = false;
 				}
+			} else {
+				bone.boundingBox = BoundingBox {0.0f, 0.0f};
 			}
 		}
 
