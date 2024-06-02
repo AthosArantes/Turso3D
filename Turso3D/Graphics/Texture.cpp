@@ -145,7 +145,7 @@ namespace Turso3D
 		texture(0),
 		target(0),
 		type(TARGET_2D),
-		size(0),
+		size(IntVector3::ZERO()),
 		format(FORMAT_NONE),
 		multisample(0),
 		numLevels(0),
