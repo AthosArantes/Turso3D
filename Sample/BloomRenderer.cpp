@@ -1,4 +1,5 @@
 #include "BloomRenderer.h"
+#include "BlurRenderer.h"
 #include <Turso3D/Graphics/Graphics.h>
 #include <Turso3D/Graphics/ShaderProgram.h>
 #include <Turso3D/Graphics/FrameBuffer.h>
@@ -9,8 +10,9 @@ namespace Turso3D
 {
 	BloomRenderer::BloomRenderer()
 	{
-		resultTexture = std::make_unique<Texture>();
-		resultFbo = std::make_unique<FrameBuffer>();
+		blurRenderer = std::make_unique<BlurRenderer>();
+		buffer = std::make_unique<Texture>();
+		fbo = std::make_unique<FrameBuffer>();
 	}
 
 	BloomRenderer::~BloomRenderer()
@@ -20,6 +22,8 @@ namespace Turso3D
 	void BloomRenderer::Initialize(Graphics* graphics_)
 	{
 		graphics = graphics_;
+
+		blurRenderer->Initialize(graphics);
 
 		constexpr StringHash intensityHash {"intensity"};
 
@@ -31,29 +35,31 @@ namespace Turso3D
 	{
 		Log::Scope logScope {"BloomRenderer::UpdateBuffers"};
 
-		resultTexture->Define(TARGET_2D, size, format);
-		resultTexture->DefineSampler(FILTER_BILINEAR, ADDRESS_CLAMP, ADDRESS_CLAMP, ADDRESS_CLAMP);
-		resultFbo->Define(resultTexture.get(), nullptr);
+		buffer->Define(TARGET_2D, size, format);
+		buffer->DefineSampler(FILTER_BILINEAR, ADDRESS_CLAMP, ADDRESS_CLAMP, ADDRESS_CLAMP);
+		fbo->Define(buffer.get(), nullptr);
 
-		blurPasses.clear();
-		BlurRenderer::CreateMips(blurPasses, size / 2, format, IntVector2 {8, 8}, 0);
+		blurRenderer->UpdateBuffers(size / 2, format, IntVector2 {4, 4}, 0);
 	}
 
-	void BloomRenderer::Render(BlurRenderer* blurRenderer, Texture* hdrColor, float intensity)
+	void BloomRenderer::Render(Texture* hdrColor, float intensity)
 	{
 		graphics->SetRenderState(BLEND_REPLACE, CULL_NONE, CMP_ALWAYS, true, false);
+		blurRenderer->Downsample(hdrColor);
 
-		blurRenderer->Render(blurPasses, hdrColor);
+		graphics->SetRenderState(BLEND_ADD, CULL_NONE, CMP_ALWAYS, true, false);
+		blurRenderer->Upsample();
 
 		// Compose
-		resultFbo->Bind();
-		graphics->SetViewport(IntRect {IntVector2::ZERO(), resultTexture->Size2D()});
+		fbo->Bind();
 
 		bloomProgram->Bind();
 		graphics->SetUniform(uIntensity, intensity);
 		hdrColor->Bind(0);
-		blurPasses[0].buffer->Bind(1);
+		blurRenderer->GetTexture()->Bind(1);
 
+		graphics->SetViewport(IntRect {IntVector2::ZERO(), buffer->Size2D()});
+		graphics->SetRenderState(BLEND_REPLACE, CULL_NONE, CMP_ALWAYS, true, false);
 		graphics->DrawQuad();
 	}
 }

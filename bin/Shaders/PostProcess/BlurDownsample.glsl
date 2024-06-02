@@ -31,10 +31,11 @@ void main()
 // Remember to use edge clamping for this texture!
 
 in vec2 texCoord;
-out vec4 downsample;
 
 uniform sampler2D srcTex0;
 uniform vec2 invSrcSize;
+
+out vec4 downsample;
 
 void main()
 {
@@ -84,7 +85,9 @@ void main()
 	downsample += (b+d+f+h)*0.0625;
 	downsample += (j+k+l+m)*0.125;
 
+#ifdef FIRST_PASS
 	downsample = max(downsample, 0.0001);
+#endif
 }
 
 #endif

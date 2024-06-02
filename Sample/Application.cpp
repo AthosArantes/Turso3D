@@ -1,4 +1,5 @@
 #include "Application.h"
+#include "BlurRenderer.h"
 #include "BloomRenderer.h"
 #include "SSAORenderer.h"
 #include "ModelConverter.h"
@@ -99,6 +100,7 @@ Application::Application() :
 		graphics.reset();
 	}
 
+	blurRenderer = std::make_unique<BlurRenderer>();
 	bloomRenderer = std::make_unique<BloomRenderer>();
 	ssaoRenderer = std::make_unique<SSAORenderer>();
 }
@@ -124,8 +126,7 @@ bool Application::Initialize()
 	renderer->SetupShadowMaps(DIRECTIONAL_LIGHT_SIZE, LIGHT_ATLAS_SIZE, FORMAT_D32_SFLOAT_PACK32);
 	debugRenderer = std::make_unique<DebugRenderer>(graphics.get());
 
-	blurRenderer.Initialize(graphics.get());
-
+	blurRenderer->Initialize(graphics.get());
 	bloomRenderer->Initialize(graphics.get());
 	ssaoRenderer->Initialize(graphics.get());
 
@@ -552,8 +553,7 @@ void Application::OnFramebufferSize(int width, int height)
 	guiTexture->DefineSampler(FILTER_POINT, ADDRESS_CLAMP, ADDRESS_CLAMP, ADDRESS_CLAMP);
 	guiFbo->Define(guiTexture.get(), nullptr);
 
-	sceneBlurPasses.clear();
-	BlurRenderer::CreateMips(sceneBlurPasses, sz / 2, ldrBuffer->Format(), IntVector2::ZERO(), 4);
+	blurRenderer->UpdateBuffers(sz / 2, ldrBuffer->Format(), IntVector2::ZERO(), 4);
 
 	// Bloom resources
 	if (bloomRenderer) {
@@ -689,8 +689,8 @@ void Application::Render(double dt)
 	if (bloomRenderer) {
 		TURSO3D_GL_MARKER("Bloom");
 
-		bloomRenderer->Render(&blurRenderer, color);
-		color = bloomRenderer->GetResultTexture();
+		bloomRenderer->Render(color, 0.03f);
+		color = bloomRenderer->GetTexture();
 	}
 
 	// Tonemap
@@ -698,10 +698,12 @@ void Application::Render(double dt)
 		TURSO3D_GL_MARKER("Tonemap");
 
 		ldrFbo->Bind();
-		graphics->SetViewport(viewRect);
 		tonemapProgram->Bind();
+
 		graphics->SetUniform(uTonemapExposure, 1.0f);
 		color->Bind(0);
+
+		graphics->SetViewport(viewRect);
 		graphics->SetRenderState(BLEND_REPLACE, CULL_NONE, CMP_ALWAYS, true, false);
 		graphics->DrawQuad();
 	}
@@ -732,21 +734,28 @@ void Application::Render(double dt)
 		debugRenderer->Render();
 	}
 
-	// Blur scene for UI transparent backgrounds
-	{
-		TURSO3D_GL_MARKER("Scene Blur");
-
-		blurRenderer.Render(sceneBlurPasses, ldrBuffer.get());
-	}
+	graphics->SetViewport(viewRect);
 
 	// RmlUi
 	{
 		TURSO3D_GL_MARKER("Rml Ui");
 
-		graphics->SetViewport(viewRect);
 		rmlRenderer->BeginRender();
 		mainContext->Render();
 		rmlRenderer->EndRender();
+	}
+
+	graphics->SetRenderState(BLEND_REPLACE, CULL_NONE, CMP_ALWAYS, true, false);
+
+	// Blur scene for UI transparent backgrounds
+	{
+		TURSO3D_GL_MARKER("Scene Blur");
+
+		blurRenderer->Downsample(ldrBuffer.get());
+		blurRenderer->Upsample();
+
+		graphics->SetViewport(viewRect);
+		graphics->Blit(guiFbo.get(), viewRect, blurRenderer->GetFramebuffer(), IntRect {IntVector2::ZERO(), blurRenderer->GetTexture()->Size2D()}, true, false, FILTER_BILINEAR);
 	}
 
 	// Compose UI
@@ -756,12 +765,11 @@ void Application::Render(double dt)
 		guiProgram->Bind();
 
 		ldrBuffer->Bind(0);
-		sceneBlurPasses[0].buffer->Bind(1);
+		guiTexture->Bind(1);
 		rmlRenderer->GetTexture()->Bind(2);
 		rmlRenderer->GetMaskTexture()->Bind(3);
 
 		FrameBuffer::Unbind();
-		graphics->SetRenderState(BLEND_REPLACE, CULL_NONE, CMP_ALWAYS, true, false);
 		graphics->DrawQuad();
 	}
 

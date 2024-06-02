@@ -8,6 +8,13 @@
 
 namespace Turso3D
 {
+	struct BlurRenderer::MipPass
+	{
+		std::unique_ptr<Texture> buffer;
+		std::unique_ptr<FrameBuffer> fbo;
+	};
+
+	// ==========================================================================================
 	BlurRenderer::BlurRenderer() :
 		graphics(nullptr)
 	{
@@ -23,56 +30,69 @@ namespace Turso3D
 
 		constexpr StringHash invSrcSizeHash {"invSrcSize"};
 		constexpr StringHash filterRadiusHash {"filterRadius"};
+		constexpr StringHash aspectRatioHash {"aspectRatio"};
 
-		downsampleProgram = graphics->CreateProgram("PostProcess/BlurDownsample.glsl", "", "");
-		uInvSrcSize = downsampleProgram->Uniform(invSrcSizeHash);
+		constexpr const char* downsampleDefines[] = {"FIRST_PASS", ""};
+		for (int i = 0; i < 2; ++i) {
+			downsampleProgram[i] = graphics->CreateProgram("PostProcess/BlurDownsample.glsl", downsampleDefines[i], downsampleDefines[i]);
+			uInvSrcSize[i] = downsampleProgram[i]->Uniform(invSrcSizeHash);
+		}
 
 		upsampleProgram = graphics->CreateProgram("PostProcess/BlurUpsample.glsl", "", "");
 		uFilterRadius = upsampleProgram->Uniform(filterRadiusHash);
+		uAspectRatio = upsampleProgram->Uniform(aspectRatioHash);
 	}
 
-	void BlurRenderer::Render(std::vector<MipPass>& passes, Texture* srcColor, float filterRadius)
+	void BlurRenderer::Downsample(Texture* srcColor)
 	{
-		graphics->SetRenderState(BLEND_REPLACE, CULL_NONE, CMP_ALWAYS, true, false);
-
-		// Downsample
-		downsampleProgram->Bind();
 		for (size_t i = 0; i < passes.size(); ++i) {
+			// Bind the program
+			int p = int(bool(i));
+			downsampleProgram[p]->Bind();
+
+			// Bind the draw buffer
 			MipPass& mip = passes[i];
-
 			mip.fbo->Bind();
-			graphics->SetViewport(IntRect {IntVector2::ZERO(), mip.buffer->Size2D()});
 
+			// Bind the texture to be sampled
 			Texture* src = (i == 0) ? srcColor : passes[i - 1].buffer.get();
 			src->Bind(0);
 
-			graphics->SetUniform(uInvSrcSize, Vector2(1.0f / src->Width(), 1.0f / src->Height()));
-			graphics->DrawQuad();
-		}
-
-		// Upsample
-		upsampleProgram->Bind();
-		graphics->SetUniform(uFilterRadius, filterRadius);
-		for (size_t i = 0; i < passes.size() - 1; ++i) {
-			size_t ri = passes.size() - (1 + i);
-
-			MipPass& mip = passes[ri];
-			MipPass& prevMip = passes[ri - 1];
-
-			prevMip.fbo->Bind();
-			graphics->SetViewport(IntRect {IntVector2::ZERO(), prevMip.buffer->Size2D()});
-
-			mip.buffer->Bind(0);
-
+			graphics->SetViewport(IntRect {IntVector2::ZERO(), mip.buffer->Size2D()});
+			graphics->SetUniform(uInvSrcSize[p], Vector2 {1.0f / src->Width(), 1.0f / src->Height()});
 			graphics->DrawQuad();
 		}
 	}
 
-	// ==========================================================================================
-	void BlurRenderer::CreateMips(std::vector<MipPass>& passes, const IntVector2& size, ImageFormat format, const IntVector2& minMipSize, size_t maxMips)
+	void BlurRenderer::Upsample(float filterRadius)
 	{
+		upsampleProgram->Bind();
+		graphics->SetUniform(uAspectRatio, aspectRatio);
+		graphics->SetUniform(uFilterRadius, filterRadius);
+
+		for (size_t i = 0; i < passes.size() - 1; ++i) {
+			size_t ri = passes.size() - (1 + i);
+
+			// Bind the draw buffer
+			MipPass& prev_mip = passes[ri - 1];
+			prev_mip.fbo->Bind();
+
+			// Bind the mip texture to be sampled.
+			MipPass& mip = passes[ri];
+			mip.buffer->Bind(0);
+
+			graphics->SetViewport(IntRect {IntVector2::ZERO(), prev_mip.buffer->Size2D()});
+			graphics->DrawQuad();
+		}
+	}
+
+	void BlurRenderer::UpdateBuffers(const IntVector2& size, ImageFormat format, const IntVector2& minMipSize, int maxMips)
+	{
+		aspectRatio = static_cast<float>(size.x) / static_cast<float>(size.y);
+
 		IntVector2 min_size {std::max(minMipSize.x, 1), std::max(minMipSize.y, 1)};
 
+		passes.clear();
 		for (int i = 0, hw = size.x, hh = size.y; (!maxMips || i < maxMips) && hw >= min_size.x && hh >= min_size.y; ++i, hw /= 2, hh /= 2) {
 			MipPass& mip = passes.emplace_back();
 
@@ -83,5 +103,15 @@ namespace Turso3D
 			mip.fbo = std::make_unique<FrameBuffer>();
 			mip.fbo->Define(mip.buffer.get(), nullptr);
 		}
+	}
+
+	FrameBuffer* BlurRenderer::GetFramebuffer() const
+	{
+		return passes[0].fbo.get();
+	}
+
+	Texture* BlurRenderer::GetTexture() const
+	{
+		return passes[0].buffer.get();
 	}
 }

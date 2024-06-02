@@ -1,9 +1,7 @@
 #pragma once
 
-#include "BlurRenderer.h"
 #include <Turso3D/Graphics/GraphicsDefs.h>
 #include <memory>
-#include <vector>
 
 namespace Turso3D
 {
@@ -12,6 +10,7 @@ namespace Turso3D
 	class ShaderProgram;
 	class Texture;
 	class IntVector2;
+	class BlurRenderer;
 
 	class BloomRenderer
 	{
@@ -22,21 +21,21 @@ namespace Turso3D
 		void Initialize(Graphics* graphics);
 
 		void UpdateBuffers(const IntVector2& size, ImageFormat format);
-		void Render(BlurRenderer* blurRenderer, Texture* hdrColor, float intensity = 0.05f);
+		void Render(Texture* hdrColor, float intensity = 0.05f);
 
-		FrameBuffer* GetResultFramebuffer() const { return resultFbo.get(); }
-		Texture* GetResultTexture() const { return resultTexture.get(); }
+		FrameBuffer* GetFramebuffer() const { return fbo.get(); }
+		Texture* GetTexture() const { return buffer.get(); }
 
 	private:
 		// Cached graphics subsystem.
 		Graphics* graphics;
 
-		std::vector<BlurRenderer::MipPass> blurPasses;
+		std::unique_ptr<BlurRenderer> blurRenderer;
 
 		std::shared_ptr<ShaderProgram> bloomProgram;
 		int uIntensity; // intensity uniform location.
 
-		std::unique_ptr<Texture> resultTexture;
-		std::unique_ptr<FrameBuffer> resultFbo;
+		std::unique_ptr<Texture> buffer;
+		std::unique_ptr<FrameBuffer> fbo;
 	};
 }
