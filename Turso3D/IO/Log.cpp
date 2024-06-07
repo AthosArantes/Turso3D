@@ -5,18 +5,6 @@
 #include <fstream>
 #include <vector>
 
-#ifdef _WIN32
-	#ifndef WIN32_LEAN_AND_MEAN
-		#define WIN32_LEAN_AND_MEAN
-	#endif
-	#ifndef NOMINMAX
-		#define NOMINMAX
-	#endif
-
-	#include <SDKDDKVer.h>
-	#include <Windows.h>
-#endif
-
 namespace
 {
 	constexpr std::string_view LogLevelPrefixes[] =
@@ -105,24 +93,13 @@ namespace Turso3D
 			output.append(buffer);
 		}
 
-#ifdef _WIN32
-		HANDLE handle = GetCurrentThread();
-
-		PWSTR tDesc;
-		HRESULT hr = GetThreadDescription(handle, &tDesc);
-		if (SUCCEEDED(hr)) {
-			int sz = WideCharToMultiByte(CP_UTF8, WC_COMPOSITECHECK, tDesc, -1, nullptr, 0, NULL, NULL);
-
-			std::string str;
-			str.resize(sz);
-			sz = WideCharToMultiByte(CP_UTF8, WC_COMPOSITECHECK, tDesc, -1, str.data(), str.size(), NULL, NULL);
-			str.resize(sz - 1);
-
+		const std::string& thread_name = ThreadName();
+		if (!thread_name.empty()) {
 			output.append("[");
-			output.append(str);
+			output.append(thread_name);
 			output.append("] ");
 		}
-#endif
+
 		size_t intLevel = static_cast<size_t>(level);
 		if (level != LogLevel::None && intLevel < std::size(LogLevelPrefixes)) {
 			output.append(LogLevelPrefixes[intLevel]);
@@ -140,5 +117,11 @@ namespace Turso3D
 			logFile.write(output.data(), output.size());
 			logFile.flush();
 		}
+	}
+
+	std::string& Log::ThreadName()
+	{
+		thread_local std::string name;
+		return name;
 	}
 }

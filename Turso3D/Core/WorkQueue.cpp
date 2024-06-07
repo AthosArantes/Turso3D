@@ -3,18 +3,6 @@
 #include <cassert>
 #include <string>
 
-#ifdef _WIN32
-	#ifndef WIN32_LEAN_AND_MEAN
-		#define WIN32_LEAN_AND_MEAN
-	#endif
-	#ifndef NOMINMAX
-		#define NOMINMAX
-	#endif
-
-	#include <SDKDDKVer.h>
-	#include <Windows.h>
-#endif
-
 namespace Turso3D
 {
 	thread_local unsigned WorkQueue::threadIndex = 0;
@@ -36,14 +24,7 @@ namespace Turso3D
 		numQueuedTasks.store(0);
 		numPendingTasks.store(0);
 
-#ifdef _WIN32
-		{
-			HANDLE handle = GetCurrentThread();
-			std::wstring wthreadname = L"MainThread";
-			HRESULT hr = SetThreadDescription(handle, wthreadname.c_str());
-			assert(SUCCEEDED(hr));
-		}
-#endif
+		Log::ThreadName().assign("MainThread");
 	}
 
 	WorkQueue::~WorkQueue()
@@ -84,25 +65,6 @@ namespace Turso3D
 
 		for (unsigned i = 0; i < numThreads; ++i) {
 			std::thread& worker = threads.emplace_back(std::thread(&WorkQueue::WorkerLoop, this, i + 1));
-
-#ifdef _WIN32
-			// Do Windows-specific thread setup
-			HANDLE handle = (HANDLE)worker.native_handle();
-
-			// Put each thread on to dedicated core
-			//DWORD_PTR affinityMask = (DWORD_PTR)(1ull << i);
-			//DWORD_PTR affinity_result = SetThreadAffinityMask(handle, affinityMask);
-			//assert(affinity_result > 0);
-
-			// Increase thread priority
-			//BOOL priority_result = SetThreadPriority(handle, THREAD_PRIORITY_HIGHEST);
-			//assert(priority_result != 0);
-
-			// Name the thread
-			std::wstring wthreadname = L"WorkQueue_" + std::to_wstring(i);
-			HRESULT hr = SetThreadDescription(handle, wthreadname.c_str());
-			assert(SUCCEEDED(hr));
-#endif
 		}
 	}
 
@@ -233,6 +195,8 @@ namespace Turso3D
 	void WorkQueue::WorkerLoop(unsigned threadIndex_)
 	{
 		WorkQueue::threadIndex = threadIndex_;
+
+		Log::ThreadName().assign(fmt::format("WorkQueue{:d}", threadIndex_));
 
 		for (;;) {
 			Task* task;

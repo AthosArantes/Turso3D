@@ -48,6 +48,9 @@ namespace Turso3D
 		{
 			Write(level, fmt::template format(format, std::forward<Args>(args)...), true);
 		}
+
+		// Return the string name of the calling thread
+		std::string& ThreadName();
 	}
 
 #ifdef TURSO3D_LOG_RAW_ENABLED
