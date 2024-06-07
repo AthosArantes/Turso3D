@@ -1308,8 +1308,7 @@ namespace Turso3D
 			unsigned char planeMask = it->second;
 			const std::vector<Drawable*>& drawables = octant->Drawables();
 
-			for (auto dIt = drawables.begin(); dIt != drawables.end(); ++dIt) {
-				Drawable* drawable = *dIt;
+			for (Drawable* drawable : drawables) {
 
 				if (drawable->TestFlag(Drawable::FLAG_GEOMETRY) && (drawable->LayerMask() & viewMask)) {
 					const BoundingBox& geometryBox = drawable->WorldBoundingBox();
@@ -1529,8 +1528,7 @@ namespace Turso3D
 				BatchQueue* destStatic = !dynamicOrDirLight ? &shadowMap.shadowBatches[view.staticQueueIdx] : nullptr;
 				BatchQueue* destDynamic = &shadowMap.shadowBatches[view.dynamicQueueIdx];
 
-				for (auto it = initialShadowCasters.begin(); it != initialShadowCasters.end(); ++it) {
-					Drawable* drawable = *it;
+				for (Drawable* drawable : initialShadowCasters) {
 					const BoundingBox& geometryBox = drawable->WorldBoundingBox();
 
 					bool inView = drawable->InView(frameNumber);

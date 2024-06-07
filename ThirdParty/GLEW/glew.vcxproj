@@ -1,6 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project DefaultTargets="Build" ToolsVersion="15.0"
-	xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
 	<ItemGroup Label="ProjectConfigurations">
 		<ProjectConfiguration Include="Debug|x64">
 			<Configuration>Debug</Configuration>
@@ -11,6 +10,7 @@
 			<Platform>x64</Platform>
 		</ProjectConfiguration>
 	</ItemGroup>
+
 	<PropertyGroup Label="Globals">
 		<ProjectGuid>{DE45D5E8-EAD2-401B-958D-5BC7BEDCAC38}</ProjectGuid>
 		<Keyword>Win32Proj</Keyword>

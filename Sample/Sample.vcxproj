@@ -37,15 +37,15 @@
 
 	<PropertyGroup>
 		<LinkIncremental>false</LinkIncremental>
-		<TargetName>$(ProjectName)</TargetName>
+		<TargetName>$(ProjectName)_$(Platform)$(Configuration)</TargetName>
 	</PropertyGroup>
 	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-		<OutDir>$(SolutionDir)bin\$(Platform)$(Configuration)\</OutDir>
-		<IntDir>$(SolutionDir)obj\$(Platform)$(Configuration)\$(ProjectName)\</IntDir>
+		<OutDir>$(SolutionDir)bin\</OutDir>
+		<IntDir>$(SolutionDir)obj\$(TargetName)\</IntDir>
 	</PropertyGroup>
 	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-		<OutDir>$(SolutionDir)bin\$(Platform)$(Configuration)\</OutDir>
-		<IntDir>$(SolutionDir)obj\$(Platform)$(Configuration)\$(ProjectName)\</IntDir>
+		<OutDir>$(SolutionDir)bin\</OutDir>
+		<IntDir>$(SolutionDir)obj\$(TargetName)\</IntDir>
 	</PropertyGroup>
 
 	<ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">

@@ -192,6 +192,9 @@ namespace Turso3D
 
 		// Combined drawable and child octant bounding box. Used for culling tests.
 		mutable BoundingBox cullingBox;
+		// Dirty flags.
+		mutable unsigned flags;
+
 		// Drawables contained in the octant.
 		std::vector<Drawable*> drawables;
 		// Expanded (loose) bounding box used for fitting drawables within the octant.
@@ -216,8 +219,6 @@ namespace Turso3D
 		unsigned char level;
 		// The child index of this octant.
 		unsigned char childIndex;
-		// Dirty flags.
-		mutable unsigned flags;
 	};
 
 	// ==========================================================================================
@@ -343,8 +344,7 @@ namespace Turso3D
 			} else {
 				std::vector<Drawable*>& drawables = octant->drawables;
 
-				for (auto it = drawables.begin(); it != drawables.end(); ++it) {
-					Drawable* drawable = *it;
+				for (Drawable* drawable : drawables) {
 					if ((drawable->Flags() & drawableFlags) == drawableFlags && (drawable->LayerMask() & layerMask) && volume.IsInsideFast(drawable->WorldBoundingBox()) != OUTSIDE) {
 						result.push_back(drawable);
 					}
@@ -372,9 +372,7 @@ namespace Turso3D
 			}
 
 			std::vector<Drawable*>& drawables = octant->drawables;
-
-			for (auto it = drawables.begin(); it != drawables.end(); ++it) {
-				Drawable* drawable = *it;
+			for (Drawable* drawable : drawables) {
 				if ((drawable->Flags() & drawableFlags) == drawableFlags && (drawable->LayerMask() & layerMask) && (!planeMask || frustum.IsInsideMaskedFast(drawable->WorldBoundingBox(), planeMask) != OUTSIDE)) {
 					result.push_back(drawable);
 				}
@@ -417,6 +415,7 @@ namespace Turso3D
 		std::vector<std::unique_ptr<ReinsertDrawablesTask>> reinsertTasks;
 		// Intermediate reinsert queues for threaded execution.
 		std::unique_ptr<std::vector<Drawable*>[]> reinsertQueues;
+
 		// RaycastSingle initial coarse result.
 		mutable std::vector<std::pair<Drawable*, float>> initialRayResult;
 		// RaycastSingle final result.

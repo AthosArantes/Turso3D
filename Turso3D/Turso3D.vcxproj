@@ -1,6 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project DefaultTargets="Build" ToolsVersion="15.0"
-	xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
 	<ItemGroup Label="ProjectConfigurations">
 		<ProjectConfiguration Include="Debug|x64">
 			<Configuration>Debug</Configuration>
@@ -11,13 +10,14 @@
 			<Platform>x64</Platform>
 		</ProjectConfiguration>
 	</ItemGroup>
+
 	<PropertyGroup Label="Globals">
 		<ProjectGuid>{3CA1B824-72EB-4605-93A3-29B99AF2C03E}</ProjectGuid>
 		<Keyword>Win32Proj</Keyword>
 		<Platform>x64</Platform>
 		<ProjectName>Turso3D</ProjectName>
 		<VCProjectUpgraderObjectName>NoUpgrade</VCProjectUpgraderObjectName>
-		<WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+		<WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>
 	</PropertyGroup>
 	<Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
 

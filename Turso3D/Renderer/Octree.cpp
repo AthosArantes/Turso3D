@@ -130,7 +130,6 @@ namespace Turso3D
 		// Whenever is visible, push visibility to parents if they are not visible yet
 		if (newVisibility == VIS_VISIBLE) {
 			Octant* octant = parent;
-
 			while (octant && octant->visibility != newVisibility) {
 				octant->visibility = newVisibility;
 				octant = octant->parent;
@@ -147,8 +146,8 @@ namespace Turso3D
 				// Use a temporary bounding box for calculations in case many threads call this simultaneously
 				BoundingBox tempBox;
 
-				for (auto it = drawables.begin(); it != drawables.end(); ++it) {
-					tempBox.Merge((*it)->WorldBoundingBox());
+				for (const Drawable* drawable : drawables) {
+					tempBox.Merge(drawable->WorldBoundingBox());
 				}
 
 				if (numChildren) {
@@ -186,8 +185,7 @@ namespace Turso3D
 	{
 		// Clear octree association from nodes that were never inserted
 		// Note: the threaded queues cannot have nodes that were never inserted, only nodes that should be moved
-		for (auto it = updateQueue.begin(); it != updateQueue.end(); ++it) {
-			Drawable* drawable = *it;
+		for (Drawable* drawable : updateQueue) {
 			if (drawable) {
 				drawable->octant = nullptr;
 				drawable->SetFlag(Drawable::FLAG_OCTREE_REINSERT_QUEUED, false);
@@ -248,8 +246,7 @@ namespace Turso3D
 		updateQueue.clear();
 
 		// Sort octants' drawables by address and put lights first
-		for (auto it = sortDirtyOctants.begin(); it != sortDirtyOctants.end(); ++it) {
-			Octant* octant = *it;
+		for (Octant* octant : sortDirtyOctants) {
 			std::sort(octant->drawables.begin(), octant->drawables.end(), CompareDrawables);
 			octant->SetFlag(Octant::FLAG_DRAWABLES_SORT_DIRTY, false);
 		}
@@ -369,9 +366,7 @@ namespace Turso3D
 
 	void Octree::ReinsertDrawables(std::vector<Drawable*>& drawables)
 	{
-		for (auto it = drawables.begin(); it != drawables.end(); ++it) {
-			Drawable* drawable = *it;
-
+		for (Drawable* drawable : drawables) {
 			const BoundingBox& box = drawable->WorldBoundingBox();
 			Octant* oldOctant = drawable->GetOctant();
 			Octant* newOctant = &root;
@@ -459,8 +454,7 @@ namespace Turso3D
 
 	void Octree::DeleteChildOctants(Octant* octant, bool deletingOctree)
 	{
-		for (auto it = octant->drawables.begin(); it != octant->drawables.end(); ++it) {
-			Drawable* drawable = *it;
+		for (Drawable* drawable : octant->drawables) {
 			drawable->octant = nullptr;
 			drawable->SetFlag(Drawable::FLAG_OCTREE_REINSERT_QUEUED, false);
 			if (deletingOctree) {
@@ -497,9 +491,7 @@ namespace Turso3D
 	void Octree::CollectDrawables(std::vector<Drawable*>& result, Octant* octant, unsigned short drawableFlags, unsigned layerMask) const
 	{
 		std::vector<Drawable*>& drawables = octant->drawables;
-
-		for (auto it = drawables.begin(); it != drawables.end(); ++it) {
-			Drawable* drawable = *it;
+		for (Drawable* drawable : drawables) {
 			if ((drawable->Flags() & drawableFlags) == drawableFlags && (drawable->LayerMask() & layerMask)) {
 				result.push_back(drawable);
 			}
@@ -522,9 +514,7 @@ namespace Turso3D
 		}
 
 		std::vector<Drawable*>& drawables = octant->drawables;
-
-		for (auto it = drawables.begin(); it != drawables.end(); ++it) {
-			Drawable* drawable = *it;
+		for (Drawable* drawable : drawables) {
 			if ((drawable->Flags() & drawableFlags) == drawableFlags && (drawable->LayerMask() & layerMask)) {
 				drawable->OnRaycast(result, ray, maxDistance);
 			}
@@ -547,9 +537,7 @@ namespace Turso3D
 		}
 
 		std::vector<Drawable*>& drawables = octant->drawables;
-
-		for (auto it = drawables.begin(); it != drawables.end(); ++it) {
-			Drawable* drawable = *it;
+		for (Drawable* drawable : drawables) {
 			if ((drawable->Flags() & drawableFlags) == drawableFlags && (drawable->LayerMask() & layerMask)) {
 				float distance = ray.HitDistance(drawable->WorldBoundingBox());
 				if (distance < maxDistance) {
