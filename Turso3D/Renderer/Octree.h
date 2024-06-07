@@ -135,7 +135,7 @@ namespace Turso3D
 		void MarkCullingBoxDirty() const
 		{
 			const Octant* octant = this;
-			while (octant && !octant->TestFlag(FLAG_CULLING_BOX_DIRTY)) {
+			while (octant) {
 				octant->SetFlag(FLAG_CULLING_BOX_DIRTY, true);
 				octant = octant->parent;
 			}
