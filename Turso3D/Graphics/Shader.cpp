@@ -64,6 +64,8 @@ namespace Turso3D
 
 		std::vector<std::string> buffer;
 
+		const std::locale& lc = std::locale::classic();
+
 		// Split by whitespace
 		size_t start = 0;
 		while (start != std::string::npos) {
@@ -73,10 +75,10 @@ namespace Turso3D
 			start = (end != std::string::npos) ? end + 1 : end;
 
 			// Trim whitespace
-			while (!def.empty() && std::isspace(def.front())) {
+			while (!def.empty() && std::isspace(def.front(), lc)) {
 				def.remove_prefix(1);
 			}
-			while (!def.empty() && std::isspace(def.back())) {
+			while (!def.empty() && std::isspace(def.back(), lc)) {
 				def.remove_suffix(1);
 			}
 

@@ -343,7 +343,7 @@ namespace Turso3D
 #ifdef _DEBUG
 					LOG_ERROR("Multisample not supported for texture type ({:s})", TextureTargetName(type));
 #else
-					LOG_ERROR("Multisample not supported for texture type ({:d})", type);
+					LOG_ERROR("Multisample not supported for texture type ({:d})", (unsigned)type);
 #endif
 					return false;
 			}
@@ -443,7 +443,7 @@ namespace Turso3D
 #ifdef _DEBUG
 						LOG_ERROR("Texture type ({:s}) is not supported.", TextureTargetName(type));
 #else
-						LOG_ERROR("Texture type ({:d}) is not supported.", type);
+						LOG_ERROR("Texture type ({:d}) is not supported.", (unsigned)type);
 #endif
 						Release();
 						return false;
