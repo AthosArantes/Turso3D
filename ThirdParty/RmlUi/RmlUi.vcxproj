@@ -13,63 +13,52 @@
 
 	<PropertyGroup Label="Globals">
 		<ProjectGuid>{029FEA18-D976-4A17-86B0-70533F7F68B0}</ProjectGuid>
-		<Keyword>Win32Proj</Keyword>
-		<Platform>x64</Platform>
 		<ProjectName>RmlUi</ProjectName>
-		<VCProjectUpgraderObjectName>NoUpgrade</VCProjectUpgraderObjectName>
 		<WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
 	</PropertyGroup>
 	<Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
 
 	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+		<OutDir>$(SolutionDir)lib\$(Platform)$(Configuration)\</OutDir>
+		<IntDir>$(SolutionDir)obj\$(Platform)$(Configuration)\lib\$(ProjectName)\</IntDir>
+		<UseDebugLibraries>true</UseDebugLibraries>
 		<ConfigurationType>StaticLibrary</ConfigurationType>
-		<CharacterSet>MultiByte</CharacterSet>
 		<PlatformToolset>v143</PlatformToolset>
+		<CharacterSet>MultiByte</CharacterSet>
 	</PropertyGroup>
 	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+		<OutDir>$(SolutionDir)lib\$(Platform)$(Configuration)\</OutDir>
+		<IntDir>$(SolutionDir)obj\$(Platform)$(Configuration)\lib\$(ProjectName)\</IntDir>
+		<UseDebugLibraries>false</UseDebugLibraries>
 		<ConfigurationType>StaticLibrary</ConfigurationType>
-		<CharacterSet>MultiByte</CharacterSet>
 		<PlatformToolset>v143</PlatformToolset>
+		<CharacterSet>MultiByte</CharacterSet>
 	</PropertyGroup>
 
 	<Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
-	<ImportGroup Label="ExtensionSettings">
-		<Import Project="$(VCTargetsPath)\BuildCustomizations\masm.props" />
-	</ImportGroup>
-	<ImportGroup Label="PropertySheets">
+	<ImportGroup Label="ExtensionSettings"></ImportGroup>
+	<ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
 		<Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
 	</ImportGroup>
-	<PropertyGroup Label="UserMacros" />
-
-	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-		<LinkIncremental>true</LinkIncremental>
-		<OutDir>$(SolutionDir)lib\$(Platform)$(Configuration)\</OutDir>
-		<IntDir>$(SolutionDir)obj\$(Platform)$(Configuration)\$(ProjectName)\</IntDir>
-		<PublicIncludeDirectories>$(ProjectDir)include\</PublicIncludeDirectories>
-	</PropertyGroup>
-	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-		<LinkIncremental>false</LinkIncremental>
-		<OutDir>$(SolutionDir)lib\$(Platform)$(Configuration)\</OutDir>
-		<IntDir>$(SolutionDir)obj\$(Platform)$(Configuration)\$(ProjectName)\</IntDir>
-		<PublicIncludeDirectories>$(ProjectDir)include\</PublicIncludeDirectories>
+	<ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+		<Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+	</ImportGroup>
+	<PropertyGroup Label="UserMacros">
+		<FreeTypeIncludeDir>$(SolutionDir)ThirdParty\freetype\include\</FreeTypeIncludeDir>
 	</PropertyGroup>
 
 	<ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
 		<ClCompile>
-			<AdditionalIncludeDirectories>$(ProjectDir)include\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-			<PreprocessorDefinitions>_DEBUG;_WIN32;LIB;HAVE_LIBC=1;RMLUI_STATIC_LIB;RMLUI_USE_CUSTOM_RTTI;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-			<AssemblerListingLocation>Debug/</AssemblerListingLocation>
-			<BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
-			<LanguageStandard>stdcpp17</LanguageStandard>
-			<DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
-			<FloatingPointModel>Fast</FloatingPointModel>
-			<InlineFunctionExpansion>Disabled</InlineFunctionExpansion>
-			<MultiProcessorCompilation>true</MultiProcessorCompilation>
+			<AdditionalIncludeDirectories>$(ProjectDir)include\;$(FreeTypeIncludeDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+			<PreprocessorDefinitions>_DEBUG;LIB;WIN32_LEAN_AND_MEAN;RMLUI_STATIC_LIB;RMLUI_USE_CUSTOM_RTTI;%(PreprocessorDefinitions)</PreprocessorDefinitions>
 			<Optimization>Disabled</Optimization>
+			<InlineFunctionExpansion>Disabled</InlineFunctionExpansion>
 			<RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
 			<WarningLevel>Level3</WarningLevel>
+			<ConformanceMode>true</ConformanceMode>
+			<LanguageStandard>stdcpp17</LanguageStandard>
 			<RuntimeTypeInfo>false</RuntimeTypeInfo>
-			<EnableModules>false</EnableModules>
+			<FloatingPointModel>Fast</FloatingPointModel>
 		</ClCompile>
 		<Lib>
 			<TargetMachine>MachineX64</TargetMachine>
@@ -77,20 +66,20 @@
 	</ItemDefinitionGroup>
 	<ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
 		<ClCompile>
-			<AdditionalIncludeDirectories>$(ProjectDir)include\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-			<PreprocessorDefinitions>NDEBUG;_WIN32;LIB;HAVE_LIBC=1;RMLUI_STATIC_LIB;RMLUI_USE_CUSTOM_RTTI;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-			<AssemblerListingLocation>Release/</AssemblerListingLocation>
-			<BufferSecurityCheck>false</BufferSecurityCheck>
-			<LanguageStandard>stdcpp17</LanguageStandard>
-			<DebugInformationFormat>None</DebugInformationFormat>
-			<FloatingPointModel>Fast</FloatingPointModel>
-			<InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
-			<MultiProcessorCompilation>true</MultiProcessorCompilation>
+			<AdditionalIncludeDirectories>$(ProjectDir)include\;$(FreeTypeIncludeDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+			<PreprocessorDefinitions>NDEBUG;LIB;WIN32_LEAN_AND_MEAN;RMLUI_STATIC_LIB;RMLUI_USE_CUSTOM_RTTI;%(PreprocessorDefinitions)</PreprocessorDefinitions>
 			<Optimization>MaxSpeed</Optimization>
+			<InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
 			<RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
 			<WarningLevel>Level3</WarningLevel>
+			<ConformanceMode>true</ConformanceMode>
+			<FunctionLevelLinking>true</FunctionLevelLinking>
+			<IntrinsicFunctions>true</IntrinsicFunctions>
+			<FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
+			<LanguageStandard>stdcpp17</LanguageStandard>
 			<RuntimeTypeInfo>false</RuntimeTypeInfo>
-			<EnableModules>false</EnableModules>
+			<BufferSecurityCheck>false</BufferSecurityCheck>
+			<FloatingPointModel>Fast</FloatingPointModel>
 		</ClCompile>
 		<Lib>
 			<TargetMachine>MachineX64</TargetMachine>
@@ -395,11 +384,6 @@
 		<ClCompile Include="source\Core\FontEngineDefault\FontFamily.cpp" />
 		<ClCompile Include="source\Core\FontEngineDefault\FontProvider.cpp" />
 		<ClCompile Include="source\Core\FontEngineDefault\FreeTypeInterface.cpp" />
-	</ItemGroup>
-	<ItemGroup>
-		<ProjectReference Include="..\..\ThirdParty\freetype\freetype.vcxproj">
-			<Project>{9811EF16-02B9-43B4-9406-07722EFB3C35}</Project>
-		</ProjectReference>
 	</ItemGroup>
 
 	<Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
