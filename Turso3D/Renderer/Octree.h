@@ -16,7 +16,6 @@ namespace Turso3D
 	class Graphics;
 	class WorkQueue;
 	struct Task;
-	struct ReinsertDrawablesTask;
 
 	// Octant occlusion query visibility states.
 	enum OctantVisibility
@@ -135,7 +134,7 @@ namespace Turso3D
 		void MarkCullingBoxDirty() const
 		{
 			const Octant* octant = this;
-			while (octant) {
+			while (octant && !octant->TestFlag(FLAG_CULLING_BOX_DIRTY)) {
 				octant->SetFlag(FLAG_CULLING_BOX_DIRTY, true);
 				octant = octant->parent;
 			}
@@ -225,6 +224,8 @@ namespace Turso3D
 	// Acceleration structure for rendering.
 	class Octree
 	{
+		struct ReinsertDrawablesTask;
+
 	public:
 		// Construct.
 		// The WorkQueue subsystem must have been initialized, as it will be used during update.
@@ -273,43 +274,9 @@ namespace Turso3D
 		void RemoveDrawableFromQueue(Drawable* drawable, std::vector<Drawable*>& drawables);
 
 		// Add drawable to a specific octant.
-		void AddDrawable(Drawable* drawable, Octant* octant)
-		{
-			octant->drawables.push_back(drawable);
-			octant->MarkCullingBoxDirty();
-			drawable->octant = octant;
-
-			if (!octant->TestFlag(Octant::FLAG_DRAWABLES_SORT_DIRTY)) {
-				octant->SetFlag(Octant::FLAG_DRAWABLES_SORT_DIRTY, true);
-				sortDirtyOctants.push_back(octant);
-			}
-		}
-
+		void AddDrawable(Drawable* drawable, Octant* octant);
 		// Remove drawable from an octant.
-		void RemoveDrawable(Drawable* drawable, Octant* octant)
-		{
-			if (!octant) {
-				return;
-			}
-
-			octant->MarkCullingBoxDirty();
-
-			// Do not set the drawable's octant pointer to zero, as the drawable may already be added into another octant.
-			// Just remove from octant
-			for (auto it = octant->drawables.begin(); it != octant->drawables.end(); ++it) {
-				if ((*it) == drawable) {
-					octant->drawables.erase(it);
-
-					// Erase empty octants as necessary, but never the root
-					while (!octant->drawables.size() && !octant->numChildren && octant->parent) {
-						Octant* parent = octant->parent;
-						DeleteChildOctant(parent, octant->childIndex);
-						octant = parent;
-					}
-					return;
-				}
-			}
-		}
+		void RemoveDrawable(Drawable* drawable, Octant* octant);
 
 		// Create a new child octant.
 		Octant* CreateChildOctant(Octant* octant, unsigned char index);

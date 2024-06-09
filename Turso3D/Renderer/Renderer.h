@@ -39,9 +39,10 @@ namespace Turso3D
 	struct ThreadOctantResult;
 	struct Task;
 
-	constexpr size_t NUM_CLUSTER_X = 16;
-	constexpr size_t NUM_CLUSTER_Y = 8;
-	constexpr size_t NUM_CLUSTER_Z = 8;
+	constexpr int NUM_CLUSTER_X = 16;
+	constexpr int NUM_CLUSTER_Y = 8;
+	constexpr int NUM_CLUSTER_Z = 8;
+
 	constexpr size_t MAX_LIGHTS = 255;
 	constexpr size_t MAX_LIGHTS_CLUSTER = 16;
 	constexpr size_t NUM_OCTANT_TASKS = 9;

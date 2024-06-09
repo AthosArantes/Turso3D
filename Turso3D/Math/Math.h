@@ -3,6 +3,7 @@
 #include <cstdlib>
 #include <cmath>
 #include <limits>
+#include <algorithm>
 
 #undef M_PI
 

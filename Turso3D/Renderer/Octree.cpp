@@ -37,7 +37,7 @@ namespace Turso3D
 	}
 
 	// Task for octree drawables reinsertion.
-	struct ReinsertDrawablesTask : public MemberFunctionTask<Octree>
+	struct Octree::ReinsertDrawablesTask : public MemberFunctionTask<Octree>
 	{
 		// Construct.
 		ReinsertDrawablesTask(Octree* object_, MemberWorkFunctionPtr function_) :
@@ -408,6 +408,43 @@ namespace Turso3D
 		}
 	}
 
+	void Octree::AddDrawable(Drawable* drawable, Octant* octant)
+	{
+		octant->drawables.push_back(drawable);
+		drawable->octant = octant;
+		octant->MarkCullingBoxDirty();
+
+		if (!octant->TestFlag(Octant::FLAG_DRAWABLES_SORT_DIRTY)) {
+			octant->SetFlag(Octant::FLAG_DRAWABLES_SORT_DIRTY, true);
+			sortDirtyOctants.push_back(octant);
+		}
+	}
+
+	void Octree::RemoveDrawable(Drawable* drawable, Octant* octant)
+	{
+		if (!octant) {
+			return;
+		}
+
+		octant->MarkCullingBoxDirty();
+
+		// Do not set the drawable's octant pointer to zero, as the drawable may already be added into another octant.
+		// Just remove from octant
+		for (auto it = octant->drawables.begin(); it != octant->drawables.end(); ++it) {
+			if ((*it) == drawable) {
+				octant->drawables.erase(it);
+
+				// Erase empty octants as necessary, but never the root
+				while (!octant->drawables.size() && !octant->numChildren && octant->parent) {
+					Octant* parent = octant->parent;
+					DeleteChildOctant(parent, octant->childIndex);
+					octant = parent;
+				}
+				return;
+			}
+		}
+	}
+
 	Octant* Octree::CreateChildOctant(Octant* octant, unsigned char index)
 	{
 		if (octant->children[index]) {
@@ -441,6 +478,8 @@ namespace Turso3D
 		child->Initialize(graphics, octant, BoundingBox(newMin, newMax), octant->level - 1, index);
 		octant->children[index] = child;
 		++octant->numChildren;
+
+		octant->SetFlag(Octant::FLAG_CULLING_BOX_DIRTY, true);
 
 		return child;
 	}
