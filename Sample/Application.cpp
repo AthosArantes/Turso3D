@@ -53,7 +53,9 @@ Application::Application() :
 	frameLimit(0),
 	cursorInside(false),
 	camYaw(0),
-	camPitch(0)
+	camPitch(0),
+	useOcclusion(true),
+	renderDebug(false)
 {
 	// Create subsystems that don't depend on the application window / OpenGL context
 	workQueue = std::make_unique<WorkQueue>();
@@ -387,7 +389,7 @@ void Application::CreateSpheresScene()
 			//light->SetStatic(true);
 			light->SetLightType(LIGHT_POINT);
 			//light->SetCastShadows(true);
-			light->SetPosition(Vector3 {Random() * 2.0f - 1.0f, Random() * 2.0f - 2.0f, -1.0f} * 3.0f);
+			light->SetPosition(Vector3 {Random() * 2.0f - 1.0f, Random() * 2.0f - 2.0f, -1.0f} *3.0f);
 
 			light->SetColor(Color::WHITE() * 10.0f);
 			light->SetRange(10.0f);
@@ -434,6 +436,23 @@ void Application::CreateThousandMushroomScene()
 					object->SetMaxDistance(0.0f);
 				}
 			}
+		}
+	}
+
+	// Crate huge walls
+	{
+		std::shared_ptr<Model> boxModel = cache->LoadResource<Model>("box.tmf");
+
+		float rotate[] = {0.0f, 90.f};
+		for (int i = 0; i < 2; ++i) {
+			StaticModel* wall = root->CreateChild<StaticModel>();
+			wall->SetStatic(true);
+			wall->SetPosition(Vector3 {0.0f, 14.0f, 0.0f});
+			wall->SetScale(Vector3(1000.0f, 30.0f, 0.1f));
+			wall->Rotate(Quaternion(0.0f, rotate[i], 0.0f));
+			wall->SetModel(boxModel);
+			wall->SetMaterial(floorMaterial);
+			wall->SetCastShadows(true);
 		}
 	}
 }
@@ -583,6 +602,8 @@ void Application::OnWindowFocusChanged(int focused)
 // ==========================================================================================
 void Application::Update(double dt)
 {
+	const float dtf = static_cast<float>(dt);
+
 	double delay = mainContext->GetNextUpdateDelay();
 	if (delay <= dt) {
 		mainContext->Update();
@@ -594,10 +615,12 @@ void Application::Update(double dt)
 	float moveSpeed = (IsKeyDown(GLFW_KEY_LEFT_SHIFT) || IsKeyDown(GLFW_KEY_RIGHT_SHIFT)) ? 50.0f : 5.0f;
 	moveSpeed *= (IsKeyDown(GLFW_KEY_LEFT_ALT) || IsKeyDown(GLFW_KEY_RIGHT_ALT)) ? 0.25f : 1.0f;
 
-	if (IsKeyDown(GLFW_KEY_W)) camera->Translate(Vector3::FORWARD() * moveSpeed * (float)dt);
-	if (IsKeyDown(GLFW_KEY_S)) camera->Translate(Vector3::BACK() * moveSpeed * (float)dt);
-	if (IsKeyDown(GLFW_KEY_A)) camera->Translate(Vector3::LEFT() * moveSpeed * (float)dt);
-	if (IsKeyDown(GLFW_KEY_D)) camera->Translate(Vector3::RIGHT() * moveSpeed * (float)dt);
+	Vector3 camTranslation = Vector3::ZERO();
+	if (IsKeyDown(GLFW_KEY_W)) camTranslation += Vector3::FORWARD();
+	if (IsKeyDown(GLFW_KEY_S)) camTranslation += Vector3::BACK();
+	if (IsKeyDown(GLFW_KEY_A)) camTranslation += Vector3::LEFT();
+	if (IsKeyDown(GLFW_KEY_D)) camTranslation += Vector3::RIGHT();
+	camera->Translate(camTranslation * moveSpeed * dtf);
 
 	GLFWwindow* window = graphics->Window();
 	int mouseMode = glfwGetInputMode(window, GLFW_CURSOR);
@@ -623,7 +646,10 @@ void Application::Update(double dt)
 		glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 	}
 
+	if (IsKeyPressed(GLFW_KEY_1)) useOcclusion = !useOcclusion;
+	if (IsKeyPressed(GLFW_KEY_2)) renderDebug = !renderDebug;
 	if (IsKeyPressed(GLFW_KEY_F)) graphics->SetFullscreen(!graphics->IsFullscreen());
+	if (IsKeyPressed(GLFW_KEY_V)) graphics->SetVSync(!graphics->VSync());
 
 #endif
 
@@ -663,7 +689,7 @@ void Application::Render(double dt)
 
 	// Collect geometries and lights in frustum.
 	// Also set debug renderer to use the correct camera view.
-	renderer->PrepareView(scene.get(), camera.get(), true, true, (float)dt);
+	renderer->PrepareView(scene.get(), camera.get(), true, useOcclusion, (float)dt);
 	debugRenderer->SetView(camera.get());
 
 	// Now render the scene, starting with shadowmaps and opaque geometries
@@ -716,19 +742,19 @@ void Application::Render(double dt)
 	}
 
 	// Optional render of debug geometry
-	bool drawDebug = false;
-	if (drawDebug) {
-		Octree* octree = scene->GetOctree();
-
+	if (renderDebug) {
+#if 0
 		// Raycast into the scene using the camera forward vector.
 		// If has a hit, draw a small debug sphere at the hit location.
 		{
+			Octree* octree = scene->GetOctree();
 			Ray cameraRay(camera->WorldPosition(), camera->WorldDirection());
 			RaycastResult res = scene->GetOctree()->RaycastSingle(cameraRay, Drawable::FLAG_GEOMETRY);
 			if (res.drawable) {
 				debugRenderer->AddSphere(Sphere(res.position, 0.05f), Color::WHITE(), true);
 			}
 		}
+#endif
 
 		renderer->RenderDebug(debugRenderer.get());
 		debugRenderer->Render();

@@ -136,4 +136,7 @@ private:
 
 	float camYaw;
 	float camPitch;
+
+	bool useOcclusion;
+	bool renderDebug;
 };
