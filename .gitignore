@@ -11,3 +11,9 @@
 [Ll]ogs/
 
 [Pp]rivate/
+
+*.exe
+*.exp
+*.log
+*.lib
+*.pdb
