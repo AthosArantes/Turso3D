@@ -55,7 +55,8 @@ Application::Application() :
 	camYaw(0),
 	camPitch(0),
 	useOcclusion(true),
-	renderDebug(false)
+	renderDebug(false),
+	character(nullptr)
 {
 	// Create subsystems that don't depend on the application window / OpenGL context
 	workQueue = std::make_unique<WorkQueue>();
@@ -187,6 +188,7 @@ bool Application::Initialize()
 	CreateDefaultScene();
 	//CreateSpheresScene();
 	CreateThousandMushroomScene();
+	CreateWalkingCharacter();
 
 	return true;
 }
@@ -440,7 +442,7 @@ void Application::CreateThousandMushroomScene()
 	}
 
 	// Crate huge walls
-	{
+	/*{
 		std::shared_ptr<Model> boxModel = cache->LoadResource<Model>("box.tmf");
 
 		float rotate[] = {0.0f, 90.f};
@@ -454,7 +456,25 @@ void Application::CreateThousandMushroomScene()
 			wall->SetMaterial(floorMaterial);
 			wall->SetCastShadows(true);
 		}
-	}
+	}//*/
+}
+
+void Application::CreateWalkingCharacter()
+{
+	ResourceCache* cache = ResourceCache::Instance();
+	Node* root = scene->GetRoot();
+
+	std::shared_ptr<Model> charModel = cache->LoadResource<Model>("jack.tmf");
+
+	character = root->CreateChild<AnimatedModel>();
+	character->SetStatic(false);
+	character->SetModel(charModel);
+	character->SetCastShadows(true);
+	character->SetMaxDistance(600.0f);
+
+	AnimationState* state = character->AddAnimationState(cache->LoadResource<Animation>("Jack_Walk.ani"));
+	state->SetWeight(1.0f);
+	state->SetLooped(true);
 }
 
 bool Application::IsKeyDown(int key)
@@ -650,6 +670,19 @@ void Application::Update(double dt)
 	if (IsKeyPressed(GLFW_KEY_2)) renderDebug = !renderDebug;
 	if (IsKeyPressed(GLFW_KEY_F)) graphics->SetFullscreen(!graphics->IsFullscreen());
 	if (IsKeyPressed(GLFW_KEY_V)) graphics->SetVSync(!graphics->VSync());
+
+	if (character) {
+		AnimationState* state = character->AnimationStates()[0].get();
+		state->AddTime(dtf);
+
+		character->Translate(Vector3::FORWARD() * 2.0f * dtf);
+
+		// Rotate to avoid going outside the plane
+		Vector3 pos = character->Position();
+		if (pos.x < -45.0f || pos.x > 45.0f || pos.z < -45.0f || pos.z > 45.0f) {
+			character->Yaw(46.0f * dtf);
+		}
+	}
 
 #endif
 

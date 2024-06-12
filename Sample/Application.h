@@ -60,6 +60,7 @@ private:
 	// IBL sphere samples
 	void CreateSpheresScene();
 	void CreateThousandMushroomScene();
+	void CreateWalkingCharacter();
 
 	bool IsKeyDown(int key);
 	bool IsKeyPressed(int key);
@@ -139,4 +140,6 @@ private:
 
 	bool useOcclusion;
 	bool renderDebug;
+
+	Turso3D::AnimatedModel* character;
 };
