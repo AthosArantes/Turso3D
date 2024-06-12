@@ -14,14 +14,6 @@ namespace Turso3D
 	class UniformBuffer;
 	struct ModelBone;
 
-	// TODO: put these in enum
-	constexpr unsigned char AMF_ANIMATION_ORDER_DIRTY = 0x1;
-	constexpr unsigned char AMF_ANIMATION_DIRTY = 0x2;
-	constexpr unsigned char AMF_SKINNING_DIRTY = 0x4;
-	constexpr unsigned char AMF_SKINNING_BUFFER_DIRTY = 0x8;
-	constexpr unsigned char AMF_BONE_BOUNDING_BOX_DIRTY = 0x10;
-	constexpr unsigned char AMF_IN_ANIMATION_UPDATE = 0x20;
-
 	// Bone scene node for AnimatedModel skinning.
 	class Bone : public SpatialNode
 	{
@@ -78,6 +70,17 @@ namespace Turso3D
 		friend class AnimatedModel;
 
 	public:
+		enum Flag
+		{
+			FLAG_ANIMATION_ORDER_DIRTY = 0x1,
+			FLAG_ANIMATION_DIRTY = 0x2,
+			FLAG_SKINNING_DIRTY = 0x4,
+			FLAG_SKINNING_BUFFER_DIRTY = 0x8,
+			FLAG_BONE_BOUNDING_BOX_DIRTY = 0x10,
+			FLAG_IN_ANIMATION_UPDATE = 0x20
+		};
+
+	public:
 		// Construct.
 		AnimatedModelDrawable();
 
@@ -106,7 +109,7 @@ namespace Turso3D
 			if (octree && octant && !TestFlag(Drawable::FLAG_OCTREE_REINSERT_QUEUED)) {
 				octree->QueueUpdate(this);
 			}
-			animatedModelFlags |= AMF_SKINNING_DIRTY | AMF_BONE_BOUNDING_BOX_DIRTY;
+			animatedModelFlags |= FLAG_SKINNING_DIRTY | FLAG_BONE_BOUNDING_BOX_DIRTY;
 		}
 
 		// Set animation order dirty when animation state changes layer order and queue octree reinsertion.
@@ -116,7 +119,7 @@ namespace Turso3D
 			if (octree && octant && !TestFlag(Drawable::FLAG_OCTREE_REINSERT_QUEUED)) {
 				octree->QueueUpdate(this);
 			}
-			animatedModelFlags |= AMF_ANIMATION_DIRTY | AMF_ANIMATION_ORDER_DIRTY;
+			animatedModelFlags |= FLAG_ANIMATION_DIRTY | FLAG_ANIMATION_ORDER_DIRTY;
 		}
 
 		// Set animation dirty when animation state changes time position or weight and queue octree reinsertion.
@@ -126,7 +129,7 @@ namespace Turso3D
 			if (octree && octant && !TestFlag(Drawable::FLAG_OCTREE_REINSERT_QUEUED)) {
 				octree->QueueUpdate(this);
 			}
-			animatedModelFlags |= AMF_ANIMATION_DIRTY;
+			animatedModelFlags |= FLAG_ANIMATION_DIRTY;
 		}
 
 		// Mark bone transforms dirty.
@@ -151,9 +154,15 @@ namespace Turso3D
 
 		// Return all animation states.
 		const std::vector<std::shared_ptr<AnimationState>>& AnimationStates() const { return animationStates; }
-		
+
 		// Return the internal dirty status flags.
-		unsigned AnimatedModelFlags() { return animatedModelFlags; }
+		unsigned AnimatedModelFlags() const { return animatedModelFlags; }
+
+	private:
+		void SetRootBone(Bone* newRootBone)
+		{
+			rootBone = newRootBone;
+		}
 
 	protected:
 		// Combined bounding box of the bones in model space, used for quick updates when only the node moves without animation
@@ -161,7 +170,7 @@ namespace Turso3D
 		// Internal dirty status flags.
 		mutable unsigned animatedModelFlags;
 		// Number of bones.
-		unsigned short numBones;
+		size_t numBones;
 		// Octree.
 		Octree* octree;
 		// Root bone.
@@ -214,7 +223,7 @@ namespace Turso3D
 		const std::vector<std::shared_ptr<AnimationState>>& AnimationStates() const { return static_cast<AnimatedModelDrawable*>(drawable)->AnimationStates(); }
 		// Return number of animation states.
 		size_t NumAnimationStates() const { return static_cast<AnimatedModelDrawable*>(drawable)->animationStates.size(); }
-		
+
 		// Return animation state by index.
 		AnimationState* GetAnimationState(size_t index) const;
 		// Return animation state by animation pointer.

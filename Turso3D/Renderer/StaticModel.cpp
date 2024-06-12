@@ -105,6 +105,12 @@ namespace Turso3D
 	}
 
 	// ==========================================================================================
+	StaticModel::StaticModel(Drawable* drawable)
+	{
+		this->drawable = drawable;
+		drawable->SetOwner(this);
+	}
+
 	StaticModel::StaticModel()
 	{
 		drawable = drawableAllocator.Allocate();

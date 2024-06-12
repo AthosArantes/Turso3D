@@ -35,6 +35,10 @@ namespace Turso3D
 	// Scene node that renders an unanimated model, which can have LOD levels.
 	class StaticModel : public GeometryNode
 	{
+	protected:
+		// Construct.
+		StaticModel(Drawable* drawable);
+
 	public:
 		// Construct.
 		StaticModel();

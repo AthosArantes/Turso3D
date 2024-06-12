@@ -12,11 +12,20 @@
 #include <Turso3D/Resource/ResourceCache.h>
 #include <algorithm>
 
-namespace Turso3D
+namespace
 {
+	using namespace Turso3D;
+
 	static Allocator<AnimatedModelDrawable> drawableAllocator;
 
-	// ==========================================================================================
+	static inline bool CompareAnimationStates(const std::shared_ptr<AnimationState>& lhs, const std::shared_ptr<AnimationState>& rhs)
+	{
+		return lhs->BlendLayer() < rhs->BlendLayer();
+	}
+}
+
+namespace Turso3D
+{
 	Bone::Bone() :
 		drawable(nullptr),
 		animationEnabled(true),
@@ -42,7 +51,8 @@ namespace Turso3D
 	void Bone::CountChildBones()
 	{
 		numChildBones = 0;
-		for (const std::unique_ptr<Node>& child : children) {
+		for (size_t i = 0; i < children.size(); ++i) {
+			Node* child = children[i].get();
 			if (child->TestFlag(FLAG_BONE)) {
 				++numChildBones;
 			}
@@ -57,17 +67,12 @@ namespace Turso3D
 		// Do not signal changes either during animation update,
 		// as the model will set the hierarchy dirty when finished.
 		// This is also used to optimize when only the model node moves.
-		if (drawable && !(drawable->AnimatedModelFlags() & (AMF_IN_ANIMATION_UPDATE | AMF_SKINNING_DIRTY))) {
+		if (drawable && !(drawable->AnimatedModelFlags() & (AnimatedModelDrawable::FLAG_IN_ANIMATION_UPDATE | AnimatedModelDrawable::FLAG_SKINNING_DIRTY))) {
 			drawable->OnBoneTransformChanged();
 		}
 	}
 
 	// ==========================================================================================
-	static inline bool CompareAnimationStates(const std::shared_ptr<AnimationState>& lhs, const std::shared_ptr<AnimationState>& rhs)
-	{
-		return lhs->BlendLayer() < rhs->BlendLayer();
-	}
-
 	AnimatedModelDrawable::AnimatedModelDrawable() :
 		animatedModelFlags(0),
 		numBones(0),
@@ -81,7 +86,7 @@ namespace Turso3D
 	{
 		if (model && numBones) {
 			// Recalculate bounding box from bones only if they moved individually
-			if (animatedModelFlags & AMF_BONE_BOUNDING_BOX_DIRTY) {
+			if (animatedModelFlags & FLAG_BONE_BOUNDING_BOX_DIRTY) {
 				const std::vector<ModelBone>& modelBones = model->Bones();
 
 				// Use a temporary bounding box for calculations in case many threads call this simultaneously
@@ -95,7 +100,7 @@ namespace Turso3D
 
 				worldBoundingBox = tempBox;
 				boneBoundingBox = tempBox.Transformed(WorldTransform().Inverse());
-				animatedModelFlags &= ~AMF_BONE_BOUNDING_BOX_DIRTY;
+				animatedModelFlags &= ~FLAG_BONE_BOUNDING_BOX_DIRTY;
 			} else {
 				worldBoundingBox = boneBoundingBox.Transformed(WorldTransform());
 			}
@@ -107,10 +112,10 @@ namespace Turso3D
 	void AnimatedModelDrawable::OnOctreeUpdate(unsigned short frameNumber)
 	{
 		if (TestFlag(Drawable::FLAG_UPDATE_INVISIBLE) || WasInView(frameNumber)) {
-			if (animatedModelFlags & AMF_ANIMATION_DIRTY) {
+			if (animatedModelFlags & FLAG_ANIMATION_DIRTY) {
 				UpdateAnimation();
 			}
-			if (animatedModelFlags & AMF_SKINNING_DIRTY) {
+			if (animatedModelFlags & FLAG_SKINNING_DIRTY) {
 				UpdateSkinning();
 			}
 		}
@@ -123,10 +128,10 @@ namespace Turso3D
 		}
 
 		// Update animation here too if just came into view and animation / skinning is still dirty
-		if (animatedModelFlags & AMF_ANIMATION_DIRTY) {
+		if (animatedModelFlags & FLAG_ANIMATION_DIRTY) {
 			UpdateAnimation();
 		}
-		if (animatedModelFlags & AMF_SKINNING_DIRTY) {
+		if (animatedModelFlags & FLAG_SKINNING_DIRTY) {
 			UpdateSkinning();
 		}
 
@@ -139,9 +144,9 @@ namespace Turso3D
 			return;
 		}
 
-		if (animatedModelFlags & AMF_SKINNING_BUFFER_DIRTY) {
+		if (animatedModelFlags & FLAG_SKINNING_BUFFER_DIRTY) {
 			skinMatrixBuffer->SetData(0, numBones * sizeof(Matrix3x4), skinMatrices.get());
-			animatedModelFlags &= ~AMF_SKINNING_BUFFER_DIRTY;
+			animatedModelFlags &= ~FLAG_SKINNING_BUFFER_DIRTY;
 		}
 
 		skinMatrixBuffer->Bind(UB_OBJECTDATA);
@@ -192,11 +197,12 @@ namespace Turso3D
 		debug->AddBoundingBox(WorldBoundingBox(), Color::GREEN(), false);
 
 		for (size_t i = 0; i < numBones; ++i) {
-			// Skip the root bone, as it has no sensible connection point
 			Bone* bone = bones[i];
-			if (bone != rootBone) {
-				debug->AddLine(bone->WorldPosition(), bone->SpatialParent()->WorldPosition(), Color::WHITE(), false);
+			// Skip the root bone, as it has no sensible connection point
+			if (bone->SpatialParent() == rootBone) {
+				continue;
 			}
+			debug->AddLine(bone->WorldPosition(), bone->SpatialParent()->WorldPosition(), Color::WHITE(), false);
 		}
 	}
 
@@ -213,7 +219,7 @@ namespace Turso3D
 			RemoveBones();
 		}
 
-		numBones = (unsigned short)modelBones.size();
+		numBones = modelBones.size();
 
 		bones = std::make_unique<Bone*[]>(numBones);
 		skinMatrices = std::make_unique<Matrix3x4[]>(numBones);
@@ -221,7 +227,7 @@ namespace Turso3D
 		for (size_t i = 0; i < modelBones.size(); ++i) {
 			const ModelBone& modelBone = modelBones[i];
 
-			Node* existingBone = owner->FindChild(modelBone.nameHash, true);
+			Node* existingBone = rootBone->FindChild(modelBone.nameHash, true);
 			if (existingBone && existingBone->TestFlag(Node::FLAG_BONE)) {
 				bones[i] = static_cast<Bone*>(existingBone);
 			} else {
@@ -237,8 +243,7 @@ namespace Turso3D
 		for (size_t i = 0; i < modelBones.size(); ++i) {
 			const ModelBone& desc = modelBones[i];
 			if (desc.parentIndex == i) {
-				owner->AddChild(std::unique_ptr<Bone>(bones[i]));
-				rootBone = bones[i];
+				rootBone->AddChild(std::unique_ptr<Bone>(bones[i]));
 			} else {
 				bones[desc.parentIndex]->AddChild(std::unique_ptr<Bone>(bones[i]));
 			}
@@ -254,17 +259,18 @@ namespace Turso3D
 		}
 		skinMatrixBuffer->Define(USAGE_DYNAMIC, numBones * sizeof(Matrix3x4));
 
-		// Set initial bone bounding box recalculation and skinning dirty. Also calculate a valid bone bounding box immediately to ensure models can enter the view without updating animation first
+		// Set initial bone bounding box recalculation and skinning dirty.
+		// Also calculate a valid bone bounding box immediately to ensure models can enter the view without updating animation first
 		OnBoneTransformChanged();
 		OnWorldBoundingBoxUpdate();
 	}
 
 	void AnimatedModelDrawable::UpdateAnimation()
 	{
-		if (animatedModelFlags & AMF_ANIMATION_ORDER_DIRTY) {
+		if (animatedModelFlags & FLAG_ANIMATION_ORDER_DIRTY) {
 			std::sort(animationStates.begin(), animationStates.end(), CompareAnimationStates);
 		}
-		animatedModelFlags |= AMF_IN_ANIMATION_UPDATE | AMF_BONE_BOUNDING_BOX_DIRTY;
+		animatedModelFlags |= FLAG_IN_ANIMATION_UPDATE | FLAG_BONE_BOUNDING_BOX_DIRTY;
 
 		// Reset bones to initial pose, then apply animations
 		const std::vector<ModelBone>& modelBones = model->Bones();
@@ -287,7 +293,7 @@ namespace Turso3D
 		// Dirty the bone hierarchy now. This will also dirty and queue reinsertion for attached models
 		SetBoneTransformsDirty();
 
-		animatedModelFlags &= ~(AMF_ANIMATION_ORDER_DIRTY | AMF_ANIMATION_DIRTY | AMF_IN_ANIMATION_UPDATE);
+		animatedModelFlags &= ~(FLAG_ANIMATION_ORDER_DIRTY | FLAG_ANIMATION_DIRTY | FLAG_IN_ANIMATION_UPDATE);
 
 		// Update bounding box already here to take advantage of threaded update, and also to update bone world transforms for skinning
 		OnWorldBoundingBoxUpdate();
@@ -300,7 +306,7 @@ namespace Turso3D
 			}
 		}
 
-		animatedModelFlags |= AMF_SKINNING_DIRTY;
+		animatedModelFlags |= FLAG_SKINNING_DIRTY;
 	}
 
 	void AnimatedModelDrawable::UpdateSkinning()
@@ -310,12 +316,13 @@ namespace Turso3D
 		for (size_t i = 0; i < numBones; ++i) {
 			skinMatrices[i] = bones[i]->WorldTransform() * modelBones[i].offsetMatrix;
 		}
-		animatedModelFlags &= ~AMF_SKINNING_DIRTY;
-		animatedModelFlags |= AMF_SKINNING_BUFFER_DIRTY;
+		animatedModelFlags &= ~FLAG_SKINNING_DIRTY;
+		animatedModelFlags |= FLAG_SKINNING_BUFFER_DIRTY;
 	}
 
 	void AnimatedModelDrawable::SetBoneTransformsDirty()
 	{
+		rootBone->SetFlag(Node::FLAG_WORLDTRANSFORMDIRTY, true);
 		for (size_t i = 0; i < numBones; ++i) {
 			// If bone has only other bones as children, just set its world transform dirty without going through the hierarchy.
 			// The whole hierarchy will be eventually updated
@@ -337,23 +344,20 @@ namespace Turso3D
 		for (size_t i = 0; i < numBones; ++i) {
 			bones[i]->SetDrawable(nullptr);
 		}
-
-		if (rootBone) {
-			rootBone->RemoveSelf();
-			rootBone = nullptr;
-		}
-
 		bones.reset();
+		numBones = 0;
+
 		skinMatrices.reset();
 		skinMatrixBuffer.reset();
-		numBones = 0;
 	}
 
 	// ==========================================================================================
-	AnimatedModel::AnimatedModel()
+	AnimatedModel::AnimatedModel() :
+		StaticModel(drawableAllocator.Allocate())
 	{
-		drawable = drawableAllocator.Allocate();
-		drawable->SetOwner(this);
+		// Create a nameless bone used to contain all models' bones.
+		Bone* rootBone = CreateChild<Bone>();
+		static_cast<AnimatedModelDrawable*>(drawable)->SetRootBone(rootBone);
 	}
 
 	AnimatedModel::~AnimatedModel()
@@ -510,7 +514,7 @@ namespace Turso3D
 		AnimatedModelDrawable* modelDrawable = static_cast<AnimatedModelDrawable*>(drawable);
 
 		// To improve performance set skinning dirty now, so the bone nodes will not redundantly signal transform changes back
-		modelDrawable->animatedModelFlags |= AMF_SKINNING_DIRTY;
+		modelDrawable->animatedModelFlags |= AnimatedModelDrawable::FLAG_SKINNING_DIRTY;
 
 		// If have other children than the root bone, dirty the hierarchy normally. Otherwise optimize
 		if (children.size() > 1) {
