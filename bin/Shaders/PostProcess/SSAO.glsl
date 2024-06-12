@@ -1,10 +1,6 @@
 #version 330 core
 
-// ================================================================================================
-// VERTEX SHADER
-// ================================================================================================
-#ifdef COMPILE_VS
-
+#pragma shader vs //===============================================================================
 in vec3 position;
 out vec2 texCoord;
 
@@ -14,17 +10,10 @@ void main()
 	texCoord = vec2(position.xy) * 0.5 + 0.5;
 }
 
-#endif
-
-// ================================================================================================
-// FRAGMENT SHADER
-// ================================================================================================
-#ifdef COMPILE_FS
-
-#include <Uniforms.glsli>
+#pragma shader fs //===============================================================================
+#include <Uniforms.h>
 
 in vec2 texCoord;
-out float fragColor;
 
 uniform sampler2D depthTex0;
 uniform sampler2D normalTex1;
@@ -63,6 +52,8 @@ float DoAmbientOcclusion(vec2 uv, vec2 offs, vec3 pos, vec3 n)
 }
 
 // ------------------------------------------------------------------------------------------------
+out float fragColor;
+
 void main()
 {
 	vec2 rand = texture(noiseTex2, texCoord * noiseInvSize.xy).rg * 2.0 - 1.0;
@@ -95,5 +86,3 @@ void main()
 
 	fragColor = clamp(ao * aoParameters.z, 0.0, 1.0);
 }
-
-#endif

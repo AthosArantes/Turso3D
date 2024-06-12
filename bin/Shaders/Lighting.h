@@ -1,9 +1,6 @@
-#ifndef I_LIGHTING_H
-#define I_LIGHTING_H
-
 #extension GL_ARB_texture_cube_map_array : enable
 
-#include <BRDF.glsli>
+#include <BRDF.h>
 
 uniform sampler2DShadow dirShadowTex8;
 uniform sampler2DShadow shadowTex9;
@@ -209,5 +206,3 @@ vec3 CalculateLighting(const in vec4 worldPos, const in vec2 screenPos, const in
 
 	return ambient + color;
 }
-
-#endif

@@ -1,6 +1,3 @@
-#ifndef I_UTILS_H
-#define I_UTILS_H
-
 vec3 BC5NormalMap(const in vec4 normalMap)
 {
 	vec2 n = normalMap.xy * 2.0 - 1.0;
@@ -19,5 +16,3 @@ vec3 BlendNormalMap(vec3 n1, vec3 n2)
     vec3 u = n2 * vec3(-2, -2, 2) + vec3(1, 1, -1);
     return normalize(t * dot(t, u) - u * t.z);
 }
-
-#endif

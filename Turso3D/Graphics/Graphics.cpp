@@ -306,7 +306,7 @@ namespace Turso3D
 		ResourceCache* cache = ResourceCache::Instance();
 		std::shared_ptr<Shader> shader = cache->LoadResource<Shader>(shaderName);
 		if (shader) {
-			return shader->CreateProgram(vsDefines, fsDefines);
+			return shader->Program(vsDefines, fsDefines);
 		}
 		return {};
 	}

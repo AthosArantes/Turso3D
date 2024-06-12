@@ -1,13 +1,9 @@
 #version 330 core
 
-#include <Uniforms.glsli>
+#include <Uniforms.h>
 
-// ================================================================================================
-// VERTEX SHADER
-// ================================================================================================
-#ifdef COMPILE_VS
-
-#include <Transform.glsli>
+#pragma shader vs //===============================================================================
+#include <Transform.h>
 
 in vec3 position;
 in vec3 normal;
@@ -30,14 +26,8 @@ void main()
 	vScreenPos = CalculateScreenPos(gl_Position);
 }
 
-#endif
-
-// ================================================================================================
-// FRAGMENT SHADER
-// ================================================================================================
-#ifdef COMPILE_FS
-
-#include <Lighting.glsli>
+#pragma shader fs //===============================================================================
+#include <Lighting.h>
 
 in vec4 vWorldPos;
 in vec3 vNormal;
@@ -53,7 +43,8 @@ layout(std140) uniform PerMaterialData3
 #endif
 };
 
-out vec4 fragColor[2];
+layout (location = 0) out vec4 fragColor;
+layout (location = 1) out vec4 fragNormal;
 
 void main()
 {
@@ -77,8 +68,6 @@ void main()
 	// Add environment fog
 	color = mix(fogColor, color, GetFogFactor(vWorldPos.w));
 
-	fragColor[0] = vec4(color, BaseColor.a);
-	fragColor[1] = vec4(vViewNormal, 1.0);
+	fragColor = vec4(color, BaseColor.a);
+	fragNormal = vec4(vViewNormal, 1.0);
 }
-
-#endif

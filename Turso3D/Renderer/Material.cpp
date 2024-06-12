@@ -231,7 +231,7 @@ namespace Turso3D
 	void Pass::CreateShaderProgram(uint8_t programBits)
 	{
 		uint8_t geomBits = programBits & SP_GEOMETRYBITS;
-		std::shared_ptr<ShaderProgram> newShaderProgram = shader->CreateProgram(
+		std::shared_ptr<ShaderProgram> newShaderProgram = shader->Program(
 			GlobalDefines[SHADER_VS] + parent->VSDefines() + vsDefines + GeometryDefines[geomBits],
 			GlobalDefines[SHADER_FS] + parent->FSDefines() + fsDefines
 		);

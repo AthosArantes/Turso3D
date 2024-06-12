@@ -1,10 +1,6 @@
 #version 330 core
 
-// ================================================================================================
-// VERTEX SHADER
-// ================================================================================================
-#ifdef COMPILE_VS
-
+#pragma shader vs //===============================================================================
 in vec2 position;
 in vec4 color;
 in vec2 texCoord;
@@ -26,13 +22,7 @@ void main()
 	gl_Position = outPos;
 }
 
-#endif
-
-// ================================================================================================
-// FRAGMENT SHADER
-// ================================================================================================
-#ifdef COMPILE_FS
-
+#pragma shader fs //===============================================================================
 #ifdef TEXTURED
 uniform sampler2D tex0;
 #endif
@@ -40,8 +30,8 @@ uniform sampler2D tex0;
 in vec2 vTexCoord;
 in vec4 vColor;
 
-layout(location = 0) out vec4 fragColor;
-layout(location = 1) out vec4 fragMask;
+layout (location = 0) out vec4 fragColor;
+layout (location = 1) out vec4 fragMask;
 
 void main()
 {
@@ -58,5 +48,3 @@ void main()
 	fragColor = color;
 	fragMask = vec4(mask);
 }
-
-#endif

@@ -1,6 +1,3 @@
-#ifndef I_UNIFORMS_H
-#define I_UNIFORMS_H
-
 layout(std140) uniform PerViewData0
 {
 	uniform mat3x4 viewMatrix;
@@ -45,5 +42,3 @@ float GetFogFactor(float depth)
 {
 	return clamp((fogParameters.x - depth) * fogParameters.y, 0.0, 1.0);
 }
-
-#endif

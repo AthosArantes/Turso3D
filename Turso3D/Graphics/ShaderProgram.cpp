@@ -11,7 +11,7 @@ namespace Turso3D
 
 	constexpr size_t MAX_NAME_LENGTH = 256;
 
-	int NumberPostfix(const std::string& string)
+	static int NumberPostfix(const std::string& string)
 	{
 		for (size_t i = 0; i < string.length(); ++i) {
 			if (isdigit(string[i])) {
@@ -36,14 +36,59 @@ namespace Turso3D
 		Release();
 	}
 
-	bool ShaderProgram::Create(const std::string& code, const std::vector<std::string>& vsDefines, const std::vector<std::string>& fsDefines)
+	bool ShaderProgram::Bind()
+	{
+		if (!program) {
+			return false;
+		}
+		if (boundProgram == this) {
+			return true;
+		}
+		glUseProgram(program);
+		boundProgram = this;
+		return true;
+	}
+
+	void ShaderProgram::SetUniform(PresetUniform uniform, float value)
+	{
+		glUniform1f(Uniform(uniform), value);
+	}
+
+	void ShaderProgram::SetUniform(PresetUniform uniform, const Vector2& value)
+	{
+		glUniform2fv(Uniform(uniform), 1, value.Data());
+	}
+
+	void ShaderProgram::SetUniform(PresetUniform uniform, const Vector3& value)
+	{
+		glUniform3fv(Uniform(uniform), 1, value.Data());
+	}
+
+	void ShaderProgram::SetUniform(PresetUniform uniform, const Vector4& value)
+	{
+		glUniform4fv(Uniform(uniform), 1, value.Data());
+	}
+
+	void ShaderProgram::SetUniform(PresetUniform uniform, const Matrix3& value)
+	{
+		glUniformMatrix3fv(Uniform(uniform), 1, GL_FALSE, value.Data());
+	}
+
+	void ShaderProgram::SetUniform(PresetUniform uniform, const Matrix3x4& value)
+	{
+		glUniformMatrix3x4fv(Uniform(uniform), 1, GL_FALSE, value.Data());
+	}
+
+	void ShaderProgram::SetUniform(PresetUniform uniform, const Matrix4& value)
+	{
+		glUniformMatrix4fv(Uniform(uniform), 1, GL_FALSE, value.Data());
+	}
+
+	bool ShaderProgram::Create(unsigned vs, unsigned fs)
 	{
 		if (program) {
 			return true;
 		}
-
-		unsigned vs = CompileShader(SHADER_VS, code, vsDefines);
-		unsigned fs = CompileShader(SHADER_FS, code, fsDefines);
 
 		if (!vs || !fs) {
 			return false;
@@ -56,10 +101,11 @@ namespace Turso3D
 			glBindAttribLocation(program, i, VertexAttributeName((VertexAttribute)i));
 		}
 		glLinkProgram(program);
+
 		glDeleteShader(vs);
 		glDeleteShader(fs);
 
-		int linked;
+		GLint linked;
 		glGetProgramiv(program, GL_LINK_STATUS, &linked);
 		{
 			int length, outLength;
@@ -70,14 +116,14 @@ namespace Turso3D
 			glGetProgramInfoLog(program, length, &outLength, &errorString[0]);
 
 			if (!linked) {
-				LOG_ERROR("Could not link shader \"{:s}\": {:s}", name, errorString.c_str());
+				LOG_ERROR("Could not link shader program: {:s}", errorString.c_str());
 				glDeleteProgram(program);
 				program = 0;
 				return false;
 			}
 #ifdef _DEBUG
 			else if (length > 1) {
-				LOG_DEBUG("Shader link messages \"{:s}\": {:s}", name, errorString.c_str());
+				LOG_DEBUG("Shader program link messages: {:s}", errorString.c_str());
 			}
 #endif
 		}
@@ -122,7 +168,7 @@ namespace Turso3D
 			if (size_t p = name.find("[0]", 0); p != std::string::npos) {
 				name.erase(p, 3);
 			}
-			uniforms[StringHash(name)] = location;
+			uniforms[StringHash {name}] = location;
 
 			// Check if uniform is a preset one for quick access
 			PresetUniform preset = MAX_PRESET_UNIFORMS;
@@ -177,151 +223,6 @@ namespace Turso3D
 		}
 
 		return true;
-	}
-
-	bool ShaderProgram::Bind()
-	{
-		if (!program) {
-			return false;
-		}
-		if (boundProgram == this) {
-			return true;
-		}
-		glUseProgram(program);
-		boundProgram = this;
-		return true;
-	}
-
-	void ShaderProgram::SetName(const std::string& newName)
-	{
-		name = newName;
-	}
-
-	int ShaderProgram::Uniform(const std::string& name) const
-	{
-		return Uniform(StringHash(name));
-	}
-
-	int ShaderProgram::Uniform(const char* name) const
-	{
-		return Uniform(StringHash(name));
-	}
-
-	int ShaderProgram::Uniform(StringHash name) const
-	{
-		auto it = uniforms.find(name);
-		return it != uniforms.end() ? it->second : -1;
-	}
-
-	void ShaderProgram::SetUniform(PresetUniform uniform, float value)
-	{
-		glUniform1f(Uniform(uniform), value);
-	}
-
-	void ShaderProgram::SetUniform(PresetUniform uniform, const Vector2& value)
-	{
-		glUniform2fv(Uniform(uniform), 1, value.Data());
-	}
-
-	void ShaderProgram::SetUniform(PresetUniform uniform, const Vector3& value)
-	{
-		glUniform3fv(Uniform(uniform), 1, value.Data());
-	}
-
-	void ShaderProgram::SetUniform(PresetUniform uniform, const Vector4& value)
-	{
-		glUniform4fv(Uniform(uniform), 1, value.Data());
-	}
-
-	void ShaderProgram::SetUniform(PresetUniform uniform, const Matrix3& value)
-	{
-		glUniformMatrix3fv(Uniform(uniform), 1, GL_FALSE, value.Data());
-	}
-
-	void ShaderProgram::SetUniform(PresetUniform uniform, const Matrix3x4& value)
-	{
-		glUniformMatrix3x4fv(Uniform(uniform), 1, GL_FALSE, value.Data());
-	}
-
-	void ShaderProgram::SetUniform(PresetUniform uniform, const Matrix4& value)
-	{
-		glUniformMatrix4fv(Uniform(uniform), 1, GL_FALSE, value.Data());
-	}
-
-	unsigned ShaderProgram::CompileShader(ShaderType type, const std::string& code, const std::vector<std::string>& defines)
-	{
-		std::string shaderCode;
-
-		// Process shader version
-		size_t offset = 0;
-		if (memcmp(code.c_str(), "#version", 8) == 0) {
-			offset = code.find_first_of("\n\r");
-			shaderCode += code.substr(0, offset);
-			shaderCode += "\n";
-		} else {
-			shaderCode += "#version 150\n";
-		}
-
-		GLenum glType;
-		switch (type) {
-			case SHADER_VS:
-				glType = GL_VERTEX_SHADER;
-				shaderCode += "#define COMPILE_VS\n";
-				break;
-			case SHADER_FS:
-				glType = GL_FRAGMENT_SHADER;
-				shaderCode += "#define COMPILE_FS\n";
-				break;
-			default:
-				LOG_ERROR("Shader type {:d} not implemented.", (int)type);
-				return 0;
-		}
-
-		for (std::string define : defines) {
-			std::replace_if(define.begin(), define.end(), [](const char& c)
-			{
-				return c == '=';
-			}, ' ');
-			shaderCode += "#define " + define + '\n';
-		}
-		shaderCode += code.substr(offset);
-
-		unsigned shader = glCreateShader(glType);
-		if (!shader) {
-			LOG_ERROR("Failed to create shader \"{:s}\".", name);
-			return 0;
-		}
-
-		const char* src = shaderCode.c_str();
-		glShaderSource(shader, 1, &src, nullptr);
-		glCompileShader(shader);
-
-		int compiled;
-		glGetShaderiv(shader, GL_COMPILE_STATUS, &compiled);
-		{
-			int length, outLength;
-			std::string msg;
-
-			glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &length);
-			msg.resize(length);
-			glGetShaderInfoLog(shader, 1024, &outLength, &msg[0]);
-
-			if (!compiled) {
-				LOG_ERROR("Failed to compile shader \"{:s}\": ({:s}) {:s}", name, ShaderTypeName(type), msg.c_str());
-			}
-#ifdef _DEBUG
-			else if (length > 1) {
-				LOG_DEBUG("Compiled shader \"{:s}\": ({:s}) {:s}", name, ShaderTypeName(type), msg.c_str());
-			}
-#endif
-		}
-
-		if (!compiled) {
-			glDeleteShader(shader);
-			shader = 0;
-		}
-
-		return shader;
 	}
 
 	void ShaderProgram::Release()

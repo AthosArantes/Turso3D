@@ -1,13 +1,9 @@
 #version 330 core
 
-#include <Uniforms.glsli>
+#include <Uniforms.h>
 
-// ================================================================================================
-// VERTEX SHADER
-// ================================================================================================
-#ifdef COMPILE_VS
-
-#include <Transform.glsli>
+#pragma shader vs //===============================================================================
+#include <Transform.h>
 
 in vec3 position;
 in vec3 normal;
@@ -38,15 +34,9 @@ void main()
 	vScreenPos = CalculateScreenPos(gl_Position);
 }
 
-#endif
-
-// ================================================================================================
-// FRAGMENT SHADER
-// ================================================================================================
-#ifdef COMPILE_FS
-
-#include <Lighting.glsli>
-#include <Utils.glsli>
+#pragma shader fs //===============================================================================
+#include <Lighting.h>
+#include <Utils.h>
 
 uniform sampler2D albedoTex0;
 uniform sampler2D aoRoughMetalTex1;
@@ -75,10 +65,9 @@ layout(std140) uniform PerMaterialData3
 #endif
 };
 
-layout(location = 0) out vec4 fragColor;
-layout(location = 1) out vec4 fragNormal;
+layout (location = 0) out vec4 fragColor;
+layout (location = 1) out vec4 fragNormal;
 
-// ====================================================================================================
 void main()
 {
 	vec4 sAlbedo = texture(albedoTex0, vTexCoord);
@@ -129,5 +118,3 @@ void main()
 	fragColor = vec4(color, alpha);
 	fragNormal = vec4(vec4(normal, 0.0) * viewMatrix * 0.5 + 0.5, 0.0);
 }
-
-#endif

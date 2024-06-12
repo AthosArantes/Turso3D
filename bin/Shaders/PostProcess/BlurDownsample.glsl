@@ -1,10 +1,6 @@
 #version 330 core
 
-// ================================================================================================
-// VERTEX SHADER
-// ================================================================================================
-#ifdef COMPILE_VS
-
+#pragma shader vs //===============================================================================
 in vec3 position;
 out vec2 texCoord;
 
@@ -14,13 +10,7 @@ void main()
 	texCoord = vec2(position.xy) * 0.5 + 0.5;
 }
 
-#endif
-
-// ================================================================================================
-// FRAGMENT SHADER
-// ================================================================================================
-#ifdef COMPILE_FS
-
+#pragma shader fs //===============================================================================
 // This shader performs downsampling on a texture,
 // as taken from Call Of Duty method, presented at ACM Siggraph 2014.
 // This particular method was customly designed to eliminate
@@ -89,5 +79,3 @@ void main()
 	downsample = max(downsample, 0.0001);
 #endif
 }
-
-#endif

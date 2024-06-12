@@ -1,10 +1,6 @@
 #version 330 core
 
-// ================================================================================================
-// VERTEX SHADER
-// ================================================================================================
-#ifdef COMPILE_VS
-
+#pragma shader vs //===============================================================================
 in vec3 position;
 out vec2 texCoord;
 
@@ -14,20 +10,15 @@ void main()
 	texCoord = vec2(position.xy) * 0.5 + 0.5;
 }
 
-#endif
-
-// ================================================================================================
-// FRAGMENT SHADER
-// ================================================================================================
-#ifdef COMPILE_FS
-
+#pragma shader fs //===============================================================================
 in vec2 texCoord;
-out vec4 fragColor;
 
 uniform sampler2D sceneTex0;
 uniform sampler2D sceneBlurTex1;
 uniform sampler2D uiTex2;
 uniform sampler2D uiMaskTex3;
+
+out vec4 fragColor;
 
 void main()
 {
@@ -41,5 +32,3 @@ void main()
 	fragColor = mix(uiBlurredBackground, uiColor, uiColor.a);
 	fragColor.a = clamp((sceneColor.a + uiBlurredBackground.a), 0.0, 1.0);
 }
-
-#endif

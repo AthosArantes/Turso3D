@@ -1,165 +1,414 @@
 #include <Turso3D/Graphics/Shader.h>
+#include <Turso3D/Graphics/ShaderProgram.h>
 #include <Turso3D/IO/Log.h>
 #include <Turso3D/IO/MemoryStream.h>
 #include <Turso3D/Resource/ResourceCache.h>
+#include <Turso3D/Utils/StringHash.h>
+#include <GLEW/glew.h>
 #include <cassert>
 #include <algorithm>
 #include <string_view>
 #include <filesystem>
+#include <type_traits>
 
-namespace Turso3D
+namespace
 {
-	bool Shader::BeginLoad(Stream& source)
+	using namespace Turso3D;
+
+	static std::string_view ReadLine(std::string_view str)
 	{
-		if (source.IsReadable()) {
-			SetShaderCode(source.Read<std::string>());
-			return true;
+		std::string_view::const_iterator eit = str.end();
+		for (auto it = str.begin(); it != str.end(); ++it) {
+			const char& c = *it;
+			if (c == '\r' || c == '\n') {
+				eit = it + 1;
+				if (c == '\r' && eit != str.end() && *eit == '\n') {
+					++eit;
+				}
+				break;
+			}
 		}
-		LOG_ERROR("Failed to load shader \"{:s}\".", source.Name());
-		return false;
+		return str.substr(0, static_cast<size_t>(eit - str.begin()));
 	}
 
-	std::shared_ptr<ShaderProgram> Shader::CreateProgram(const std::string& vsDefines_, const std::string& fsDefines_)
+	static std::string_view GetShaderPragma(std::string_view line)
 	{
-		std::vector<std::string> defines[MAX_SHADER_TYPES];
-		CreateDefinesVector(vsDefines_, defines[SHADER_VS]);
-		CreateDefinesVector(fsDefines_, defines[SHADER_FS]);
+		std::string_view directive {"pragma"};
+		std::string_view value {"shader"};
 
-		std::string strDefines[MAX_SHADER_TYPES];
-		StringHash hashes[MAX_SHADER_TYPES];
-		for (int i = 0; i < MAX_SHADER_TYPES; ++i) {
-			for (const std::string& def : defines[i]) {
-				if (strDefines[i].length()) {
-					strDefines[i] += ' ';
+		// Trim leading spaces
+		while (line.size() && std::isblank(static_cast<const unsigned char&>(line.front()))) {
+			line.remove_prefix(1);
+		}
+
+		if (line.front() == '#') {
+			line.remove_prefix(1);
+			// Trim spaces after the '#' character
+			while (line.size() && std::isblank(static_cast<const unsigned char&>(line.front()))) {
+				line.remove_prefix(1);
+			}
+			if (line.compare(0, directive.size(), directive) == 0) {
+				line.remove_prefix(directive.size());
+				// Trim spaces after the '#pragma'
+				while (line.size() && std::isblank(static_cast<const unsigned char&>(line.front()))) {
+					line.remove_prefix(1);
 				}
-				strDefines[i].append(def);
-				hashes[i].value ^= StringHash {def}.value;
+				if (line.compare(0, value.size(), value) == 0) {
+					line.remove_prefix(value.size());
+					// Trim spaces after the '#pragma shader'
+					while (line.size() && std::isblank(static_cast<const unsigned char&>(line.front()))) {
+						line.remove_prefix(1);
+					}
+					return line;
+				}
 			}
 		}
 
-		std::pair<StringHash, StringHash> k {hashes[SHADER_VS], hashes[SHADER_FS]};
-		auto it = programs.find(k);
-		if (it != programs.end()) {
+		return std::string_view {};
+	}
+
+	static std::string_view GetVersion(std::string_view line)
+	{
+		std::string_view directive {"version"};
+
+		// Trim leading spaces
+		while (line.size() && std::isblank(static_cast<const unsigned char&>(line.front()))) {
+			line.remove_prefix(1);
+		}
+
+		if (line.front() == '#') {
+			line.remove_prefix(1);
+			// Trim spaces after the '#' character
+			while (line.size() && std::isblank(static_cast<const unsigned char&>(line.front()))) {
+				line.remove_prefix(1);
+			}
+			if (line.compare(0, directive.size(), directive) == 0) {
+				line.remove_prefix(directive.size());
+				// Trim spaces after the '#version'
+				while (line.size() && std::isblank(static_cast<const unsigned char&>(line.front()))) {
+					line.remove_prefix(1);
+				}
+				return line;
+			}
+		}
+
+		return std::string_view {};
+	}
+
+	static std::string_view GetInclude(std::string_view line)
+	{
+		std::string_view directive {"include"};
+
+		// Trim leading spaces
+		while (line.size() && std::isblank(static_cast<const unsigned char&>(line.front()))) {
+			line.remove_prefix(1);
+		}
+
+		if (line.front() == '#') {
+			line.remove_prefix(1);
+			// Trim spaces after the '#' character
+			while (line.size() && std::isblank(static_cast<const unsigned char&>(line.front()))) {
+				line.remove_prefix(1);
+			}
+			if (line.compare(0, directive.size(), directive) == 0) {
+				line.remove_prefix(directive.size());
+				// Trim spaces after the '#include'
+				while (line.size() && std::isblank(static_cast<const unsigned char&>(line.front()))) {
+					line.remove_prefix(1);
+				}
+				size_t close = std::string_view::npos;
+				switch (line.front()) {
+					case '<': close = line.find_first_of('>'); break;
+					case '"': close = line.find_first_of('"', 1); break;
+				}
+				if (close != std::string_view::npos) {
+					return line.substr(0, close + 1);
+				}
+			}
+		}
+
+		return std::string_view {};
+	}
+
+	template <typename L>
+	static std::string ProcessIncludes(std::string_view str, L&& includeLambda)
+	{
+		static_assert(std::is_invocable_r<std::string, L, std::string_view>::value);
+
+		std::string output {str};
+
+		std::string_view buffer {output};
+		size_t offset = 0;
+		while (buffer.size()) {
+			std::string_view line = ReadLine(buffer);
+
+			std::string_view inc = GetInclude(line);
+			if (inc.size()) {
+				{
+					// Copy all string prior the #include line.
+					std::string newOutput {output.substr(0, offset)};
+
+					// Append the include content.
+					const std::string& content = includeLambda(inc);
+					if (content.size()) {
+						newOutput.append(content);
+					}
+
+					// Append the content post #include line.
+					newOutput.append(output.substr(offset + line.size()));
+					output.swap(newOutput);
+				}
+
+				// The processing should continue at the beginning of the included file.
+				buffer = output;
+				buffer.remove_prefix(offset);
+				continue;
+			}
+
+			offset += line.size();
+			buffer.remove_prefix(line.size());
+		}
+
+		return output;
+	}
+
+	// ==========================================================================================
+	struct Permutation
+	{
+		// Defines used when compiling the shader.
+		std::vector<std::string> defines;
+		// The combined hash of all defines.
+		size_t hash;
+	};
+
+	static void CreatePermutation(const std::string& inDefines, Permutation& outInfo)
+	{
+		outInfo.defines.clear();
+		outInfo.hash = 0;
+
+		std::string_view str {inDefines};
+		while (str.size()) {
+			// Trim leading whitespace
+			while (str.size() && std::isspace(static_cast<const unsigned char&>(str.front()))) {
+				str.remove_prefix(1);
+			}
+
+			// Iterate to next whitespace
+			auto it = str.begin();
+			for (; it != str.end(); ++it) {
+				const unsigned char& c = static_cast<const unsigned char&>(*it);
+				if (std::isspace(c)) {
+					break;
+				}
+			}
+
+			size_t count = it - str.begin();
+
+			std::string def {str.substr(0, count)};
+			if (!def.empty()) {
+				outInfo.hash ^= StringHash {def};
+				outInfo.defines.push_back(std::move(def));
+			}
+
+			str.remove_prefix(count);
+		}
+	}
+}
+
+namespace Turso3D
+{
+	Shader::Shader()
+	{
+	}
+
+	Shader::~Shader()
+	{
+	}
+
+	bool Shader::BeginLoad(Stream& source)
+	{
+		if (!source.IsReadable()) {
+			LOG_ERROR("Failed to read shader \"{:s}\"", source.Name());
+			return false;
+		}
+
+		ResourceCache* cache = ResourceCache::Instance();
+		assert(cache);
+
+		// Clear previous code
+		sharedCode.clear();
+		for (size_t i = 0; i < MAX_SHADER_TYPES; ++i) {
+			sourceCode[i].clear();
+		}
+
+		// Process includes
+		// Vector used to prevent duplicate includes.
+		std::vector<StringHash> includedFiles;
+		const std::string& code = ProcessIncludes(source.Read<std::string>(), [&](std::string_view include) -> std::string
+		{
+			std::string filename {include.substr(1, include.size() - 2)};
+			if (include.front() == '"') {
+				filename = std::filesystem::path {Name()}.replace_filename(filename).string();
+			}
+			StringHash filenameHash {filename};
+
+			auto it = std::find(includedFiles.begin(), includedFiles.end(), filenameHash);
+			if (it == includedFiles.end()) {
+				std::unique_ptr<Stream> stream = cache->OpenData(filename);
+				if (stream) {
+					includedFiles.push_back(filenameHash);
+					return stream->Read<std::string>();
+				}
+			}
+
+			return std::string {};
+		});
+
+		// Process code, break by their shader stage pragmas.
+		int stage = -1;
+		std::string_view codev {code};
+		while (codev.size()) {
+			std::string_view line = ReadLine(codev);
+			codev.remove_prefix(line.size());
+
+			// Read a shader pragma to change the destination string.
+			std::string_view ps = GetShaderPragma(line);
+			if (ps.size()) {
+				std::string_view stages[] = {{"vs"}, {"fs"}};
+				for (int i = 0; i < MAX_SHADER_TYPES; ++i) {
+					if (ps.compare(0, stages[i].size(), stages[i]) == 0) {
+						stage = i;
+						break;
+					}
+				}
+				continue;
+			}
+
+			if (stage == -1) {
+				// Extract #version directive
+				std::string_view sv = GetVersion(line);
+				if (sv.size()) {
+					version = std::string {line};
+					continue;
+				}
+				sharedCode.append(line);
+
+			} else {
+				sourceCode[stage].append(line);
+			}
+		}
+
+		return true;
+	}
+
+	std::shared_ptr<ShaderProgram> Shader::Program(const std::string& vsDefines, const std::string& fsDefines)
+	{
+		Permutation permutation[MAX_SHADER_TYPES];
+		CreatePermutation(vsDefines, permutation[SHADER_VS]);
+		CreatePermutation(fsDefines, permutation[SHADER_FS]);
+
+		// Check for a program already created for the shader vs/fs permutation combination.
+		size_t program_hash;
+		{
+			size_t v = permutation[SHADER_VS].hash;
+			program_hash = (v << 24 | v >> 40 & 0xFFFFFFFFFFu) ^ permutation[SHADER_FS].hash;
+		}
+
+		if (auto it = programs.find(program_hash); it != programs.end()) {
 			return it->second;
 		}
 
-		// Create shader program
-		std::shared_ptr<ShaderProgram> program = std::make_shared<ShaderProgram>();
-		program->SetName(std::filesystem::path {Name()}.stem().string() + "[" + strDefines[SHADER_VS] + "][" + strDefines[SHADER_FS] + "]");
+		// Compile shaders for program linking
+		unsigned gl_shader[MAX_SHADER_TYPES];
+		for (int i = 0; i < MAX_SHADER_TYPES; ++i) {
+			gl_shader[i] = Compile((ShaderType)i, permutation[i].defines);
 
-		if (program->Create(sourceCode, defines[SHADER_VS], defines[SHADER_FS])) {
-			programs[k] = program;
+#ifdef _DEBUG
+			// TODO: set a nice name
+			//glObjectLabel(GL_SHADER, new_shader, name.size(), name.c_str());
+#endif
+
+		}
+
+		std::shared_ptr<ShaderProgram> program = std::make_shared<ShaderProgram>();
+		if (program->Create(gl_shader[SHADER_VS], gl_shader[SHADER_FS])) {
+			programs[program_hash] = program;
+
+#ifdef _DEBUG
+			// TODO: set a nice name
+			//glObjectLabel(GL_PROGRAM, program->GLProgram(), name.size(), name.c_str());
+#endif
+
 			return program;
 		}
 
 		return {};
 	}
 
-	// ==========================================================================================
-	void Shader::CreateDefinesVector(const std::string& defines, std::vector<std::string>& outVector)
+	unsigned Shader::Compile(ShaderType type, const std::vector<std::string>& defines)
 	{
-		if (defines.empty()) {
-			return;
+		std::string shader_code {version};
+
+		GLenum gl_type;
+		switch (type) {
+			case SHADER_VS:
+				gl_type = GL_VERTEX_SHADER;
+				shader_code += "#define COMPILE_VS\n";
+				break;
+			case SHADER_FS:
+				gl_type = GL_FRAGMENT_SHADER;
+				shader_code += "#define COMPILE_FS\n";
+				break;
+			default:
+				LOG_ERROR("Invalid shader type for compilation: {:d}", (unsigned)type);
+				return 0;
 		}
 
-		std::vector<std::string> buffer;
-
-		const std::locale& lc = std::locale::classic();
-
-		// Split by whitespace
-		size_t start = 0;
-		while (start != std::string::npos) {
-			// Read a define
-			size_t end = defines.find_first_of(" \t", start);
-			std::string_view def {&*defines.cbegin() + start, (end != std::string::npos) ? end - start : defines.length() - start};
-			start = (end != std::string::npos) ? end + 1 : end;
-
-			// Trim whitespace
-			while (!def.empty() && std::isspace(def.front(), lc)) {
-				def.remove_prefix(1);
-			}
-			while (!def.empty() && std::isspace(def.back(), lc)) {
-				def.remove_suffix(1);
-			}
-
-			if (!def.empty()) {
-				bool exists = false;
-
-				// Check for duplicate defines
-				for (const std::string& def2 : buffer) {
-					if (def.substr(0, def.find_first_of('=')) == def2.substr(0, def2.find_first_of('='))) {
-						exists = true;
-						LOG_WARNING("Shader define '{:s}' was already defined for shader '{:s}'", def, Name());
-						break;
-					}
-				}
-
-				if (!exists) {
-					buffer.push_back(std::string {def});
-				}
-			}
+		for (std::string define : defines) {
+			std::replace_if(define.begin(), define.end(), [](const char& c)
+			{
+				return c == '=';
+			}, ' ');
+			shader_code += "#define " + define + '\n';
 		}
 
-		outVector.swap(buffer);
-	}
+		shader_code.append(sharedCode);
+		shader_code.append(sourceCode[type]);
 
-	void Shader::SetShaderCode(const std::string& source)
-	{
-		programs.clear();
-		sourceCode.clear();
-		ProcessIncludes(source, sourceCode);
-	}
-
-	void Shader::ProcessIncludes(const std::string& source, std::string& outResult)
-	{
-		if (source.empty()) {
-			return;
+		unsigned shader = glCreateShader(gl_type);
+		if (!shader) {
+			LOG_ERROR("Failed to create new gl shader");
+			return 0;
 		}
 
-		ResourceCache* cache = ResourceCache::Instance();
-		assert(cache);
+		const char* src = shader_code.c_str();
+		glShaderSource(shader, 1, &src, nullptr);
+		glCompileShader(shader);
 
-		size_t line_start = 0;
-		while (line_start != std::string::npos) {
-			// Read a line
-			size_t line_end = source.find_first_of("\r\n", line_start);
-			std::string_view line {&*source.cbegin() + line_start, (line_end != std::string::npos) ? line_end - line_start : source.length() - line_start};
-			line_start = (line_end != std::string::npos) ? line_end + 1 : line_end;
-
-			// Process include directive
-			if (size_t start = line.find("#include"); start != std::string::npos) {
-				start = line.find_first_of("\"<", start);
-				size_t end = line.find_first_of("\">", start + 1);
-
-				std::string_view filename = line.substr(start + 1, end - start - 1);
-
-				std::unique_ptr<Stream> stream;
-				if (line.at(start) == '<') {
-					stream = cache->OpenData(std::string {filename});
-				} else {
-					stream = cache->OpenData(std::filesystem::path {Name()}.replace_filename(filename).string());
-				}
-
-				if (stream) {
-#ifdef _DEBUG
-					// Mark of included files
-					outResult += "// @";
-					outResult += filename;
-					outResult += " {\n";
-#endif
-
-					// Add the include file into the current code recursively
-					ProcessIncludes(stream->Read<std::string>(), outResult);
+		GLint compiled;
+		glGetShaderiv(shader, GL_COMPILE_STATUS, &compiled);
 
 #ifdef _DEBUG
-					outResult += "// }\n";
-#endif
-				}
+		{
+			int length, outLength;
+			std::string msg;
 
-			} else {
-				outResult += line;
-				outResult += '\n';
+			glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &length);
+			msg.resize(length);
+			glGetShaderInfoLog(shader, length, &outLength, &msg[0]);
+
+			if (length > 1) {
+				// IMPROVE: log all defines too
+				LOG_DEBUG("Compiled {:s} shader {:s}: {:s}", ShaderTypeName(type), Name(), msg.c_str());
 			}
 		}
+#endif
+
+		if (!compiled) {
+			glDeleteShader(shader);
+			shader = 0;
+		}
+
+		return shader;
 	}
 }

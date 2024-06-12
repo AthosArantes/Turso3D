@@ -1,7 +1,4 @@
-#ifndef I_BRDF_H
-#define I_BRDF_H
-
-#define PI 3.141592653589793
+const float PI = 3.141592653589793;
 
 // ====================================================================================================
 // Normal Distribution Functions
@@ -72,5 +69,3 @@ float OrenNayarDiffuse(const in float LdotV, const in float NdotL, const in floa
 
 	return albedo * max(0.0, NdotL) * (A + B * s / t) / PI;
 }
-
-#endif

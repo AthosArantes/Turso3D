@@ -1,18 +1,15 @@
 #version 330 core
 
-#include <Uniforms.glsli>
+#include <Uniforms.h>
 
-// ================================================================================================
-// VERTEX SHADER
-// ================================================================================================
-#ifdef COMPILE_VS
-
-#include <Transform.glsli>
+#pragma shader vs //===============================================================================
+#include <Transform.h>
 
 in vec3 position;
 
 #ifdef ALPHAMASK
 	in vec2 texCoord;
+
 	out vec2 vTexCoord;
 #endif
 
@@ -28,13 +25,7 @@ void main()
 	gl_Position = vec4(worldPos, 1.0) * viewProjMatrix;
 }
 
-#endif
-
-// ================================================================================================
-// FRAGMENT SHADER
-// ================================================================================================
-#ifdef COMPILE_FS
-
+#pragma shader fs //===============================================================================
 #ifdef ALPHAMASK
 	in vec2 vTexCoord;
 
@@ -48,5 +39,3 @@ void main()
 	if (alpha < 0.5) discard;
 #endif
 }
-
-#endif

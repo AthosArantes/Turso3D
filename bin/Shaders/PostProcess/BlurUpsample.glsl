@@ -1,10 +1,6 @@
 #version 330 core
 
-// ================================================================================================
-// VERTEX SHADER
-// ================================================================================================
-#ifdef COMPILE_VS
-
+#pragma shader vs //===============================================================================
 in vec3 position;
 out vec2 texCoord;
 
@@ -14,13 +10,7 @@ void main()
 	texCoord = vec2(position.xy) * 0.5 + 0.5;
 }
 
-#endif
-
-// ================================================================================================
-// FRAGMENT SHADER
-// ================================================================================================
-#ifdef COMPILE_FS
-
+#pragma shader fs //===============================================================================
 // This shader performs upsampling on a texture,
 // as taken from Call Of Duty method, presented at ACM Siggraph 2014.
 
@@ -29,13 +19,15 @@ void main()
 // Remember to use edge clamping for this texture!
 
 in vec2 texCoord;
-out vec4 upsample;
 
 uniform sampler2D srcTex0;
+
 uniform float filterRadius;
 uniform float aspectRatio;
 
 const float WeightMul = 1.0 / 16.0;
+
+out vec4 upsample;
 
 void main()
 {
@@ -70,5 +62,3 @@ void main()
 	upsample += (a+c+g+i);
 	upsample *= WeightMul;
 }
-
-#endif
