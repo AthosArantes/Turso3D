@@ -9,9 +9,6 @@ namespace Turso3D
 {
 	class Scene;
 
-	constexpr uint8_t LAYER_DEFAULT = 0;
-	constexpr unsigned LAYERMASK_ALL = 0xffffffff;
-
 	// Base class for scene nodes.
 	class Node
 	{
@@ -30,6 +27,8 @@ namespace Turso3D
 		};
 
 	public:
+		// Construct.
+		Node();
 		// Destruct. Destroy any child nodes.
 		virtual ~Node();
 
@@ -41,15 +40,6 @@ namespace Turso3D
 		const std::string& Name() const { return name; }
 		// Return hash of name.
 		const StringHash& NameHash() const { return nameHash; }
-
-		// Set node's layer.
-		// Usage is subclass specific, for example rendering nodes selectively.
-		// Default is 0.
-		void SetLayer(uint8_t newLayer);
-		// Return layer.
-		uint8_t Layer() const { return layer; }
-		// Return bitmask corresponding to layer.
-		unsigned LayerMask() const { return 1 << layer; }
 
 		// Set enabled status.
 		// Meaning is subclass specific.
@@ -65,6 +55,7 @@ namespace Turso3D
 		// Add node as a child.
 		void AddChild(std::unique_ptr<Node> child);
 
+		// Create a new node and add it as a child.
 		template <typename T, typename ...Args>
 		T* CreateChild(Args&&... args)
 		{
@@ -74,21 +65,23 @@ namespace Turso3D
 		}
 
 		// Remove child node.
-		std::unique_ptr<Node> RemoveChild(Node* child);
+		void RemoveChild(Node* child);
 
 		// Remove child node.
 		template <typename T>
-		std::unique_ptr<T> RemoveChild(T* child)
+		void RemoveChild(T* child)
 		{
-			std::unique_ptr<Node> node = RemoveChild(static_cast<Node*>(child));
-			return std::unique_ptr<T> {static_cast<T*>(node.release())};
+			RemoveChild(static_cast<Node*>(child));
 		}
 
-		// Remove all child nodes.
-		void RemoveAllChildren();
-		// Remove self from the parent node. No-op if no parent.
-		// NOTE: Causes deletion of self.
+		// Remove self from the parent node.
+		// No-op if no parent.
 		void RemoveSelf();
+
+		// Destroy child node.
+		void DestroyChild(Node* child);
+		// Destroy all child nodes.
+		void DestroyAllChildren();
 
 		// Return number of immediate child nodes.
 		size_t NumChildren() const { return children.size(); }
@@ -97,14 +90,15 @@ namespace Turso3D
 
 		Node* FindChild(StringHash childNameHash, bool recursive = false) const
 		{
-			for (const std::unique_ptr<Node>& child : children) {
-				if (child->nameHash == childNameHash) {
-					return child.get();
+			for (size_t i = 0; i < children.size(); ++i) {
+				if (children[i]->nameHash == childNameHash) {
+					return children[i].get();
 				}
 			}
 			if (recursive) {
-				for (const std::unique_ptr<Node>& child : children) {
-					if (Node* node = child->FindChild(childNameHash, true); node) {
+				for (size_t i = 0; i < children.size(); ++i) {
+					Node* node = children[i]->FindChild(childNameHash, true);
+					if (node) {
 						return node;
 					}
 				}
@@ -114,6 +108,11 @@ namespace Turso3D
 
 		// Return all immediate child nodes.
 		const std::vector<std::unique_ptr<Node>>& Children() const { return children; }
+
+		// Set view mask.
+		void SetViewMask(unsigned mask);
+		// Return the view mask.
+		unsigned ViewMask() const { return viewMask; }
 
 		// Set bit flag.
 		// Called internally.
@@ -135,32 +134,35 @@ namespace Turso3D
 		// Assign node to a new scene.
 		// Called internally.
 		void SetScene(Scene* newScene);
+		// Assign child to a new parent.
+		// Also changes scene.
+		void SetParent(Node* newParent);
 
-		// Handle being assigned to a new parent node.
-		virtual void OnParentSet(Node* newParent, Node* oldParent);
 		// Handle being assigned to a new scene.
 		virtual void OnSceneSet(Scene* newScene, Scene* oldScene);
+		// Handle being assigned to a new parent node.
+		virtual void OnParentSet(Node* newParent, Node* oldParent);
 		// Handle the enabled status changing.
 		virtual void OnEnabledChanged(bool newEnabled);
-		// Handle the layer changing.
-		virtual void OnLayerChanged(uint8_t newLayer);
+		// Handle the viewMask changing.
+		virtual void OnViewMaskChanged(unsigned oldViewMask);
 
 	private:
 		// Parent scene.
-		Scene* scene = nullptr;
+		Scene* scene;
 		// Parent node.
-		Node* parent = nullptr;
+		Node* parent;
 
 		// Node name.
 		std::string name;
 		// Node name hash.
 		StringHash nameHash;
 
+		// View mask, used for filtering.
+		unsigned viewMask;
 		// Node flags.
 		// Used to hold several boolean values to reduce memory use.
-		mutable unsigned flags = FLAG_ENABLED;
-		// Layer number.
-		uint8_t layer = 0;
+		mutable unsigned flags;
 
 	protected:
 		// Child nodes.

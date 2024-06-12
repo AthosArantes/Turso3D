@@ -161,6 +161,12 @@ namespace Turso3D
 		// Return shadow map offset and depth parameters.
 		const Vector4& ShadowParameters() const { return shadowParameters; }
 
+		// Set the shadow view mask.
+		// Used to filter which drawables get to be rendered in the shadow map.
+		void SetShadowViewMask(unsigned mask);
+		// Return the shadow view mask.
+		unsigned ShadowViewMask() const { return shadowViewMask; }
+
 		// Sets if the directional light will auto focus in order to improve shadow resolution.
 		void SetAutoFocus(bool autoFocus);
 		// Return whether the directional light will auto focus in order to improve shadow resolution.
@@ -203,7 +209,9 @@ namespace Turso3D
 		std::vector<ShadowView> shadowViews;
 		// Shadow mapping parameters.
 		Vector4 shadowParameters;
-		// Dircetional light auto focus toggle.
+		// Mask to filter drawables.
+		unsigned shadowViewMask;
+		// Directional light auto focus toggle.
 		bool autoFocus;
 	};
 

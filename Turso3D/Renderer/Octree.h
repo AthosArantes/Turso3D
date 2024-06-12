@@ -253,14 +253,25 @@ namespace Turso3D
 		// Visualizes the whole octree.
 		void OnRenderDebug(DebugRenderer* debug);
 
+#if 0
 		// Query for drawables with a raycast and return all results.
-		void Raycast(std::vector<RaycastResult>& result, const Ray& ray, unsigned short nodeFlags, float maxDistance = M_INFINITY, unsigned layerMask = LAYERMASK_ALL) const;
+		void Raycast(std::vector<RaycastResult>& result, const Ray& ray, unsigned nodeFlags, unsigned viewMask, float maxDistance = M_INFINITY) const;
 		// Query for drawables with a raycast and return the closest result.
-		RaycastResult RaycastSingle(const Ray& ray, unsigned short drawableFlags, float maxDistance = M_INFINITY, unsigned layerMask = LAYERMASK_ALL) const;
+		RaycastResult RaycastSingle(const Ray& ray, unsigned drawableFlags, unsigned viewMask, float maxDistance = M_INFINITY) const;
+#endif
+
 		// Query for drawables using a volume such as frustum or sphere.
-		template <class T> void FindDrawables(std::vector<Drawable*>& result, const T& volume, unsigned short drawableFlags, unsigned layerMask = LAYERMASK_ALL) const { CollectDrawables(result, const_cast<Octant*>(&root), volume, drawableFlags, layerMask); }
+		template <class T>
+		void FindDrawables(std::vector<Drawable*>& result, const T& volume, unsigned drawableFlags, unsigned viewMask) const
+		{
+			CollectDrawables(result, const_cast<Octant*>(&root), volume, drawableFlags, viewMask);
+		}
 		// Query for drawables using a frustum and masked testing.
-		void FindDrawablesMasked(std::vector<Drawable*>& result, const Frustum& frustum, unsigned short drawableFlags, unsigned layerMask = LAYERMASK_ALL) const;
+		void FindDrawablesMasked(std::vector<Drawable*>& result, const Frustum& frustum, unsigned drawableFlags, unsigned viewMask) const
+		{
+			CollectDrawablesMasked(result, const_cast<Octant*>(&root), frustum, drawableFlags, viewMask);
+		}
+
 		// Return whether threaded update is enabled.
 		bool ThreadedUpdate() const { return threadedUpdate; }
 		// Return the root octant.
@@ -285,20 +296,22 @@ namespace Turso3D
 		// Delete a child octant hierarchy.
 		// If not deleting the octree for good, moves any nodes back to the root octant.
 		void DeleteChildOctants(Octant* octant, bool deletingOctree);
+
 		// Return all drawables from an octant recursively.
 		void CollectDrawables(std::vector<Drawable*>& result, Octant* octant) const;
 		// Return all drawables matching flags from an octant recursively.
-		void CollectDrawables(std::vector<Drawable*>& result, Octant* octant, unsigned short drawableFlags, unsigned layerMask) const;
+		void CollectDrawables(std::vector<Drawable*>& result, Octant* octant, unsigned drawableFlags, unsigned viewMask) const;
 		// Return all drawables matching flags along a ray.
-		void CollectDrawables(std::vector<RaycastResult>& result, Octant* octant, const Ray& ray, unsigned short drawableFlags, float maxDistance, unsigned layerMask) const;
+		void CollectDrawables(std::vector<RaycastResult>& result, Octant* octant, const Ray& ray, unsigned drawableFlags, unsigned viewMask, float maxDistance) const;
 		// Return all visible drawables matching flags that could be potential raycast hits.
-		void CollectDrawables(std::vector<std::pair<Drawable*, float>>& result, Octant* octant, const Ray& ray, unsigned short drawableFlags, float maxDistance, unsigned layerMask) const;
+		void CollectDrawables(std::vector<std::pair<Drawable*, float>>& result, Octant* octant, const Ray& ray, unsigned drawableFlags, unsigned viewMask, float maxDistance) const;
+
 		// Work function to check reinsertion of nodes.
 		void CheckReinsertWork(Task* task, unsigned threadIndex);
 
 		// Collect nodes matching flags using a volume such as frustum or sphere.
 		template <class T>
-		void CollectDrawables(std::vector<Drawable*>& result, Octant* octant, const T& volume, unsigned short drawableFlags, unsigned layerMask) const
+		void CollectDrawables(std::vector<Drawable*>& result, Octant* octant, const T& volume, unsigned drawableFlags, unsigned viewMask) const
 		{
 			Intersection res = volume.IsInside(octant->CullingBox());
 			if (res == OUTSIDE) {
@@ -307,12 +320,12 @@ namespace Turso3D
 
 			// If this octant is completely inside the volume, can include all contained octants and their nodes without further tests
 			if (res == INSIDE) {
-				CollectDrawables(result, octant, drawableFlags, layerMask);
+				CollectDrawables(result, octant, drawableFlags, viewMask);
 			} else {
 				std::vector<Drawable*>& drawables = octant->drawables;
-
-				for (Drawable* drawable : drawables) {
-					if ((drawable->Flags() & drawableFlags) == drawableFlags && (drawable->LayerMask() & layerMask) && volume.IsInsideFast(drawable->WorldBoundingBox()) != OUTSIDE) {
+				for (size_t i = 0; i < drawables.size(); ++i) {
+					Drawable* drawable = drawables[i];
+					if ((drawable->Flags() & drawableFlags) == drawableFlags && (drawable->ViewMask() & viewMask) && volume.IsInsideFast(drawable->WorldBoundingBox()) != OUTSIDE) {
 						result.push_back(drawable);
 					}
 				}
@@ -320,7 +333,7 @@ namespace Turso3D
 				if (octant->numChildren) {
 					for (size_t i = 0; i < NUM_OCTANTS; ++i) {
 						if (octant->children[i]) {
-							CollectDrawables(result, octant->children[i], volume, drawableFlags, layerMask);
+							CollectDrawables(result, octant->children[i], volume, drawableFlags, viewMask);
 						}
 					}
 				}
@@ -328,7 +341,7 @@ namespace Turso3D
 		}
 
 		// Collect nodes using a frustum and masked testing.
-		void CollectDrawablesMasked(std::vector<Drawable*>& result, Octant* octant, const Frustum& frustum, unsigned short drawableFlags, unsigned layerMask, unsigned char planeMask = 0x3f) const
+		void CollectDrawablesMasked(std::vector<Drawable*>& result, Octant* octant, const Frustum& frustum, unsigned drawableFlags, unsigned viewMask, unsigned char planeMask = 0x3f) const
 		{
 			if (planeMask) {
 				planeMask = frustum.IsInsideMasked(octant->CullingBox(), planeMask);
@@ -339,8 +352,9 @@ namespace Turso3D
 			}
 
 			std::vector<Drawable*>& drawables = octant->drawables;
-			for (Drawable* drawable : drawables) {
-				if ((drawable->Flags() & drawableFlags) == drawableFlags && (drawable->LayerMask() & layerMask) && (!planeMask || frustum.IsInsideMaskedFast(drawable->WorldBoundingBox(), planeMask) != OUTSIDE)) {
+			for (size_t i = 0; i < drawables.size(); ++i) {
+				Drawable* drawable = drawables[i];
+				if ((drawable->Flags() & drawableFlags) == drawableFlags && (drawable->ViewMask() & viewMask) && (!planeMask || frustum.IsInsideMaskedFast(drawable->WorldBoundingBox(), planeMask) != OUTSIDE)) {
 					result.push_back(drawable);
 				}
 			}
@@ -348,7 +362,7 @@ namespace Turso3D
 			if (octant->numChildren) {
 				for (size_t i = 0; i < NUM_OCTANTS; ++i) {
 					if (octant->children[i]) {
-						CollectDrawablesMasked(result, octant->children[i], frustum, drawableFlags, layerMask, planeMask);
+						CollectDrawablesMasked(result, octant->children[i], frustum, drawableFlags, viewMask, planeMask);
 					}
 				}
 			}

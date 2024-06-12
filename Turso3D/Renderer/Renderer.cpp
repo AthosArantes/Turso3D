@@ -517,20 +517,21 @@ namespace Turso3D
 			return;
 		}
 
-		for (auto it = lights.begin(); it != lights.end(); ++it) {
-			(*it)->OnRenderDebug(debugRenderer);
+		for (size_t i = 0; i < lights.size(); ++i) {
+			LightDrawable* light = lights[i];
+			light->OnRenderDebug(debugRenderer);
 		}
 
 		for (size_t i = 0; i < rootLevelOctants.size(); ++i) {
 			const ThreadOctantResult& result = octantResults[i];
 
-			for (auto oIt = result.octants.begin(); oIt != result.octants.end(); ++oIt) {
-				Octant* octant = oIt->first;
+			for (size_t j = 0; j < result.octants.size(); ++j) {
+				Octant* octant = result.octants[j].first;
 				octant->OnRenderDebug(debugRenderer);
-				const std::vector<Drawable*>& drawables = octant->Drawables();
 
-				for (auto dIt = drawables.begin(); dIt != drawables.end(); ++dIt) {
-					Drawable* drawable = *dIt;
+				const std::vector<Drawable*>& drawables = octant->Drawables();
+				for (size_t k = 0; k < drawables.size(); ++k) {
+					Drawable* drawable = drawables[k];
 					if (drawable->TestFlag(Drawable::FLAG_GEOMETRY) && drawable->LastFrameNumber() == frameNumber) {
 						drawable->OnRenderDebug(debugRenderer);
 					}
@@ -605,19 +606,18 @@ namespace Turso3D
 		}
 
 		const std::vector<Drawable*>& drawables = octant->Drawables();
-
-		for (auto it = drawables.begin(); it != drawables.end(); ++it) {
-			Drawable* drawable = *it;
+		for (size_t i = 0; i < drawables.size(); ++i) {
+			Drawable* drawable = drawables[i];
 
 			if (drawable->TestFlag(Drawable::FLAG_LIGHT)) {
 				const BoundingBox& lightBox = drawable->WorldBoundingBox();
-				if ((drawable->LayerMask() & viewMask) && (!planeMask || frustum.IsInsideMaskedFast(lightBox, planeMask)) && drawable->OnPrepareRender(frameNumber, camera)) {
+				if ((drawable->ViewMask() & viewMask) && (!planeMask || frustum.IsInsideMaskedFast(lightBox, planeMask)) && drawable->OnPrepareRender(frameNumber, camera)) {
 					result.lights.push_back(static_cast<LightDrawable*>(drawable));
 				}
 			} else {
 				// Lights are sorted first in octants, so break when first geometry encountered. Store the octant for batch collecting
 				result.octants.push_back(std::make_pair(octant, planeMask));
-				result.drawableAcc += drawables.end() - it;
+				result.drawableAcc += drawables.size() - i;
 				break;
 			}
 		}
@@ -840,8 +840,10 @@ namespace Turso3D
 
 		perViewDataBuffer->Bind(UB_PERVIEWDATA);
 
-		for (auto it = queue.batches.begin(); it != queue.batches.end(); ++it) {
-			const Batch& batch = *it;
+		const std::vector<Batch>& batches = queue.batches;
+		for (size_t i = 0; i < batches.size(); ++i) {
+			const Batch& batch = batches[i];
+
 			unsigned char geometryBits = batch.programBits & SP_GEOMETRYBITS;
 
 			ShaderProgram* program = batch.pass->GetShaderProgram(batch.programBits);
@@ -893,7 +895,8 @@ namespace Turso3D
 				} else {
 					graphics->DrawInstanced(PT_TRIANGLE_LIST, geometry->drawStart, geometry->drawCount, instanceVertexBuffer.get(), batch.instanceStart, batch.instanceCount);
 				}
-				it += batch.instanceCount - 1;
+				i += static_cast<size_t>(batch.instanceCount) - 1;
+
 			} else {
 				if (!geometryBits) {
 					program->SetUniform(U_WORLDMATRIX, *batch.worldTransform);
@@ -916,7 +919,10 @@ namespace Turso3D
 
 		occlusionQueryResults.clear();
 		graphics->CheckOcclusionQueryResults(occlusionQueryResults, lastFrameTime < target_rate);
-		for (OcclusionQueryResult& result : occlusionQueryResults) {
+
+		for (size_t i = 0; i < occlusionQueryResults.size(); ++i) {
+			OcclusionQueryResult& result = occlusionQueryResults[i];
+
 			Octant* octant = static_cast<Octant*>(result.object);
 			octant->OnOcclusionQueryResult(result.visible);
 		}
@@ -943,8 +949,10 @@ namespace Turso3D
 		graphics->SetRenderState(BLEND_REPLACE, CULL_BACK, CMP_LESS_EQUAL, false, false);
 
 		for (size_t i = 0; i < NUM_OCTANT_TASKS; ++i) {
-			for (auto it = octantResults[i].occlusionQueries.begin(); it != octantResults[i].occlusionQueries.end(); ++it) {
-				Octant* octant = *it;
+			std::vector<Octant*>& occlusionQueries = octantResults[i].occlusionQueries;
+
+			for (size_t j = 0; j < occlusionQueries.size(); ++j) {
+				Octant* octant = occlusionQueries[j];
 
 				const BoundingBox& octantBox = octant->CullingBox();
 				BoundingBox box(octantBox.min - enlargement, octantBox.max + enlargement);
@@ -1147,15 +1155,16 @@ namespace Turso3D
 		}
 
 		// Find the directional light if any
-		for (auto it = lights.begin(); it != lights.end(); ) {
-			LightDrawable* light = *it;
+		for (size_t i = 0; i < lights.size(); ) {
+			LightDrawable* light = lights[i];
 			if (light->GetLightType() == LIGHT_DIRECTIONAL) {
 				if (!dirLight || light->GetColor().Average() > dirLight->GetColor().Average()) {
 					dirLight = light;
 				}
-				it = lights.erase(it);
+				std::swap(lights.back(), lights.at(i));
+				lights.pop_back();
 			} else {
-				++it;
+				++i;
 			}
 		}
 
@@ -1169,8 +1178,8 @@ namespace Turso3D
 
 		// Pre-step for shadow map caching: reallocate all lights' shadow map rectangles which are non-zero at this point.
 		// If shadow maps were dirtied (size or bias change) reset all allocations instead
-		for (auto it = lights.begin(); it != lights.end(); ++it) {
-			LightDrawable* light = *it;
+		for (size_t i = 0; i < lights.size(); ++i) {
+			LightDrawable* light = lights[i];
 			if (shadowMapsDirty) {
 				light->SetShadowMap(nullptr);
 			} else if (drawShadows && light->ShadowStrength() < 1.0f && light->ShadowRect() != IntRect::ZERO()) {
@@ -1303,14 +1312,15 @@ namespace Turso3D
 		float farClipMul = 32767.0f / camera->FarClip();
 
 		// Scan octants for geometries
-		for (auto it = octants.begin(); it != octants.end(); ++it) {
-			Octant* octant = it->first;
-			unsigned char planeMask = it->second;
+		for (size_t i = 0; i < octants.size(); ++i) {
+			Octant* octant = octants[i].first;
+			unsigned char planeMask = octants[i].second;
+
 			const std::vector<Drawable*>& drawables = octant->Drawables();
+			for (size_t j = 0; j < drawables.size(); ++j) {
+				Drawable* drawable = drawables[j];
 
-			for (Drawable* drawable : drawables) {
-
-				if (drawable->TestFlag(Drawable::FLAG_GEOMETRY) && (drawable->LayerMask() & viewMask)) {
+				if (drawable->TestFlag(Drawable::FLAG_GEOMETRY) && (drawable->ViewMask() & viewMask)) {
 					const BoundingBox& geometryBox = drawable->WorldBoundingBox();
 
 					// Note: to strike a balance between performance and occlusion accuracy, per-geometry occlusion tests are skipped for now,
@@ -1390,7 +1400,8 @@ namespace Turso3D
 		if (lightType == LIGHT_POINT) {
 			// Point light: perform only one sphere query, then check which of the point light sides are visible
 			for (size_t i = 0; i < shadowViews.size(); ++i) {
-				// Check if each of the sides is in view. Do not process if isn't. Rendering will be no-op this frame, but cached contents are discarded once comes into view again
+				// Check if each of the sides is in view. Do not process if isn't.
+				// Rendering will be no-op this frame, but cached contents are discarded once comes into view again
 				light->SetupShadowView(i, camera);
 				ShadowView& view = shadowViews[i];
 
@@ -1402,14 +1413,15 @@ namespace Turso3D
 			}
 
 			std::vector<Drawable*>& shadowCasters = shadowMap.shadowCasters[shadowViews[0].casterListIdx];
-			octree->FindDrawables(shadowCasters, light->WorldSphere(), Drawable::FLAG_GEOMETRY | Drawable::FLAG_CAST_SHADOWS);
+			octree->FindDrawables(shadowCasters, light->WorldSphere(), Drawable::FLAG_GEOMETRY | Drawable::FLAG_CAST_SHADOWS, light->ShadowViewMask());
+
 		} else if (lightType == LIGHT_SPOT) {
 			// Spot light: perform query for the spot frustum
 			light->SetupShadowView(0, camera);
 			ShadowView& view = shadowViews[0];
 
 			std::vector<Drawable*>& shadowCasters = shadowMap.shadowCasters[view.casterListIdx];
-			octree->FindDrawablesMasked(shadowCasters, view.shadowFrustum, Drawable::FLAG_GEOMETRY | Drawable::FLAG_CAST_SHADOWS);
+			octree->FindDrawablesMasked(shadowCasters, view.shadowFrustum, Drawable::FLAG_GEOMETRY | Drawable::FLAG_CAST_SHADOWS, light->ShadowViewMask());
 		}
 	}
 
@@ -1419,7 +1431,8 @@ namespace Turso3D
 
 	void Renderer::ProcessShadowCastersWork(Task*, unsigned)
 	{
-		// Queue shadow batch collection tasks. These will also perform shadow batch sorting tasks when done
+		// Queue shadow batch collection tasks.
+		// These will also perform shadow batch sorting tasks when done
 		if (drawShadows) {
 			size_t shadowTaskIdx = 0;
 			LightDrawable* lastLight = nullptr;
@@ -1501,7 +1514,7 @@ namespace Turso3D
 					if (splitMinZ >= splitMaxZ || splitMinZ > view.splitMaxZ || splitMaxZ < view.splitMinZ) {
 						view.viewport = IntRect::ZERO();
 					} else {
-						octree->FindDrawablesMasked(shadowMap.shadowCasters[view.casterListIdx], view.shadowFrustum, Drawable::FLAG_GEOMETRY | Drawable::FLAG_CAST_SHADOWS);
+						octree->FindDrawablesMasked(shadowMap.shadowCasters[view.casterListIdx], view.shadowFrustum, Drawable::FLAG_GEOMETRY | Drawable::FLAG_CAST_SHADOWS, light->ShadowViewMask());
 					}
 				}
 			}
@@ -1528,7 +1541,8 @@ namespace Turso3D
 				BatchQueue* destStatic = !dynamicOrDirLight ? &shadowMap.shadowBatches[view.staticQueueIdx] : nullptr;
 				BatchQueue* destDynamic = &shadowMap.shadowBatches[view.dynamicQueueIdx];
 
-				for (Drawable* drawable : initialShadowCasters) {
+				for (size_t i = 0; i < initialShadowCasters.size(); ++i) {
+					Drawable* drawable = initialShadowCasters[i];
 					const BoundingBox& geometryBox = drawable->WorldBoundingBox();
 
 					bool inView = drawable->InView(frameNumber);

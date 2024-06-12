@@ -24,9 +24,6 @@ namespace Turso3D
 		OctreeNodeBase();
 
 	protected:
-		// Handle the layer changing.
-		void OnLayerChanged(uint8_t newLayer) override;
-
 		// Current octree.
 		Octree* octree;
 		// This node's drawable.
@@ -87,10 +84,6 @@ namespace Turso3D
 
 		// Set the owner node.
 		void SetOwner(OctreeNodeBase* owner);
-		// Set the layer.
-		void SetLayer(uint8_t newLayer);
-		// Return bitmask corresponding to layer.
-		unsigned LayerMask() const { return 1 << layer; }
 
 		// Return the owner node.
 		OctreeNodeBase* Owner() const { return owner; }
@@ -109,7 +102,7 @@ namespace Turso3D
 		// The frames are counted by Renderer internally and have no significance outside it.
 		unsigned short LastUpdateFrameNumber() const { return lastUpdateFrameNumber; }
 		// Check whether is marked in view this frame.
-		bool InView(unsigned short frameNumber) { return lastFrameNumber == frameNumber; }
+		bool InView(unsigned short frameNumber) const { return lastFrameNumber == frameNumber; }
 		// Return position in world space.
 		Vector3 WorldPosition() const { return WorldTransform().Translation(); }
 		// Return rotation in world space.
@@ -154,6 +147,9 @@ namespace Turso3D
 			return lastFrameNumber == previousFrameNumber;
 		}
 
+		// Return the view mask from the owner node.
+		unsigned ViewMask() const { return owner->ViewMask(); }
+
 		// Set bit flag.
 		void SetFlag(unsigned bit, bool set) const
 		{
@@ -164,25 +160,22 @@ namespace Turso3D
 			}
 		}
 		// Test bit flag.
-		bool TestFlag(unsigned bit) const
-		{
-			return (flags & bit) != 0;
-		}
+		bool TestFlag(unsigned bit) const { return (flags & bit) != 0; }
 		// Return flags.
 		unsigned Flags() const { return flags; }
 
 	protected:
+		// Drawable flags.
+		// Used to hold several boolean values to reduce memory use.
+		mutable unsigned flags;
 		// World space bounding box.
 		mutable BoundingBox worldBoundingBox;
+
 		// Owner scene node's world transform matrix.
 		Matrix3x4* worldTransform;
 		// Current octree octant.
 		Octant* octant;
-		// Drawable flags.
-		// Used to hold several boolean values to reduce memory use.
-		mutable unsigned flags;
-		// Layer number. Copy of the node layer.
-		uint8_t layer;
+
 		// Last frame number when was visible.
 		unsigned short lastFrameNumber;
 		// Last frame number when was reinserted to octree or other change (LOD etc.) happened.
@@ -235,7 +228,7 @@ namespace Turso3D
 		// The frames are counted by Renderer internally and have no significance outside it.
 		unsigned short LastUpdateFrameNumber() const { return drawable->LastUpdateFrameNumber(); }
 		// Check whether is marked in view this frame.
-		bool InView(unsigned short frameNumber) { return drawable->InView(frameNumber); }
+		bool InView(unsigned short frameNumber) const { return drawable->InView(frameNumber); }
 		// Check whether was in view last frame, compared to the current.
 		bool WasInView(unsigned short frameNumber) const { return drawable->WasInView(frameNumber); }
 

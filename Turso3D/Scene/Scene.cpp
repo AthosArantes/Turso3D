@@ -13,6 +13,6 @@ namespace Turso3D
 
 	void Scene::Clear()
 	{
-		root.RemoveAllChildren();
+		root.DestroyAllChildren();
 	}
 }

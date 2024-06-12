@@ -9,24 +9,11 @@
 #include <Turso3D/Renderer/Octree.h>
 #include <Turso3D/Renderer/Renderer.h>
 
-namespace Turso3D
+namespace
 {
-	constexpr LightType DEFAULT_LIGHTTYPE = LIGHT_POINT;
-	constexpr float DEFAULT_RANGE = 10.0f;
-	constexpr float DEFAULT_SPOT_FOV = 30.0f;
-	constexpr int DEFAULT_SHADOWMAP_SIZE = 512;
-	constexpr float DEFAULT_SHADOW_CASCADE_SPLIT = 0.25f;
-	constexpr float DEFAULT_FADE_START = 0.9f;
-	constexpr float DEFAULT_SHADOW_MAX_DISTANCE = 250.0f;
-	constexpr float DEFAULT_SHADOW_MAX_STRENGTH = 0.0f;
-	constexpr float DEFAULT_SHADOW_QUANTIZE = 0.5f;
-	constexpr float DEFAULT_SHADOW_MIN_VIEW = 10.0f;
-	constexpr float DEFAULT_DEPTH_BIAS = 2.0f;
-	constexpr float DEFAULT_SLOPESCALE_BIAS = 1.5f;
+	using namespace Turso3D;
 
-	static const Color DEFAULT_COLOR = Color(1.0f, 1.0f, 1.0f, 0.5f);
-
-	static const Quaternion pointLightFaceRotations[] =
+	static const Quaternion PointLightFaceRotations[] =
 	{
 		Quaternion(0.0f, 90.0f, 0.0f),
 		Quaternion(0.0f, -90.0f, 0.0f),
@@ -37,24 +24,27 @@ namespace Turso3D
 	};
 
 	static Allocator<LightDrawable> drawableAllocator;
+}
 
-	// ==========================================================================================
+namespace Turso3D
+{
 	LightDrawable::LightDrawable() :
-		lightType(DEFAULT_LIGHTTYPE),
-		color(DEFAULT_COLOR),
-		range(DEFAULT_RANGE),
-		fov(DEFAULT_SPOT_FOV),
-		fadeStart(DEFAULT_FADE_START),
-		shadowMapSize(DEFAULT_SHADOWMAP_SIZE),
-		shadowFadeStart(DEFAULT_FADE_START),
-		shadowCascadeSplit(DEFAULT_SHADOW_CASCADE_SPLIT),
-		shadowMaxDistance(DEFAULT_SHADOW_MAX_DISTANCE),
-		shadowMaxStrength(DEFAULT_SHADOW_MAX_STRENGTH),
-		shadowQuantize(DEFAULT_SHADOW_QUANTIZE),
-		shadowMinView(DEFAULT_SHADOW_MIN_VIEW),
-		depthBias(DEFAULT_DEPTH_BIAS),
-		slopeScaleBias(DEFAULT_SLOPESCALE_BIAS),
+		lightType(LIGHT_POINT),
+		color(Color::WHITE()),
+		range(10.0f),
+		fov(30.0f),
+		fadeStart(0.9f),
+		shadowMapSize(512),
+		shadowFadeStart(0.9f),
+		shadowCascadeSplit(0.25f),
+		shadowMaxDistance(250.0f),
+		shadowMaxStrength(0.0f),
+		shadowQuantize(0.5f),
+		shadowMinView(10.0f),
+		depthBias(2.0f),
+		slopeScaleBias(1.5f),
 		shadowMap(nullptr),
+		shadowViewMask(1u),
 		autoFocus(false)
 	{
 		SetFlag(Drawable::FLAG_LIGHT, true);
@@ -344,7 +334,7 @@ namespace Turso3D
 				topLeft.x += ((unsigned)viewIndex >> 1) * actualShadowMapSize;
 				view.viewport = IntRect {topLeft.x, topLeft.y, topLeft.x + actualShadowMapSize, topLeft.y + actualShadowMapSize};
 
-				shadowCamera->SetTransform(WorldPosition(), pointLightFaceRotations[viewIndex]);
+				shadowCamera->SetTransform(WorldPosition(), PointLightFaceRotations[viewIndex]);
 				shadowCamera->SetFov(90.0f);
 				shadowCamera->SetZoom((float)(actualShadowMapSize - 4) / (float)actualShadowMapSize);
 				shadowCamera->SetFarClip(Range());
@@ -415,6 +405,11 @@ namespace Turso3D
 		}
 
 		return true;
+	}
+
+	void LightDrawable::SetShadowViewMask(unsigned mask)
+	{
+		shadowViewMask = mask;
 	}
 
 	void LightDrawable::SetAutoFocus(bool autoFocus)

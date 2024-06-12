@@ -11,7 +11,6 @@ namespace Turso3D
 		owner(nullptr),
 		octant(nullptr),
 		flags(0),
-		layer(LAYER_DEFAULT),
 		lastFrameNumber(0),
 		lastUpdateFrameNumber(0),
 		distance(0.0f),
@@ -71,23 +70,11 @@ namespace Turso3D
 		worldTransform = const_cast<Matrix3x4*>(&owner_->WorldTransform());
 	}
 
-	void Drawable::SetLayer(uint8_t newLayer)
-	{
-		layer = newLayer;
-	}
-
 	// ==========================================================================================
 	OctreeNodeBase::OctreeNodeBase() :
 		octree(nullptr),
 		drawable(nullptr)
 	{
-	}
-
-	void OctreeNodeBase::OnLayerChanged(uint8_t newLayer)
-	{
-		if (drawable) {
-			drawable->SetLayer(newLayer);
-		}
 	}
 
 	// ==========================================================================================

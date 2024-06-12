@@ -1,16 +1,20 @@
 #include <Turso3D/Renderer/Camera.h>
 #include <Turso3D/Math/Matrix3x4.h>
 
-namespace Turso3D
+namespace
 {
-	static const Matrix4 flipMatrix(
+	using namespace Turso3D;
+
+	static const Matrix4 FlipMatrix(
 		1.0f, 0.0f, 0.0f, 0.0f,
 		0.0f, -1.0f, 0.0f, 0.0f,
 		0.0f, 0.0f, 1.0f, 0.0f,
 		0.0f, 0.0f, 0.0f, 1.0f
 	);
+}
 
-	// ==========================================================================================
+namespace Turso3D
+{
 	Camera::Camera() :
 		viewMatrix(Matrix3x4::IDENTITY()),
 		viewMatrixDirty(false),
@@ -23,7 +27,7 @@ namespace Turso3D
 		aspectRatio(1.0f),
 		zoom(1.0f),
 		lodBias(1.0f),
-		viewMask(M_MAX_UNSIGNED),
+		viewMask(1u),
 		reflectionPlane(Plane::UP()),
 		clipPlane(Plane::UP()),
 		useReflection(false),
@@ -136,7 +140,7 @@ namespace Turso3D
 		}
 
 		if (flipVertical) {
-			ret = flipMatrix * ret;
+			ret = FlipMatrix * ret;
 		}
 
 		if (openGLFormat) {

@@ -8,8 +8,10 @@
 #include <cassert>
 #include <algorithm>
 
-namespace Turso3D
+namespace
 {
+	using namespace Turso3D;
+
 	constexpr float DEFAULT_OCTREE_SIZE = 1000.0f;
 	constexpr int DEFAULT_OCTREE_LEVELS = 8;
 	constexpr int MAX_OCTREE_LEVELS = 255;
@@ -35,7 +37,10 @@ namespace Turso3D
 			return lhs < rhs;
 		}
 	}
+}
 
+namespace Turso3D
+{
 	// Task for octree drawables reinsertion.
 	struct Octree::ReinsertDrawablesTask : public MemberFunctionTask<Octree>
 	{
@@ -146,8 +151,8 @@ namespace Turso3D
 				// Use a temporary bounding box for calculations in case many threads call this simultaneously
 				BoundingBox tempBox;
 
-				for (const Drawable* drawable : drawables) {
-					tempBox.Merge(drawable->WorldBoundingBox());
+				for (size_t i = 0; i < drawables.size(); ++i) {
+					tempBox.Merge(drawables[i]->WorldBoundingBox());
 				}
 
 				if (numChildren) {
@@ -185,7 +190,8 @@ namespace Turso3D
 	{
 		// Clear octree association from nodes that were never inserted
 		// Note: the threaded queues cannot have nodes that were never inserted, only nodes that should be moved
-		for (Drawable* drawable : updateQueue) {
+		for (size_t i = 0; i < updateQueue.size(); ++i) {
+			Drawable* drawable = updateQueue[i];
 			if (drawable) {
 				drawable->octant = nullptr;
 				drawable->SetFlag(Drawable::FLAG_OCTREE_REINSERT_QUEUED, false);
@@ -246,7 +252,8 @@ namespace Turso3D
 		updateQueue.clear();
 
 		// Sort octants' drawables by address and put lights first
-		for (Octant* octant : sortDirtyOctants) {
+		for (size_t i = 0; i < sortDirtyOctants.size(); ++i) {
+			Octant* octant = sortDirtyOctants[i];
 			std::sort(octant->drawables.begin(), octant->drawables.end(), CompareDrawables);
 			octant->SetFlag(Octant::FLAG_DRAWABLES_SORT_DIRTY, false);
 		}
@@ -272,18 +279,19 @@ namespace Turso3D
 		root.OnRenderDebug(debug);
 	}
 
-	void Octree::Raycast(std::vector<RaycastResult>& result, const Ray& ray, unsigned short nodeFlags, float maxDistance, unsigned layerMask) const
+#if 0
+	void Octree::Raycast(std::vector<RaycastResult>& result, const Ray& ray, unsigned nodeFlags, unsigned viewMask, float maxDistance) const
 	{
 		result.clear();
-		CollectDrawables(result, const_cast<Octant*>(&root), ray, nodeFlags, maxDistance, layerMask);
+		CollectDrawables(result, const_cast<Octant*>(&root), ray, nodeFlags, viewMask, maxDistance);
 		std::sort(result.begin(), result.end(), CompareRaycastResults);
 	}
 
-	RaycastResult Octree::RaycastSingle(const Ray& ray, unsigned short nodeFlags, float maxDistance, unsigned layerMask) const
+	RaycastResult Octree::RaycastSingle(const Ray& ray, unsigned nodeFlags, unsigned viewMask, float maxDistance) const
 	{
 		// Get the potential hits first
 		initialRayResult.clear();
-		CollectDrawables(initialRayResult, const_cast<Octant*>(&root), ray, nodeFlags, maxDistance, layerMask);
+		CollectDrawables(initialRayResult, const_cast<Octant*>(&root), ray, nodeFlags, viewMask, maxDistance);
 		std::sort(initialRayResult.begin(), initialRayResult.end(), CompareDrawableDistances);
 
 		// Then perform actual per-node ray tests and early-out when possible
@@ -313,11 +321,7 @@ namespace Turso3D
 			return emptyRes;
 		}
 	}
-
-	void Octree::FindDrawablesMasked(std::vector<Drawable*>& result, const Frustum& frustum, unsigned short drawableFlags, unsigned layerMask) const
-	{
-		CollectDrawablesMasked(result, const_cast<Octant*>(&root), frustum, drawableFlags, layerMask);
-	}
+#endif
 
 	void Octree::QueueUpdate(Drawable* drawable)
 	{
@@ -366,7 +370,9 @@ namespace Turso3D
 
 	void Octree::ReinsertDrawables(std::vector<Drawable*>& drawables)
 	{
-		for (Drawable* drawable : drawables) {
+		for (size_t i = 0; i < drawables.size(); ++i) {
+			Drawable* drawable = drawables[i];
+
 			const BoundingBox& box = drawable->WorldBoundingBox();
 			Octant* oldOctant = drawable->GetOctant();
 			Octant* newOctant = &root;
@@ -400,9 +406,9 @@ namespace Turso3D
 
 	void Octree::RemoveDrawableFromQueue(Drawable* drawable, std::vector<Drawable*>& drawables)
 	{
-		for (auto it = drawables.begin(); it != drawables.end(); ++it) {
-			if ((*it) == drawable) {
-				*it = nullptr;
+		for (size_t i = 0; i < drawables.size(); ++i) {
+			if (drawables[i] == drawable) {
+				drawables[i] = nullptr;
 				break;
 			}
 		}
@@ -493,14 +499,16 @@ namespace Turso3D
 
 	void Octree::DeleteChildOctants(Octant* octant, bool deletingOctree)
 	{
-		for (Drawable* drawable : octant->drawables) {
+		std::vector<Drawable*>& drawables = octant->drawables;
+		for (size_t i = 0; i < drawables.size(); ++i) {
+			Drawable* drawable = drawables[i];
 			drawable->octant = nullptr;
 			drawable->SetFlag(Drawable::FLAG_OCTREE_REINSERT_QUEUED, false);
 			if (deletingOctree) {
 				drawable->Owner()->octree = nullptr;
 			}
 		}
-		octant->drawables.clear();
+		drawables.clear();
 
 		if (octant->numChildren) {
 			for (size_t i = 0; i < NUM_OCTANTS; ++i) {
@@ -527,11 +535,12 @@ namespace Turso3D
 		}
 	}
 
-	void Octree::CollectDrawables(std::vector<Drawable*>& result, Octant* octant, unsigned short drawableFlags, unsigned layerMask) const
+	void Octree::CollectDrawables(std::vector<Drawable*>& result, Octant* octant, unsigned drawableFlags, unsigned viewMask) const
 	{
 		std::vector<Drawable*>& drawables = octant->drawables;
-		for (Drawable* drawable : drawables) {
-			if ((drawable->Flags() & drawableFlags) == drawableFlags && (drawable->LayerMask() & layerMask)) {
+		for (size_t i = 0; i < drawables.size(); ++i) {
+			Drawable* drawable = drawables[i];
+			if ((drawable->Flags() & drawableFlags) == drawableFlags && (drawable->ViewMask() & viewMask)) {
 				result.push_back(drawable);
 			}
 		}
@@ -539,13 +548,13 @@ namespace Turso3D
 		if (octant->numChildren) {
 			for (size_t i = 0; i < NUM_OCTANTS; ++i) {
 				if (octant->children[i]) {
-					CollectDrawables(result, octant->children[i], drawableFlags, layerMask);
+					CollectDrawables(result, octant->children[i], drawableFlags, viewMask);
 				}
 			}
 		}
 	}
 
-	void Octree::CollectDrawables(std::vector<RaycastResult>& result, Octant* octant, const Ray& ray, unsigned short drawableFlags, float maxDistance, unsigned layerMask) const
+	void Octree::CollectDrawables(std::vector<RaycastResult>& result, Octant* octant, const Ray& ray, unsigned drawableFlags, unsigned viewMask, float maxDistance) const
 	{
 		float octantDist = ray.HitDistance(octant->CullingBox());
 		if (octantDist >= maxDistance) {
@@ -553,8 +562,9 @@ namespace Turso3D
 		}
 
 		std::vector<Drawable*>& drawables = octant->drawables;
-		for (Drawable* drawable : drawables) {
-			if ((drawable->Flags() & drawableFlags) == drawableFlags && (drawable->LayerMask() & layerMask)) {
+		for (size_t i = 0; i < drawables.size(); ++i) {
+			Drawable* drawable = drawables[i];
+			if ((drawable->Flags() & drawableFlags) == drawableFlags && (drawable->ViewMask() & viewMask)) {
 				drawable->OnRaycast(result, ray, maxDistance);
 			}
 		}
@@ -562,13 +572,13 @@ namespace Turso3D
 		if (octant->numChildren) {
 			for (size_t i = 0; i < NUM_OCTANTS; ++i) {
 				if (octant->children[i]) {
-					CollectDrawables(result, octant->children[i], ray, drawableFlags, maxDistance, layerMask);
+					CollectDrawables(result, octant->children[i], ray, drawableFlags, viewMask, maxDistance);
 				}
 			}
 		}
 	}
 
-	void Octree::CollectDrawables(std::vector<std::pair<Drawable*, float>>& result, Octant* octant, const Ray& ray, unsigned short drawableFlags, float maxDistance, unsigned layerMask) const
+	void Octree::CollectDrawables(std::vector<std::pair<Drawable*, float>>& result, Octant* octant, const Ray& ray, unsigned drawableFlags, unsigned viewMask, float maxDistance) const
 	{
 		float octantDist = ray.HitDistance(octant->CullingBox());
 		if (octantDist >= maxDistance) {
@@ -576,8 +586,9 @@ namespace Turso3D
 		}
 
 		std::vector<Drawable*>& drawables = octant->drawables;
-		for (Drawable* drawable : drawables) {
-			if ((drawable->Flags() & drawableFlags) == drawableFlags && (drawable->LayerMask() & layerMask)) {
+		for (size_t i = 0; i < drawables.size(); ++i) {
+			Drawable* drawable = drawables[i];
+			if ((drawable->Flags() & drawableFlags) == drawableFlags && (drawable->ViewMask() & viewMask)) {
 				float distance = ray.HitDistance(drawable->WorldBoundingBox());
 				if (distance < maxDistance) {
 					result.push_back(std::make_pair(drawable, distance));
@@ -588,7 +599,7 @@ namespace Turso3D
 		if (octant->numChildren) {
 			for (size_t i = 0; i < NUM_OCTANTS; ++i) {
 				if (octant->children[i]) {
-					CollectDrawables(result, octant->children[i], ray, drawableFlags, maxDistance, layerMask);
+					CollectDrawables(result, octant->children[i], ray, drawableFlags, viewMask, maxDistance);
 				}
 			}
 		}

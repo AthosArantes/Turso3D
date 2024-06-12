@@ -4,9 +4,17 @@
 
 namespace Turso3D
 {
+	Node::Node() :
+		scene(nullptr),
+		parent(nullptr),
+		flags(FLAG_ENABLED),
+		viewMask(1u)
+	{
+	}
+
 	Node::~Node()
 	{
-		RemoveAllChildren();
+		DestroyAllChildren();
 	}
 
 	void Node::SetName(const std::string& newName)
@@ -21,16 +29,6 @@ namespace Turso3D
 		nameHash = StringHash {newName};
 	}
 
-	void Node::SetLayer(uint8_t newLayer)
-	{
-		if (layer < 32) {
-			layer = newLayer;
-			OnLayerChanged(newLayer);
-		} else {
-			LOG_ERROR("Can not set layer 32 or higher");
-		}
-	}
-
 	void Node::SetEnabled(bool enable)
 	{
 		if (enable != TestFlag(FLAG_ENABLED)) {
@@ -42,8 +40,8 @@ namespace Turso3D
 	void Node::SetEnabledRecursive(bool enable)
 	{
 		SetEnabled(enable);
-		for (auto it = children.begin(); it != children.end(); ++it) {
-			Node* child = it->get();
+		for (size_t i = 0; i < children.size(); ++i) {
+			Node* child = children[i].get();
 			child->SetEnabledRecursive(enable);
 		}
 	}
@@ -72,43 +70,44 @@ namespace Turso3D
 		}
 #endif
 
-		child->parent = this;
-		child->OnParentSet(this, nullptr);
-		child->SetScene(scene);
-
-		auto& newChild = children.emplace_back(std::unique_ptr<Node> {});
-		newChild.swap(child);
+		Node* child_node = child.get();
+		children.push_back(std::move(child));
+		child_node->SetParent(this);
 	}
 
-	std::unique_ptr<Node> Node::RemoveChild(Node* child)
+	void Node::RemoveChild(Node* child)
 	{
-		if (!child || child->parent != this) {
-			return {};
-		}
+		if (child && child->parent == this) {
+			for (size_t i = 0; i < children.size(); ++i) {
+				Node* node_child = children[i].get();
+				if (node_child == child) {
+					children[i].release();
+					children.back().swap(children[i]);
+					children.pop_back();
 
-		for (auto it = children.begin(); it != children.end(); ++it) {
-			if (it->get() == child) {
-				std::unique_ptr<Node> node;
-				node.swap(*it);
-
-				children.erase(it);
-
-				node->SetScene(nullptr);
-				return node;
+					node_child->SetParent(nullptr);
+					return;
+				}
 			}
 		}
-
-		return {};
 	}
 
-	void Node::RemoveAllChildren()
+	void Node::DestroyChild(Node* child)
 	{
-		for (auto it = children.begin(); it != children.end(); ++it) {
-			Node* child = it->get();
-			child->parent = nullptr;
-			child->SetFlag(FLAG_SPATIALPARENT, false);
-			it->reset();
+		if (child && child->parent == this) {
+			for (size_t i = 0; i < children.size(); ++i) {
+				Node* node_child = children[i].get();
+				if (node_child == child) {
+					children.back().swap(children[i]);
+					children.pop_back();
+					return;
+				}
+			}
 		}
+	}
+
+	void Node::DestroyAllChildren()
+	{
 		children.clear();
 	}
 
@@ -122,13 +121,20 @@ namespace Turso3D
 	size_t Node::NumPersistentChildren() const
 	{
 		size_t ret = 0;
-		for (auto it = children.begin(); it != children.end(); ++it) {
-			Node* child = it->get();
+		for (size_t i = 0; i < children.size(); ++i) {
+			Node* child = children[i].get();
 			if (!child->TestFlag(FLAG_TEMPORARY)) {
 				++ret;
 			}
 		}
 		return ret;
+	}
+
+	void Node::SetViewMask(unsigned mask)
+	{
+		unsigned oldMask = viewMask;
+		viewMask = mask;
+		OnViewMaskChanged(oldMask);
 	}
 
 	void Node::SetScene(Scene* newScene)
@@ -138,16 +144,25 @@ namespace Turso3D
 		OnSceneSet(scene, oldScene);
 
 		// Also set for the children
-		for (auto it = children.begin(); it != children.end(); ++it) {
-			(*it)->SetScene(newScene);
+		for (size_t i = 0; i < children.size(); ++i) {
+			children[i]->SetScene(newScene);
 		}
 	}
 
-	void Node::OnParentSet(Node*, Node*)
+	void Node::SetParent(Node* newParent)
 	{
+		Node* oldParent = parent;
+		parent = newParent;
+		SetScene(newParent ? newParent->scene : nullptr);
+
+		OnParentSet(newParent, oldParent);
 	}
 
 	void Node::OnSceneSet(Scene*, Scene*)
+	{
+	}
+
+	void Node::OnParentSet(Node*, Node*)
 	{
 	}
 
@@ -155,7 +170,7 @@ namespace Turso3D
 	{
 	}
 
-	void Node::OnLayerChanged(uint8_t)
+	void Node::OnViewMaskChanged(unsigned)
 	{
 	}
 }
