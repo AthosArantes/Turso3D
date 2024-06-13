@@ -63,9 +63,8 @@ namespace Turso3D
 				const Vector3& center = WorldPosition();
 				Vector3 edge(range, range, range);
 				worldBoundingBox.Define(center - edge, center + edge);
+				break;
 			}
-			break;
-
 			case LIGHT_SPOT:
 				worldBoundingBox.Define(WorldFrustum());
 				break;
@@ -407,16 +406,6 @@ namespace Turso3D
 		return true;
 	}
 
-	void LightDrawable::SetShadowViewMask(unsigned mask)
-	{
-		shadowViewMask = mask;
-	}
-
-	void LightDrawable::SetAutoFocus(bool autoFocus)
-	{
-		this->autoFocus = autoFocus;
-	}
-
 	// ==========================================================================================
 	Light::Light()
 	{
@@ -433,100 +422,108 @@ namespace Turso3D
 
 	void Light::SetLightType(LightType type)
 	{
-		LightDrawable* lightDrawable = static_cast<LightDrawable*>(drawable);
-
-		if (type != lightDrawable->lightType) {
-			lightDrawable->lightType = type;
+		LightDrawable* drawable = GetDrawable();
+		if (type != drawable->lightType) {
+			drawable->lightType = type;
 			OnBoundingBoxChanged();
 		}
 	}
 
-	void Light::SetColor(const Color& color_)
+	void Light::SetColor(const Color& color)
 	{
-		LightDrawable* lightDrawable = static_cast<LightDrawable*>(drawable);
-		lightDrawable->color = color_;
+		LightDrawable* drawable = GetDrawable();
+		drawable->color = color;
 	}
 
 	void Light::SetRange(float range_)
 	{
-		LightDrawable* lightDrawable = static_cast<LightDrawable*>(drawable);
-
+		LightDrawable* drawable = GetDrawable();
 		range_ = std::max(range_, 0.0f);
-		if (range_ != lightDrawable->range) {
-			lightDrawable->range = range_;
+		if (range_ != drawable->range) {
+			drawable->range = range_;
 			OnBoundingBoxChanged();
 		}
 	}
 
 	void Light::SetFov(float fov_)
 	{
-		LightDrawable* lightDrawable = static_cast<LightDrawable*>(drawable);
-
+		LightDrawable* drawable = GetDrawable();
 		fov_ = Clamp(fov_, 0.0f, 180.0f);
-		if (fov_ != lightDrawable->fov) {
-			lightDrawable->fov = fov_;
+		if (fov_ != drawable->fov) {
+			drawable->fov = fov_;
 			OnBoundingBoxChanged();
 		}
 	}
 
 	void Light::SetFadeStart(float start)
 	{
-		LightDrawable* lightDrawable = static_cast<LightDrawable*>(drawable);
-		lightDrawable->fadeStart = Clamp(start, 0.0f, 1.0f - M_EPSILON);
+		LightDrawable* drawable = GetDrawable();
+		drawable->fadeStart = Clamp(start, 0.0f, 1.0f - M_EPSILON);
 	}
 
 	void Light::SetShadowMapSize(int size)
 	{
-		LightDrawable* lightDrawable = static_cast<LightDrawable*>(drawable);
-		lightDrawable->shadowMapSize = NextPowerOfTwo(std::max(1, size));
+		LightDrawable* drawable = GetDrawable();
+		drawable->shadowMapSize = NextPowerOfTwo(std::max(1, size));
 	}
 
 	void Light::SetShadowFadeStart(float start)
 	{
-		LightDrawable* lightDrawable = static_cast<LightDrawable*>(drawable);
-		lightDrawable->shadowFadeStart = Clamp(start, 0.0f, 1.0f - M_EPSILON);
+		LightDrawable* drawable = GetDrawable();
+		drawable->shadowFadeStart = Clamp(start, 0.0f, 1.0f - M_EPSILON);
 	}
 
 	void Light::SetShadowCascadeSplit(float split)
 	{
-		LightDrawable* lightDrawable = static_cast<LightDrawable*>(drawable);
-		lightDrawable->shadowCascadeSplit = Clamp(split, M_EPSILON, 1.0f - M_EPSILON);
+		LightDrawable* drawable = GetDrawable();
+		drawable->shadowCascadeSplit = Clamp(split, M_EPSILON, 1.0f - M_EPSILON);
 	}
 
 	void Light::SetShadowMaxDistance(float distance_)
 	{
-		LightDrawable* lightDrawable = static_cast<LightDrawable*>(drawable);
-		lightDrawable->shadowMaxDistance = std::max(distance_, 0.0f);
+		LightDrawable* drawable = GetDrawable();
+		drawable->shadowMaxDistance = std::max(distance_, 0.0f);
 	}
 
 	void Light::SetShadowMaxStrength(float strength)
 	{
-		LightDrawable* lightDrawable = static_cast<LightDrawable*>(drawable);
-		lightDrawable->shadowMaxStrength = Clamp(strength, 0.0f, 1.f);
+		LightDrawable* drawable = GetDrawable();
+		drawable->shadowMaxStrength = Clamp(strength, 0.0f, 1.f);
 	}
 
 	void Light::SetShadowQuantize(float quantize)
 	{
-		LightDrawable* lightDrawable = static_cast<LightDrawable*>(drawable);
-		lightDrawable->shadowQuantize = std::max(quantize, M_EPSILON);
+		LightDrawable* drawable = GetDrawable();
+		drawable->shadowQuantize = std::max(quantize, M_EPSILON);
 	}
-
 
 	void Light::SetShadowMinView(float minView)
 	{
-		LightDrawable* lightDrawable = static_cast<LightDrawable*>(drawable);
-		lightDrawable->shadowMinView = std::max(minView, M_EPSILON);
+		LightDrawable* drawable = GetDrawable();
+		drawable->shadowMinView = std::max(minView, M_EPSILON);
 	}
 
 	void Light::SetDepthBias(float bias)
 	{
-		LightDrawable* lightDrawable = static_cast<LightDrawable*>(drawable);
-		lightDrawable->depthBias = std::max(bias, 0.0f);
+		LightDrawable* drawable = GetDrawable();
+		drawable->depthBias = std::max(bias, 0.0f);
 	}
 
 	void Light::SetSlopeScaleBias(float bias)
 	{
-		LightDrawable* lightDrawable = static_cast<LightDrawable*>(drawable);
-		lightDrawable->slopeScaleBias = std::max(bias, 0.0f);
+		LightDrawable* drawable = GetDrawable();
+		drawable->slopeScaleBias = std::max(bias, 0.0f);
+	}
+
+	void Light::SetShadowViewMask(unsigned mask)
+	{
+		LightDrawable* drawable = GetDrawable();
+		drawable->shadowViewMask = mask;
+	}
+
+	void Light::SetAutoFocus(bool autoFocus)
+	{
+		LightDrawable* drawable = GetDrawable();
+		drawable->autoFocus = autoFocus;
 	}
 }

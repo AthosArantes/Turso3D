@@ -127,6 +127,11 @@ namespace Turso3D
 		float DepthBias() const { return depthBias; }
 		// Return slope-scaled depth bias.
 		float SlopeScaleBias() const { return slopeScaleBias; }
+		// Return the shadow view mask.
+		unsigned ShadowViewMask() const { return shadowViewMask; }
+		// Return whether the directional light will auto focus in order to improve shadow resolution.
+		bool AutoFocus() const { return autoFocus; }
+
 		// Return total requested shadow map size, accounting for multiple faces / splits for directional and point lights.
 		IntVector2 TotalShadowMapSize() const;
 		// Return actual shadow map face size.
@@ -160,17 +165,6 @@ namespace Turso3D
 		const IntRect& ShadowRect() const { return shadowRect; }
 		// Return shadow map offset and depth parameters.
 		const Vector4& ShadowParameters() const { return shadowParameters; }
-
-		// Set the shadow view mask.
-		// Used to filter which drawables get to be rendered in the shadow map.
-		void SetShadowViewMask(unsigned mask);
-		// Return the shadow view mask.
-		unsigned ShadowViewMask() const { return shadowViewMask; }
-
-		// Sets if the directional light will auto focus in order to improve shadow resolution.
-		void SetAutoFocus(bool autoFocus);
-		// Return whether the directional light will auto focus in order to improve shadow resolution.
-		bool AutoFocus() const { return autoFocus; }
 
 	private:
 		// Light type.
@@ -215,6 +209,7 @@ namespace Turso3D
 		bool autoFocus;
 	};
 
+	// ==========================================================================================
 	// Dynamic light scene node.
 	class Light : public OctreeNode
 	{
@@ -222,7 +217,10 @@ namespace Turso3D
 		// Construct.
 		Light();
 		// Destruct.
-		virtual ~Light();
+		~Light();
+
+		// Return derived drawable.
+		LightDrawable* GetDrawable() const { return static_cast<LightDrawable*>(drawable); }
 
 		// Set light type.
 		void SetLightType(LightType type);
@@ -255,40 +253,50 @@ namespace Turso3D
 		void SetDepthBias(float bias);
 		// Set slope-scaled depth bias for shadows.
 		void SetSlopeScaleBias(float bias);
+		// Set the shadow view mask.
+		// Used to filter which drawables get to be rendered in the shadow map.
+		void SetShadowViewMask(unsigned mask);
+		// Sets if the directional light will auto focus in order to improve shadow resolution.
+		void SetAutoFocus(bool autoFocus);
 
 		// Return light type.
-		LightType GetLightType() const { return static_cast<LightDrawable*>(drawable)->lightType; }
+		LightType GetLightType() const { return GetDrawable()->lightType; }
 		// Return color.
-		const Color& GetColor() const { return static_cast<LightDrawable*>(drawable)->color; }
+		const Color& GetColor() const { return GetDrawable()->color; }
 		// Return range.
-		float Range() const { return static_cast<LightDrawable*>(drawable)->range; }
+		float Range() const { return GetDrawable()->range; }
 		// Return spotlight field of view.
-		float Fov() const { return static_cast<LightDrawable*>(drawable)->fov; }
+		float Fov() const { return GetDrawable()->fov; }
 		// Return fade start as a function of max draw distance.
-		float FadeStart() const { return static_cast<LightDrawable*>(drawable)->fadeStart; }
+		float FadeStart() const { return GetDrawable()->fadeStart; }
 		// Return shadow map face resolution in pixels.
-		int ShadowMapSize() const { return static_cast<LightDrawable*>(drawable)->shadowMapSize; }
+		int ShadowMapSize() const { return GetDrawable()->shadowMapSize; }
 		// Return directional light shadow cascade absolute end distances.
-		Vector2 ShadowCascadeSplits() const { return static_cast<LightDrawable*>(drawable)->ShadowCascadeSplits(); }
+		Vector2 ShadowCascadeSplits() const { return GetDrawable()->ShadowCascadeSplits(); }
 		// Return light shadow fade start as a function of max shadow distance.
-		float ShadowFadeStart() const { return static_cast<LightDrawable*>(drawable)->shadowFadeStart; }
+		float ShadowFadeStart() const { return GetDrawable()->shadowFadeStart; }
 		// Return directional light cascade split distance as a function of max shadow distance.
-		float ShadowCascadeSplit() const { return static_cast<LightDrawable*>(drawable)->shadowCascadeSplit; }
+		float ShadowCascadeSplit() const { return GetDrawable()->shadowCascadeSplit; }
 		// Return maximum distance for shadow rendering.
-		float ShadowMaxDistance() const { return static_cast<LightDrawable*>(drawable)->shadowMaxDistance; }
+		float ShadowMaxDistance() const { return GetDrawable()->shadowMaxDistance; }
 		// Return maximum shadow strength.
-		float ShadowMaxStrength() const { return static_cast<LightDrawable*>(drawable)->shadowMaxStrength; }
+		float ShadowMaxStrength() const { return GetDrawable()->shadowMaxStrength; }
 		// Return directional light shadow view quantization step.
-		float ShadowQuantize() const { return static_cast<LightDrawable*>(drawable)->shadowQuantize; }
+		float ShadowQuantize() const { return GetDrawable()->shadowQuantize; }
 		// Return directional light shadow view minimum size.
-		float ShadowMinView() const { return static_cast<LightDrawable*>(drawable)->shadowMinView; }
+		float ShadowMinView() const { return GetDrawable()->shadowMinView; }
 		// Return constant depth bias.
-		float DepthBias() const { return static_cast<LightDrawable*>(drawable)->depthBias; }
+		float DepthBias() const { return GetDrawable()->depthBias; }
 		// Return slope-scaled depth bias.
-		float SlopeScaleBias() const { return static_cast<LightDrawable*>(drawable)->slopeScaleBias; }
+		float SlopeScaleBias() const { return GetDrawable()->slopeScaleBias; }
+		// Return the shadow view mask.
+		unsigned ShadowViewMask() const { GetDrawable()->shadowViewMask; }
+		// Return whether the directional light will auto focus in order to improve shadow resolution.
+		bool AutoFocus() const { return GetDrawable()->autoFocus; }
+
 		// Return spotlight world space frustum.
-		Frustum WorldFrustum() const { return static_cast<LightDrawable*>(drawable)->WorldFrustum(); }
+		Frustum WorldFrustum() const { return GetDrawable()->WorldFrustum(); }
 		// Return point light world space sphere.
-		Sphere WorldSphere() const { return static_cast<LightDrawable*>(drawable)->WorldSphere(); }
+		Sphere WorldSphere() const { return GetDrawable()->WorldSphere(); }
 	};
 }
