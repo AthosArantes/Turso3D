@@ -64,35 +64,35 @@ namespace Turso3D
 	// ==========================================================================================
 	void GeometryNode::SetNumGeometries(size_t num)
 	{
-		GeometryDrawable* geomDrawable = static_cast<GeometryDrawable*>(drawable);
-		geomDrawable->batches.SetNumGeometries(num);
+		GeometryDrawable* drawable = GetDrawable();
+		drawable->batches.SetNumGeometries(num);
 	}
 
-	void GeometryNode::SetGeometry(size_t index, const std::shared_ptr<Geometry>& geometry)
+	void GeometryNode::SetGeometry(size_t index, std::shared_ptr<Geometry> geometry)
 	{
 		if (!geometry) {
 			LOG_ERROR("Can not assign null geometry");
 			return;
 		}
-		GeometryDrawable* geomDrawable = static_cast<GeometryDrawable*>(drawable);
-		if (index < geomDrawable->batches.NumGeometries()) {
-			geomDrawable->batches.SetGeometry(index, geometry.get());
+		GeometryDrawable* drawable = GetDrawable();
+		if (index < drawable->batches.NumGeometries()) {
+			drawable->batches.SetGeometry(index, geometry.get());
 		}
 	}
 
-	void GeometryNode::SetMaterial(const std::shared_ptr<Material>& material)
+	void GeometryNode::SetMaterial(std::shared_ptr<Material> material)
 	{
-		GeometryDrawable* geomDrawable = static_cast<GeometryDrawable*>(drawable);
-		for (size_t i = 0; i < geomDrawable->batches.NumGeometries(); ++i) {
-			geomDrawable->batches.SetMaterial(i, material ? material : Material::GetDefault());
+		GeometryDrawable* drawable = GetDrawable();
+		for (size_t i = 0; i < drawable->batches.NumGeometries(); ++i) {
+			drawable->batches.SetMaterial(i, material ? material : Material::GetDefault());
 		}
 	}
 
-	void GeometryNode::SetMaterial(size_t index, const std::shared_ptr<Material>& material)
+	void GeometryNode::SetMaterial(size_t index, std::shared_ptr<Material> material)
 	{
-		GeometryDrawable* geomDrawable = static_cast<GeometryDrawable*>(drawable);
-		if (index < geomDrawable->batches.NumGeometries()) {
-			geomDrawable->batches.SetMaterial(index, material ? material : Material::GetDefault());
+		GeometryDrawable* drawable = GetDrawable();
+		if (index < drawable->batches.NumGeometries()) {
+			drawable->batches.SetMaterial(index, material ? material : Material::GetDefault());
 		}
 	}
 }

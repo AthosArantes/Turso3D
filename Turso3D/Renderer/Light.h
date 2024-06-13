@@ -150,7 +150,7 @@ namespace Turso3D
 		// Return false if the view is empty and should not render.
 		// Called by Renderer.
 		bool SetupShadowView(size_t viewIndex, Camera* mainCamera, const BoundingBox* geometryBounds = nullptr);
-		
+
 		// Return shadow map.
 		Texture* ShadowMap() const { return shadowMap; }
 		// Return the shadow views.

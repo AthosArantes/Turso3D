@@ -84,17 +84,20 @@ namespace Turso3D
 
 		// Set the owner node.
 		void SetOwner(OctreeNodeBase* owner);
-
 		// Return the owner node.
 		OctreeNodeBase* Owner() const { return owner; }
 		// Return current octree octant this drawable resides in.
 		Octant* GetOctant() const { return octant; }
+
+		// Return whether is static.
+		bool IsStatic() const { return TestFlag(FLAG_STATIC); }
 		// Return distance from camera in the current view.
 		float Distance() const { return distance; }
 		// Return max distance for rendering, or 0 for unlimited.
 		float MaxDistance() const { return maxDistance; }
-		// Return whether is static.
-		bool IsStatic() const { return TestFlag(FLAG_STATIC); }
+		// Return the view mask used for selective rendering.
+		unsigned ViewMask() const { return viewMask; }
+
 		// Return last frame number when was visible.
 		// The frames are counted by Renderer internally and have no significance outside it.
 		unsigned short LastFrameNumber() const { return lastFrameNumber; }
@@ -103,6 +106,16 @@ namespace Turso3D
 		unsigned short LastUpdateFrameNumber() const { return lastUpdateFrameNumber; }
 		// Check whether is marked in view this frame.
 		bool InView(unsigned short frameNumber) const { return lastFrameNumber == frameNumber; }
+		// Check whether was in view last frame, compared to the current.
+		bool WasInView(unsigned short frameNumber) const
+		{
+			unsigned short previousFrameNumber = frameNumber - 1;
+			if (!previousFrameNumber) {
+				--previousFrameNumber;
+			}
+			return lastFrameNumber == previousFrameNumber;
+		}
+
 		// Return position in world space.
 		Vector3 WorldPosition() const { return WorldTransform().Translation(); }
 		// Return rotation in world space.
@@ -136,19 +149,6 @@ namespace Turso3D
 				return *worldTransform;
 			}
 		}
-
-		// Check whether was in view last frame, compared to the current.
-		bool WasInView(unsigned short frameNumber) const
-		{
-			unsigned short previousFrameNumber = frameNumber - 1;
-			if (!previousFrameNumber) {
-				--previousFrameNumber;
-			}
-			return lastFrameNumber == previousFrameNumber;
-		}
-
-		// Return the view mask from the owner node.
-		unsigned ViewMask() const { return owner->ViewMask(); }
 
 		// Set bit flag.
 		void SetFlag(unsigned bit, bool set) const
@@ -184,6 +184,9 @@ namespace Turso3D
 		float distance;
 		// Max distance for rendering.
 		float maxDistance;
+		// Mask used for selective rendering.
+		unsigned viewMask;
+
 		// Owner scene node.
 		OctreeNodeBase* owner;
 	};
@@ -193,6 +196,11 @@ namespace Turso3D
 	class OctreeNode : public OctreeNodeBase
 	{
 	public:
+		// Return current octree this node resides in.
+		Octree* GetOctree() const { return octree; }
+		// Return the drawable for internal use.
+		Drawable* GetDrawable() const { return drawable; }
+
 		// Set whether is static. Used for optimizations.
 		// A static node should not move after scene load. Default false.
 		void SetStatic(bool enable);
@@ -204,23 +212,22 @@ namespace Turso3D
 		void SetUpdateInvisible(bool enable);
 		// Set max distance for rendering. 0 is unlimited.
 		void SetMaxDistance(float distance);
+		// Set view mask.
+		void SetViewMask(unsigned mask);
 
-		// Return drawable's world space bounding box. Update if necessary. 
-		const BoundingBox& WorldBoundingBox() const { return drawable->WorldBoundingBox(); }
 		// Return whether is static.
 		bool IsStatic() const { return drawable->TestFlag(Drawable::FLAG_STATIC); }
 		// Return whether casts shadows.
 		bool CastShadows() const { return drawable->TestFlag(Drawable::FLAG_CAST_SHADOWS); }
 		// Return whether updates animation when invisible. Not relevant for non-animating geometry.
 		bool UpdateInvisible() const { return drawable->TestFlag(Drawable::FLAG_UPDATE_INVISIBLE); }
-		// Return current octree this node resides in.
-		Octree* GetOctree() const { return octree; }
-		// Return the drawable for internal use.
-		Drawable* GetDrawable() const { return drawable; }
 		// Return distance from camera in the current view.
 		float Distance() const { return drawable->Distance(); }
 		// Return max distance for rendering, or 0 for unlimited.
 		float MaxDistance() const { return drawable->MaxDistance(); }
+		// Return view mask.
+		unsigned ViewMask() const { return drawable->ViewMask(); }
+
 		// Return last frame number when was visible.
 		// The frames are counted by Renderer internally and have no significance outside it.
 		unsigned short LastFrameNumber() const { return drawable->LastFrameNumber(); }
@@ -232,7 +239,13 @@ namespace Turso3D
 		// Check whether was in view last frame, compared to the current.
 		bool WasInView(unsigned short frameNumber) const { return drawable->WasInView(frameNumber); }
 
+		// Return drawable's world space bounding box. Update if necessary.
+		const BoundingBox& WorldBoundingBox() const { return drawable->WorldBoundingBox(); }
+
 	protected:
+		// Handle the drawable's viewMask changing.
+		virtual void OnViewMaskChanged(unsigned oldViewMask);
+
 		// Search for an octree from the scene root and add self to it.
 		void OnSceneSet(Scene* newScene, Scene* oldScene) override;
 		// Handle the transform matrix changing.

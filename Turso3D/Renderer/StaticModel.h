@@ -32,6 +32,7 @@ namespace Turso3D
 		float lodBias;
 	};
 
+	// ==========================================================================================
 	// Scene node that renders an unanimated model, which can have LOD levels.
 	class StaticModel : public GeometryNode
 	{
@@ -45,14 +46,17 @@ namespace Turso3D
 		// Destruct.
 		~StaticModel();
 
+		// Return derived drawable.
+		StaticModelDrawable* GetDrawable() const { return static_cast<StaticModelDrawable*>(drawable); }
+
 		// Set the model resource.
-		void SetModel(const std::shared_ptr<Model>& model);
+		void SetModel(std::shared_ptr<Model> model);
 		// Set LOD bias. Values higher than 1 use higher quality LOD (acts if distance is smaller.)
 		void SetLodBias(float bias);
 
 		// Return the model resource.
-		const std::shared_ptr<Model>& GetModel() const;
+		const std::shared_ptr<Model>& GetModel() const { return GetDrawable()->model; }
 		// Return LOD bias.
-		float LodBias() const { return static_cast<StaticModelDrawable*>(drawable)->lodBias; }
+		float LodBias() const { return GetDrawable()->lodBias; }
 	};
 }

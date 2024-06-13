@@ -126,12 +126,12 @@ namespace Turso3D
 		}
 	}
 
-	void StaticModel::SetModel(const std::shared_ptr<Model>& model)
+	void StaticModel::SetModel(std::shared_ptr<Model> model)
 	{
-		StaticModelDrawable* modelDrawable = static_cast<StaticModelDrawable*>(drawable);
+		StaticModelDrawable* drawable = GetDrawable();
 
-		modelDrawable->model = model;
-		modelDrawable->SetFlag(Drawable::FLAG_HAS_LOD_LEVELS, false);
+		drawable->model = model;
+		drawable->SetFlag(Drawable::FLAG_HAS_LOD_LEVELS, false);
 
 		if (model) {
 			SetNumGeometries(model->NumGeometries());
@@ -139,7 +139,7 @@ namespace Turso3D
 			for (size_t i = 0; i < model->NumGeometries(); ++i) {
 				SetGeometry(i, model->GetGeometry(i, 0));
 				if (model->NumLodLevels(i) > 1) {
-					modelDrawable->SetFlag(Drawable::FLAG_HAS_LOD_LEVELS, true);
+					drawable->SetFlag(Drawable::FLAG_HAS_LOD_LEVELS, true);
 				}
 			}
 		} else {
@@ -151,12 +151,7 @@ namespace Turso3D
 
 	void StaticModel::SetLodBias(float bias)
 	{
-		StaticModelDrawable* modelDrawable = static_cast<StaticModelDrawable*>(drawable);
-		modelDrawable->lodBias = std::max(bias, M_EPSILON);
-	}
-
-	const std::shared_ptr<Model>& StaticModel::GetModel() const
-	{
-		return static_cast<StaticModelDrawable*>(drawable)->model;
+		StaticModelDrawable* drawable = GetDrawable();
+		drawable->lodBias = std::max(bias, M_EPSILON);
 	}
 }

@@ -14,7 +14,8 @@ namespace Turso3D
 		lastFrameNumber(0),
 		lastUpdateFrameNumber(0),
 		distance(0.0f),
-		maxDistance(0.0f)
+		maxDistance(0.0f),
+		viewMask(1u)
 	{
 		SetFlag(FLAG_BOUNDING_BOX_DIRTY, true);
 	}
@@ -104,6 +105,17 @@ namespace Turso3D
 	void OctreeNode::SetMaxDistance(float distance_)
 	{
 		drawable->maxDistance = std::max(distance_, 0.0f);
+	}
+
+	void OctreeNode::SetViewMask(unsigned mask)
+	{
+		unsigned old_mask = drawable->viewMask;
+		drawable->viewMask = mask;
+		OnViewMaskChanged(old_mask);
+	}
+
+	void OctreeNode::OnViewMaskChanged(unsigned oldViewMask)
+	{
 	}
 
 	void OctreeNode::OnSceneSet(Scene* newScene, Scene*)

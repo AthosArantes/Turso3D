@@ -397,10 +397,13 @@ namespace Turso3D
 		// Intermediate reinsert queues for threaded execution.
 		std::unique_ptr<std::vector<Drawable*>[]> reinsertQueues;
 
+#if 0
 		// RaycastSingle initial coarse result.
 		mutable std::vector<std::pair<Drawable*, float>> initialRayResult;
 		// RaycastSingle final result.
 		mutable std::vector<RaycastResult> finalRayResult;
+#endif
+
 		// Remaining drawable reinsertion tasks.
 		std::atomic<int> numPendingReinsertionTasks;
 	};

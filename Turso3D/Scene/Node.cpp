@@ -7,8 +7,7 @@ namespace Turso3D
 	Node::Node() :
 		scene(nullptr),
 		parent(nullptr),
-		flags(FLAG_ENABLED),
-		viewMask(1u)
+		flags(FLAG_ENABLED)
 	{
 	}
 
@@ -130,13 +129,6 @@ namespace Turso3D
 		return ret;
 	}
 
-	void Node::SetViewMask(unsigned mask)
-	{
-		unsigned oldMask = viewMask;
-		viewMask = mask;
-		OnViewMaskChanged(oldMask);
-	}
-
 	void Node::SetScene(Scene* newScene)
 	{
 		Scene* oldScene = scene;
@@ -167,10 +159,6 @@ namespace Turso3D
 	}
 
 	void Node::OnEnabledChanged(bool)
-	{
-	}
-
-	void Node::OnViewMaskChanged(unsigned)
 	{
 	}
 }

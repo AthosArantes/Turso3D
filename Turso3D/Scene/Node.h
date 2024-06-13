@@ -109,11 +109,6 @@ namespace Turso3D
 		// Return all immediate child nodes.
 		const std::vector<std::unique_ptr<Node>>& Children() const { return children; }
 
-		// Set view mask.
-		void SetViewMask(unsigned mask);
-		// Return the view mask.
-		unsigned ViewMask() const { return viewMask; }
-
 		// Set bit flag.
 		// Called internally.
 		void SetFlag(unsigned bit, bool set) const
@@ -144,8 +139,6 @@ namespace Turso3D
 		virtual void OnParentSet(Node* newParent, Node* oldParent);
 		// Handle the enabled status changing.
 		virtual void OnEnabledChanged(bool newEnabled);
-		// Handle the viewMask changing.
-		virtual void OnViewMaskChanged(unsigned oldViewMask);
 
 	private:
 		// Parent scene.
@@ -158,8 +151,6 @@ namespace Turso3D
 		// Node name hash.
 		StringHash nameHash;
 
-		// View mask, used for filtering.
-		unsigned viewMask;
 		// Node flags.
 		// Used to hold several boolean values to reduce memory use.
 		mutable unsigned flags;
