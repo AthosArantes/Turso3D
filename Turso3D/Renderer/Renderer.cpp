@@ -183,7 +183,7 @@ namespace Turso3D
 		perViewDataBuffer->Define(USAGE_DYNAMIC, sizeof(PerViewUniforms));
 
 		lightDataBuffer = std::make_unique<UniformBuffer>();
-		lightDataBuffer->Define(USAGE_DYNAMIC, MAX_LIGHTS * sizeof(LightData));
+		lightDataBuffer->Define(USAGE_DYNAMIC, (MAX_LIGHTS + 1) * sizeof(LightData));
 
 		octantResults = std::make_unique<ThreadOctantResult[]>(NUM_OCTANT_TASKS);
 		batchResults = std::make_unique<ThreadBatchResult[]>(workQueue->NumThreads());

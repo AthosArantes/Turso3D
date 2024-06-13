@@ -26,57 +26,8 @@ namespace
 
 namespace Turso3D
 {
-	Bone::Bone() :
-		drawable(nullptr),
-		animationEnabled(true),
-		numChildBones(0)
-	{
-		SetFlag(FLAG_BONE, true);
-	}
-
-	Bone::~Bone()
-	{
-	}
-
-	void Bone::SetDrawable(AnimatedModelDrawable* drawable_)
-	{
-		drawable = drawable_;
-	}
-
-	void Bone::SetAnimationEnabled(bool enable)
-	{
-		animationEnabled = enable;
-	}
-
-	void Bone::CountChildBones()
-	{
-		numChildBones = 0;
-		for (size_t i = 0; i < children.size(); ++i) {
-			Node* child = children[i].get();
-			if (child->TestFlag(FLAG_BONE)) {
-				++numChildBones;
-			}
-		}
-	}
-
-	void Bone::OnTransformChanged()
-	{
-		SpatialNode::OnTransformChanged();
-
-		// Avoid duplicate dirtying calls if model's skinning is already dirty.
-		// Do not signal changes either during animation update,
-		// as the model will set the hierarchy dirty when finished.
-		// This is also used to optimize when only the model node moves.
-		if (drawable && !(drawable->AnimatedModelFlags() & (AnimatedModelDrawable::FLAG_IN_ANIMATION_UPDATE | AnimatedModelDrawable::FLAG_SKINNING_DIRTY))) {
-			drawable->OnBoneTransformChanged();
-		}
-	}
-
-	// ==========================================================================================
 	AnimatedModelDrawable::AnimatedModelDrawable() :
 		animatedModelFlags(0),
-		numBones(0),
-		octree(nullptr),
 		rootBone(nullptr)
 	{
 		SetFlag(Drawable::FLAG_SKINNED_GEOMETRY | Drawable::FLAG_OCTREE_UPDATE_CALL, true);
@@ -84,7 +35,7 @@ namespace Turso3D
 
 	void AnimatedModelDrawable::OnWorldBoundingBoxUpdate() const
 	{
-		if (model && numBones) {
+		if (model && !bones.empty()) {
 			// Recalculate bounding box from bones only if they moved individually
 			if (animatedModelFlags & FLAG_BONE_BOUNDING_BOX_DIRTY) {
 				const std::vector<ModelBone>& modelBones = model->Bones();
@@ -92,7 +43,7 @@ namespace Turso3D
 				// Use a temporary bounding box for calculations in case many threads call this simultaneously
 				BoundingBox tempBox;
 
-				for (size_t i = 0; i < numBones; ++i) {
+				for (size_t i = 0; i < bones.size(); ++i) {
 					if (modelBones[i].active) {
 						tempBox.Merge(modelBones[i].boundingBox.Transformed(bones[i]->WorldTransform()));
 					}
@@ -140,12 +91,12 @@ namespace Turso3D
 
 	void AnimatedModelDrawable::OnRender(ShaderProgram*, size_t)
 	{
-		if (!skinMatrixBuffer || !numBones) {
+		if (!skinMatrixBuffer || bones.empty()) {
 			return;
 		}
 
 		if (animatedModelFlags & FLAG_SKINNING_BUFFER_DIRTY) {
-			skinMatrixBuffer->SetData(0, numBones * sizeof(Matrix3x4), skinMatrices.get());
+			skinMatrixBuffer->SetData(0, bones.size() * sizeof(Matrix3x4), skinMatrices.get());
 			animatedModelFlags &= ~FLAG_SKINNING_BUFFER_DIRTY;
 		}
 
@@ -161,7 +112,7 @@ namespace Turso3D
 			// Perform raycast against each bone in its local space
 			const std::vector<ModelBone>& modelBones = model->Bones();
 
-			for (size_t i = 0; i < numBones; ++i) {
+			for (size_t i = 0; i < bones.size(); ++i) {
 				if (!modelBones[i].active) {
 					continue;
 				}
@@ -196,14 +147,42 @@ namespace Turso3D
 	{
 		debug->AddBoundingBox(WorldBoundingBox(), Color::GREEN(), false);
 
-		for (size_t i = 0; i < numBones; ++i) {
+		for (size_t i = 0; i < bones.size(); ++i) {
 			Bone* bone = bones[i];
 			// Skip the root bone, as it has no sensible connection point
-			if (bone->SpatialParent() == rootBone) {
+			if (bone->Parent() == rootBone) {
 				continue;
 			}
 			debug->AddLine(bone->WorldPosition(), bone->SpatialParent()->WorldPosition(), Color::WHITE(), false);
 		}
+	}
+
+	void AnimatedModelDrawable::OnBoneTransformChanged()
+	{
+		SetFlag(Drawable::FLAG_BOUNDING_BOX_DIRTY, true);
+		Octree* octree = owner->GetOctree();
+		if (octree && octant && !TestFlag(Drawable::FLAG_OCTREE_REINSERT_QUEUED)) {
+			octree->QueueUpdate(this);
+		}
+		animatedModelFlags |= FLAG_SKINNING_DIRTY | FLAG_BONE_BOUNDING_BOX_DIRTY;
+	}
+
+	void AnimatedModelDrawable::OnAnimationOrderChanged()
+	{
+		Octree* octree = owner->GetOctree();
+		if (octree && octant && !TestFlag(Drawable::FLAG_OCTREE_REINSERT_QUEUED)) {
+			octree->QueueUpdate(this);
+		}
+		animatedModelFlags |= FLAG_ANIMATION_DIRTY | FLAG_ANIMATION_ORDER_DIRTY;
+	}
+
+	void AnimatedModelDrawable::OnAnimationChanged()
+	{
+		Octree* octree = owner->GetOctree();
+		if (octree && octant && !TestFlag(Drawable::FLAG_OCTREE_REINSERT_QUEUED)) {
+			octree->QueueUpdate(this);
+		}
+		animatedModelFlags |= FLAG_ANIMATION_DIRTY;
 	}
 
 	void AnimatedModelDrawable::CreateBones()
@@ -215,14 +194,12 @@ namespace Turso3D
 		}
 
 		const std::vector<ModelBone>& modelBones = model->Bones();
-		if (numBones != modelBones.size()) {
+		if (bones.size() != modelBones.size()) {
 			RemoveBones();
 		}
+		bones.resize(modelBones.size());
 
-		numBones = modelBones.size();
-
-		bones = std::make_unique<Bone*[]>(numBones);
-		skinMatrices = std::make_unique<Matrix3x4[]>(numBones);
+		skinMatrices = std::make_unique<Matrix3x4[]>(bones.size());
 
 		for (size_t i = 0; i < modelBones.size(); ++i) {
 			const ModelBone& modelBone = modelBones[i];
@@ -257,12 +234,28 @@ namespace Turso3D
 		if (!skinMatrixBuffer) {
 			skinMatrixBuffer = std::make_unique<UniformBuffer>();
 		}
-		skinMatrixBuffer->Define(USAGE_DYNAMIC, numBones * sizeof(Matrix3x4));
+		skinMatrixBuffer->Define(USAGE_DYNAMIC, bones.size() * sizeof(Matrix3x4));
 
 		// Set initial bone bounding box recalculation and skinning dirty.
 		// Also calculate a valid bone bounding box immediately to ensure models can enter the view without updating animation first
 		OnBoneTransformChanged();
 		OnWorldBoundingBoxUpdate();
+	}
+
+	void AnimatedModelDrawable::RemoveBones()
+	{
+		if (bones.empty()) {
+			return;
+		}
+
+		// Do not signal transform changes back to the model during deletion
+		for (size_t i = 0; i < bones.size(); ++i) {
+			bones[i]->SetDrawable(nullptr);
+		}
+		bones.clear();
+
+		skinMatrices.reset();
+		skinMatrixBuffer.reset();
 	}
 
 	void AnimatedModelDrawable::UpdateAnimation()
@@ -274,8 +267,7 @@ namespace Turso3D
 
 		// Reset bones to initial pose, then apply animations
 		const std::vector<ModelBone>& modelBones = model->Bones();
-
-		for (size_t i = 0; i < numBones; ++i) {
+		for (size_t i = 0; i < bones.size(); ++i) {
 			Bone* bone = bones[i];
 			const ModelBone& modelBone = modelBones[i];
 			if (bone->AnimationEnabled()) {
@@ -283,14 +275,15 @@ namespace Turso3D
 			}
 		}
 
-		for (auto it = animationStates.begin(); it != animationStates.end(); ++it) {
-			AnimationState* state = it->get();
+		for (size_t i = 0; i < animationStates.size(); ++i) {
+			AnimationState* state = animationStates[i].get();
 			if (state->Enabled()) {
 				state->Apply();
 			}
 		}
 
-		// Dirty the bone hierarchy now. This will also dirty and queue reinsertion for attached models
+		// Dirty the bone hierarchy now.
+		// This will also dirty and queue reinsertion for attached models
 		SetBoneTransformsDirty();
 
 		animatedModelFlags &= ~(FLAG_ANIMATION_ORDER_DIRTY | FLAG_ANIMATION_DIRTY | FLAG_IN_ANIMATION_UPDATE);
@@ -301,6 +294,7 @@ namespace Turso3D
 		// If updating only when visible, queue octree reinsertion for next frame. This also ensures shadowmap rendering happens correctly
 		// Else just dirty the skinning
 		if (!TestFlag(Drawable::FLAG_UPDATE_INVISIBLE)) {
+			Octree* octree = owner->GetOctree();
 			if (octree && octant && !TestFlag(Drawable::FLAG_OCTREE_REINSERT_QUEUED)) {
 				octree->QueueUpdate(this);
 			}
@@ -312,8 +306,7 @@ namespace Turso3D
 	void AnimatedModelDrawable::UpdateSkinning()
 	{
 		const std::vector<ModelBone>& modelBones = model->Bones();
-
-		for (size_t i = 0; i < numBones; ++i) {
+		for (size_t i = 0; i < bones.size(); ++i) {
 			skinMatrices[i] = bones[i]->WorldTransform() * modelBones[i].offsetMatrix;
 		}
 		animatedModelFlags &= ~FLAG_SKINNING_DIRTY;
@@ -323,7 +316,7 @@ namespace Turso3D
 	void AnimatedModelDrawable::SetBoneTransformsDirty()
 	{
 		rootBone->SetFlag(Node::FLAG_WORLDTRANSFORMDIRTY, true);
-		for (size_t i = 0; i < numBones; ++i) {
+		for (size_t i = 0; i < bones.size(); ++i) {
 			// If bone has only other bones as children, just set its world transform dirty without going through the hierarchy.
 			// The whole hierarchy will be eventually updated
 			if (bones[i]->NumChildren() == bones[i]->NumChildBones()) {
@@ -334,21 +327,63 @@ namespace Turso3D
 		}
 	}
 
-	void AnimatedModelDrawable::RemoveBones()
+	void AnimatedModelDrawable::SetRootBone(Bone* bone)
 	{
-		if (!numBones) {
-			return;
-		}
+		rootBone = bone;
+	}
 
-		// Do not signal transform changes back to the model during deletion
-		for (size_t i = 0; i < numBones; ++i) {
-			bones[i]->SetDrawable(nullptr);
-		}
-		bones.reset();
-		numBones = 0;
+	// ==========================================================================================
+	Bone::Bone() :
+		drawable(nullptr),
+		animationEnabled(true),
+		numChildBones(0)
+	{
+		SetFlag(FLAG_BONE, true);
+	}
 
-		skinMatrices.reset();
-		skinMatrixBuffer.reset();
+	Bone::~Bone()
+	{
+	}
+
+	void Bone::SetDrawable(AnimatedModelDrawable* drawable_)
+	{
+		drawable = drawable_;
+	}
+
+	void Bone::SetAnimationEnabled(bool enable)
+	{
+		animationEnabled = enable;
+	}
+
+	void Bone::CountChildBones()
+	{
+		numChildBones = 0;
+		for (size_t i = 0; i < children.size(); ++i) {
+			Node* child = children[i].get();
+			if (child->TestFlag(FLAG_BONE)) {
+				++numChildBones;
+			}
+		}
+	}
+
+	void Bone::SetTransformSilent(const Vector3& position, const Quaternion& rotation, const Vector3& scale)
+	{
+		this->position = position;
+		this->rotation = rotation;
+		this->scale = scale;
+	}
+
+	void Bone::OnTransformChanged()
+	{
+		SpatialNode::OnTransformChanged();
+
+		// Avoid duplicate dirtying calls if model's skinning is already dirty.
+		// Do not signal changes either during animation update,
+		// as the model will set the hierarchy dirty when finished.
+		// This is also used to optimize when only the model node moves.
+		if (drawable && !(drawable->AnimatedModelFlags() & (AnimatedModelDrawable::FLAG_IN_ANIMATION_UPDATE | AnimatedModelDrawable::FLAG_SKINNING_DIRTY))) {
+			drawable->OnBoneTransformChanged();
+		}
 	}
 
 	// ==========================================================================================
@@ -357,28 +392,29 @@ namespace Turso3D
 	{
 		// Create a nameless bone used to contain all models' bones.
 		Bone* rootBone = CreateChild<Bone>();
-		static_cast<AnimatedModelDrawable*>(drawable)->SetRootBone(rootBone);
+		GetDrawable()->SetRootBone(rootBone);
 	}
 
 	AnimatedModel::~AnimatedModel()
 	{
-		static_cast<AnimatedModelDrawable*>(drawable)->RemoveBones();
+		AnimatedModelDrawable* drawable = GetDrawable();
+		drawable->RemoveBones();
 		RemoveFromOctree();
-		drawableAllocator.Free(static_cast<AnimatedModelDrawable*>(drawable));
-		drawable = nullptr;
+		drawableAllocator.Free(drawable);
+		this->drawable = nullptr;
 	}
 
-	void AnimatedModel::SetModel(const std::shared_ptr<Model>& model_)
+	void AnimatedModel::SetModel(std::shared_ptr<Model> model)
 	{
-		StaticModel::SetModel(model_);
-		static_cast<AnimatedModelDrawable*>(drawable)->CreateBones();
+		StaticModel::SetModel(model);
+		GetDrawable()->CreateBones();
 	}
 
 	AnimationState* AnimatedModel::AddAnimationState(const std::shared_ptr<Animation>& animation)
 	{
-		AnimatedModelDrawable* modelDrawable = static_cast<AnimatedModelDrawable*>(drawable);
+		AnimatedModelDrawable* drawable = GetDrawable();
 
-		if (!animation || !modelDrawable->numBones) {
+		if (!animation || drawable->bones.empty()) {
 			return nullptr;
 		}
 
@@ -388,9 +424,9 @@ namespace Turso3D
 			return existing;
 		}
 
-		std::shared_ptr<AnimationState> newState = std::make_shared<AnimationState>(modelDrawable, animation);
-		modelDrawable->animationStates.push_back(newState);
-		modelDrawable->OnAnimationOrderChanged();
+		std::shared_ptr<AnimationState> newState = std::make_shared<AnimationState>(drawable, animation);
+		drawable->animationStates.push_back(newState);
+		drawable->OnAnimationOrderChanged();
 
 		return newState.get();
 	}
@@ -402,27 +438,20 @@ namespace Turso3D
 		}
 	}
 
-	void AnimatedModel::RemoveAnimationState(const std::string& animationName)
-	{
-		RemoveAnimationState(StringHash(animationName));
-	}
-
-	void AnimatedModel::RemoveAnimationState(const char* animationName)
-	{
-		RemoveAnimationState(StringHash(animationName));
-	}
-
 	void AnimatedModel::RemoveAnimationState(StringHash animationNameHash)
 	{
-		AnimatedModelDrawable* modelDrawable = static_cast<AnimatedModelDrawable*>(drawable);
+		AnimatedModelDrawable* drawable = GetDrawable();
+		std::vector<std::shared_ptr<AnimationState>>& anim_states = drawable->animationStates;
 
-		for (auto it = modelDrawable->animationStates.begin(); it != modelDrawable->animationStates.end(); ++it) {
-			AnimationState* state = it->get();
+		for (size_t i = 0; i < anim_states.size(); ++i) {
+			AnimationState* state = anim_states[i].get();
 			Animation* animation = state->GetAnimation().get();
+
 			// Check both the animation and the resource name
 			if (animation->NameHash() == animationNameHash || animation->AnimationNameHash() == animationNameHash) {
-				modelDrawable->animationStates.erase(it);
-				modelDrawable->OnAnimationChanged();
+				anim_states[i].swap(anim_states.back());
+				anim_states.pop_back();
+				drawable->OnAnimationChanged();
 				return;
 			}
 		}
@@ -430,12 +459,14 @@ namespace Turso3D
 
 	void AnimatedModel::RemoveAnimationState(AnimationState* state)
 	{
-		AnimatedModelDrawable* modelDrawable = static_cast<AnimatedModelDrawable*>(drawable);
+		AnimatedModelDrawable* drawable = GetDrawable();
+		std::vector<std::shared_ptr<AnimationState>>& anim_states = drawable->animationStates;
 
-		for (auto it = modelDrawable->animationStates.begin(); it != modelDrawable->animationStates.end(); ++it) {
-			if (it->get() == state) {
-				modelDrawable->animationStates.erase(it);
-				modelDrawable->OnAnimationChanged();
+		for (size_t i = 0; i < anim_states.size(); ++i) {
+			if (anim_states[i].get() == state) {
+				anim_states[i].swap(anim_states.back());
+				anim_states.pop_back();
+				drawable->OnAnimationChanged();
 				return;
 			}
 		}
@@ -443,53 +474,46 @@ namespace Turso3D
 
 	void AnimatedModel::RemoveAnimationState(size_t index)
 	{
-		AnimatedModelDrawable* modelDrawable = static_cast<AnimatedModelDrawable*>(drawable);
+		AnimatedModelDrawable* drawable = GetDrawable();
+		std::vector<std::shared_ptr<AnimationState>>& anim_states = drawable->animationStates;
 
-		if (index < modelDrawable->animationStates.size()) {
-			modelDrawable->animationStates.erase(modelDrawable->animationStates.begin() + index);
-			modelDrawable->OnAnimationChanged();
+		if (index < anim_states.size()) {
+			anim_states[index].swap(anim_states.back());
+			anim_states.pop_back();
+			drawable->OnAnimationChanged();
 		}
 	}
 
 	void AnimatedModel::RemoveAllAnimationStates()
 	{
-		AnimatedModelDrawable* modelDrawable = static_cast<AnimatedModelDrawable*>(drawable);
-
-		if (modelDrawable->animationStates.size()) {
-			modelDrawable->animationStates.clear();
-			modelDrawable->OnAnimationChanged();
+		AnimatedModelDrawable* drawable = GetDrawable();
+		if (drawable->animationStates.size()) {
+			drawable->animationStates.clear();
+			drawable->OnAnimationChanged();
 		}
 	}
 
 	AnimationState* AnimatedModel::FindAnimationState(Animation* animation) const
 	{
-		AnimatedModelDrawable* modelDrawable = static_cast<AnimatedModelDrawable*>(drawable);
-		for (auto it = modelDrawable->animationStates.begin(); it != modelDrawable->animationStates.end(); ++it) {
-			if ((*it)->GetAnimation().get() == animation) {
-				return it->get();
+		AnimatedModelDrawable* drawable = GetDrawable();
+		std::vector<std::shared_ptr<AnimationState>>& anim_states = drawable->animationStates;
+		for (size_t i = 0; i < anim_states.size(); ++i) {
+			if (anim_states[i]->GetAnimation().get() == animation) {
+				return anim_states[i].get();
 			}
 		}
 		return nullptr;
 	}
 
-	AnimationState* AnimatedModel::FindAnimationState(const std::string& animationName) const
-	{
-		return GetAnimationState(StringHash(animationName));
-	}
-
-	AnimationState* AnimatedModel::FindAnimationState(const char* animationName) const
-	{
-		return GetAnimationState(StringHash(animationName));
-	}
-
 	AnimationState* AnimatedModel::FindAnimationState(StringHash animationNameHash) const
 	{
-		AnimatedModelDrawable* modelDrawable = static_cast<AnimatedModelDrawable*>(drawable);
-		for (auto it = modelDrawable->animationStates.begin(); it != modelDrawable->animationStates.end(); ++it) {
-			Animation* animation = (*it)->GetAnimation().get();
+		AnimatedModelDrawable* drawable = GetDrawable();
+		std::vector<std::shared_ptr<AnimationState>>& anim_states = drawable->animationStates;
+		for (size_t i = 0; i < anim_states.size(); ++i) {
+			Animation* animation = anim_states[i]->GetAnimation().get();
 			// Check both the animation and the resource name
 			if (animation->NameHash() == animationNameHash || animation->AnimationNameHash() == animationNameHash) {
-				return it->get();
+				return anim_states[i].get();
 			}
 		}
 		return nullptr;
@@ -497,8 +521,8 @@ namespace Turso3D
 
 	AnimationState* AnimatedModel::GetAnimationState(size_t index) const
 	{
-		AnimatedModelDrawable* modelDrawable = static_cast<AnimatedModelDrawable*>(drawable);
-		return index < modelDrawable->animationStates.size() ? modelDrawable->animationStates[index].get() : nullptr;
+		AnimatedModelDrawable* drawable = GetDrawable();
+		return index < drawable->animationStates.size() ? drawable->animationStates[index].get() : nullptr;
 	}
 
 	void AnimatedModel::OnSceneSet(Scene* newScene, Scene* oldScene)
@@ -506,28 +530,28 @@ namespace Turso3D
 		OctreeNode::OnSceneSet(newScene, oldScene);
 
 		// Set octree also directly to the drawable so it can queue itself
-		static_cast<AnimatedModelDrawable*>(drawable)->octree = octree;
+		//static_cast<AnimatedModelDrawable*>(drawable)->octree = octree;
 	}
 
 	void AnimatedModel::OnTransformChanged()
 	{
-		AnimatedModelDrawable* modelDrawable = static_cast<AnimatedModelDrawable*>(drawable);
+		AnimatedModelDrawable* drawable = GetDrawable();
 
 		// To improve performance set skinning dirty now, so the bone nodes will not redundantly signal transform changes back
-		modelDrawable->animatedModelFlags |= AnimatedModelDrawable::FLAG_SKINNING_DIRTY;
+		drawable->animatedModelFlags |= AnimatedModelDrawable::FLAG_SKINNING_DIRTY;
 
 		// If have other children than the root bone, dirty the hierarchy normally. Otherwise optimize
 		if (children.size() > 1) {
 			SpatialNode::OnTransformChanged();
 		} else {
-			modelDrawable->SetBoneTransformsDirty();
-			modelDrawable->SetFlag(Drawable::FLAG_WORLD_TRANSFORM_DIRTY, true);
+			drawable->SetBoneTransformsDirty();
+			drawable->SetFlag(Drawable::FLAG_WORLD_TRANSFORM_DIRTY, true);
 			SetFlag(FLAG_WORLDTRANSFORMDIRTY, true);
 		}
 
-		modelDrawable->SetFlag(Drawable::FLAG_BOUNDING_BOX_DIRTY, true);
-		if (octree && modelDrawable->octant && !modelDrawable->TestFlag(Drawable::FLAG_OCTREE_REINSERT_QUEUED)) {
-			octree->QueueUpdate(modelDrawable);
+		drawable->SetFlag(Drawable::FLAG_BOUNDING_BOX_DIRTY, true);
+		if (octree && drawable->octant && !drawable->TestFlag(Drawable::FLAG_OCTREE_REINSERT_QUEUED)) {
+			octree->QueueUpdate(drawable);
 		}
 	}
 }

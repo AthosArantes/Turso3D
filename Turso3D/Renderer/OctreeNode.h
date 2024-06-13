@@ -23,6 +23,11 @@ namespace Turso3D
 		// Construct.
 		OctreeNodeBase();
 
+		// Return current octree this node resides in.
+		Octree* GetOctree() const { return octree; }
+		// Return the drawable for internal use.
+		Drawable* GetDrawable() const { return drawable; }
+
 	protected:
 		// Current octree.
 		Octree* octree;
@@ -196,11 +201,6 @@ namespace Turso3D
 	class OctreeNode : public OctreeNodeBase
 	{
 	public:
-		// Return current octree this node resides in.
-		Octree* GetOctree() const { return octree; }
-		// Return the drawable for internal use.
-		Drawable* GetDrawable() const { return drawable; }
-
 		// Set whether is static. Used for optimizations.
 		// A static node should not move after scene load. Default false.
 		void SetStatic(bool enable);
