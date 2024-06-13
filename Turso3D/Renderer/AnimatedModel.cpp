@@ -233,7 +233,7 @@ namespace Turso3D
 			} else {
 				bones[i] = new Bone();
 				bones[i]->SetName(modelBone.name);
-				bones[i]->SetTransform(modelBone.initialPosition, modelBone.initialRotation, modelBone.initialScale);
+				bones[i]->SetTransform(modelBone.position, modelBone.rotation, modelBone.scale);
 			}
 
 			bones[i]->SetDrawable(this);
@@ -279,7 +279,7 @@ namespace Turso3D
 			Bone* bone = bones[i];
 			const ModelBone& modelBone = modelBones[i];
 			if (bone->AnimationEnabled()) {
-				bone->SetTransformSilent(modelBone.initialPosition, modelBone.initialRotation, modelBone.initialScale);
+				bone->SetTransformSilent(modelBone.position, modelBone.rotation, modelBone.scale);
 			}
 		}
 

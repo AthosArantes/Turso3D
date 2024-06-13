@@ -245,9 +245,9 @@ namespace Turso3D
 			bone.name = source.Read<std::string>();
 			bone.nameHash = StringHash(bone.name);
 			bone.parentIndex = source.Read<unsigned>();
-			bone.initialPosition = source.Read<Vector3>();
-			bone.initialRotation = source.Read<Quaternion>();
-			bone.initialScale = source.Read<Vector3>();
+			bone.position = source.Read<Vector3>();
+			bone.rotation = source.Read<Quaternion>();
+			bone.scale = source.Read<Vector3>();
 			bone.offsetMatrix = source.Read<Matrix3x4>();
 			bone.active = true;
 

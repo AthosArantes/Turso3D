@@ -259,9 +259,9 @@ namespace Turso3DUtils
 			bone.name = source.Read<std::string>();
 			bone.nameHash = StringHash(bone.name);
 			bone.parentIndex = source.Read<unsigned>();
-			bone.initialPosition = source.Read<Vector3>();
-			bone.initialRotation = source.Read<Quaternion>();
-			bone.initialScale = source.Read<Vector3>();
+			bone.position = source.Read<Vector3>();
+			bone.rotation = source.Read<Quaternion>();
+			bone.scale = source.Read<Vector3>();
 			bone.offsetMatrix = source.Read<Matrix3x4>();
 
 			unsigned char boneCollisionType = source.Read<unsigned char>();
@@ -328,9 +328,9 @@ namespace Turso3DUtils
 			ModelBone& bone = bones[i];
 			output.Write(bone.name);
 			output.Write<unsigned>(bone.parentIndex);
-			output.Write(bone.initialPosition);
-			output.Write(bone.initialRotation);
-			output.Write(bone.initialScale);
+			output.Write(bone.position);
+			output.Write(bone.rotation);
+			output.Write(bone.scale);
 			output.Write(bone.offsetMatrix);
 
 			unsigned char boneCollisionType = vBoneCollisionType[i];

@@ -16,25 +16,27 @@ namespace Turso3D
 	class VertexBuffer;
 	struct Geometry;
 
-	// Model's bone description.
+	// Model bone description.
 	struct ModelBone
 	{
 		// Name.
 		std::string name;
 		// Name hash.
 		StringHash nameHash;
-		// Reset position.
-		Vector3 initialPosition;
-		// Reset rotation.
-		Quaternion initialRotation;
-		// Reset scale.
-		Vector3 initialScale;
+		// Initial position.
+		Vector3 position;
+		// Initial rotation.
+		Quaternion rotation;
+		// Initial scale.
+		Vector3 scale;
 		// Offset matrix for skinning.
 		Matrix3x4 offsetMatrix;
+
 		// Collision radius.
 		float radius;
 		// Collision bounding box.
 		BoundingBox boundingBox;
+
 		// Parent bone index.
 		// If points to self, is the root bone.
 		size_t parentIndex;
