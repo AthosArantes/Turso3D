@@ -1,7 +1,6 @@
 #pragma once
 
 #include <Turso3D/Math/Color.h>
-#include <Turso3D/Scene/Node.h>
 #include <memory>
 
 namespace Turso3D
@@ -9,8 +8,7 @@ namespace Turso3D
 	class Texture;
 
 	// Global lighting settings.
-	// Should be created as a child of the scene root.
-	class LightEnvironment : public Node
+	class LightEnvironment
 	{
 	public:
 		// Construct.
