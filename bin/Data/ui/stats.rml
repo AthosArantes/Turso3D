@@ -5,6 +5,7 @@
 		<style>
 			body {
 				font-size: 16px;
+				font-weight: 600;
 				color: #ffffff;
 
 				text-align: left;
@@ -12,7 +13,7 @@
 				width: 30%;
 				height: 100%;
 
-				margin-left: auto;
+				margin-right: auto;
 			}
 			hr {
 				background-color: #FFFFFF9F;
@@ -26,14 +27,17 @@
 				width: 100%;
 				text-align: center;
 				font-size: 18px;
-				font-weight: 600;
+				font-weight: 800;
 				margin: 10px 0px;
 			}
 		</style>
 	</head>
 	<body>
-		<div style="background-color: #000000AF; border-radius: 10px; margin: 16px; padding: 16px">
+		<div style="background-color: #000000AF; border-radius: 10px; margin: 16px; padding: 16px" data-model="stats">
 			<h4 class="title">RmlUi integration</h4>
+			<p>FPS: {{fps}}</p>
+			<p>Frame time: {{frame_time}}</p>
+			<hr />
 			<p>This is a sample text being drawn in a transparent box over a blurred background.</p>
 			<hr />
 			<h4 class="title">Controls</h4>

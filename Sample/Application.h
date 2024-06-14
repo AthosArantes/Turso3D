@@ -1,142 +1,78 @@
 #pragma once
 
+#include "ApplicationBase.h"
 #include <Turso3D/Math/Vector2.h>
-#include <map>
+#include <Turso3D/fwd.h>
 #include <memory>
-#include <vector>
 
-namespace Rml
+class BlurRenderer;
+class BloomRenderer;
+class SSAORenderer;
+class TonemapRenderer;
+class UiManager;
+
+class Application : public ApplicationBase
 {
-	class Context;
-}
-
-namespace Turso3D
-{
-	class DebugRenderer;
-	class FrameBuffer;
-	class Graphics;
-	class Renderer;
-	class ShaderProgram;
-	class Texture;
-	class WorkQueue;
-
-	class AnimatedModel;
-	class Camera;
-	class Scene;
-	class SpatialNode;
-	class StaticModel;
-
-	class BlurRenderer;
-	class BloomRenderer;
-	class SSAORenderer;
-
-	class RmlFile;
-	class RmlSystem;
-	class RmlRenderer;
-}
-
-class Application
-{
-	enum class InputState
-	{
-		Up,
-		Released,
-		Pressed,
-		Down
-	};
-
 public:
 	Application();
 	~Application();
 
-	bool Initialize();
-	void Run();
+	bool Initialize() override;
 
-private:
-	void ApplyFrameLimit();
+protected:
+	void OnMouseMove(double xpos, double ypos) override;
+	void OnFramebufferSize(int width, int height) override;
 
 	void CreateTextures();
-	void CreateDefaultScene();
-	// IBL sphere samples
+	void SetupEnvironmentLighting();
 	void CreateSpheresScene();
 	void CreateThousandMushroomScene();
 	void CreateWalkingCharacter();
+	void CreateHugeWalls();
 
-	bool IsKeyDown(int key);
-	bool IsKeyPressed(int key);
-	bool IsMouseDown(int button);
+	void Update(double dt) override;
+	void PostUpdate(double dt) override;
+	void FixedUpdate(double dt) override;
 
-	void OnKey(int key, int scancode, int action, int mods);
-	void OnMouseButton(int button, int action, int mods);
-	void OnMouseMove(double xpos, double ypos);
-	void OnMouseEnterLeave(bool entered);
-	void OnFramebufferSize(int width, int height);
-	void OnWindowFocusChanged(int focused);
-
-	void Update(double dt);
-	void PostUpdate(double dt);
-	void FixedUpdate(double dt);
 	void Render(double dt);
 
 private:
-	// Cached graphics subsystem.
-	std::unique_ptr<Turso3D::WorkQueue> workQueue;
-	std::unique_ptr<Turso3D::Graphics> graphics;
-	std::unique_ptr<Turso3D::Renderer> renderer;
-	std::unique_ptr<Turso3D::DebugRenderer> debugRenderer;
-
-	std::unique_ptr<Turso3D::FrameBuffer> mrtFbo[2];
-	std::unique_ptr<Turso3D::Texture> hdrBuffer[2];
-	std::unique_ptr<Turso3D::Texture> normalBuffer[2];
-	std::unique_ptr<Turso3D::Texture> depthStencilBuffer[2];
-
-	std::unique_ptr<Turso3D::FrameBuffer> ldrFbo;
-	std::unique_ptr<Turso3D::Texture> ldrBuffer;
-
-	std::unique_ptr<Turso3D::FrameBuffer> guiFbo;
-	std::unique_ptr<Turso3D::Texture> guiTexture;
-
-	// Tonemap shader program
-	std::shared_ptr<Turso3D::ShaderProgram> tonemapProgram;
-	// Tonemap exposure shader uniform
-	int uTonemapExposure;
-
-	std::shared_ptr<Turso3D::ShaderProgram> guiProgram;
-
-	std::unique_ptr<Turso3D::BlurRenderer> blurRenderer;
-	std::unique_ptr<Turso3D::BloomRenderer> bloomRenderer;
-	std::unique_ptr<Turso3D::SSAORenderer> ssaoRenderer;
-
 	std::shared_ptr<Turso3D::Camera> camera;
 	std::shared_ptr<Turso3D::Scene> scene;
 
-	std::unique_ptr<Turso3D::RmlFile> rmlFile;
-	std::unique_ptr<Turso3D::RmlSystem> rmlSystem;
-	std::unique_ptr<Turso3D::RmlRenderer> rmlRenderer;
-	Rml::Context* mainContext;
+	// Color/Normal buffers
+	std::unique_ptr<Turso3D::Texture> colorBuffer;
+	std::unique_ptr<Turso3D::Texture> normalBuffer;
+	std::unique_ptr<Turso3D::Texture> depthBuffer;
+	std::unique_ptr<Turso3D::RenderBuffer> colorRbo;
+	std::unique_ptr<Turso3D::RenderBuffer> normalRbo;
+	std::unique_ptr<Turso3D::RenderBuffer> depthRbo;
+	std::unique_ptr<Turso3D::FrameBuffer> hdrFbo;
 
+	std::unique_ptr<Turso3D::FrameBuffer> colorFbo[2]; // Framebuffers for resolving multisampled colorRbo
+	std::unique_ptr<Turso3D::FrameBuffer> normalFbo[2]; // Framebuffers for resolving multisampled normalRbo
+	std::unique_ptr<Turso3D::FrameBuffer> depthFbo[2]; // Framebuffers for resolving multisampled depthRbo
+
+	std::unique_ptr<Turso3D::Texture> ldrBuffer;
+	std::unique_ptr<Turso3D::FrameBuffer> ldrFbo;
+
+	std::unique_ptr<BlurRenderer> blurRenderer;
+	std::unique_ptr<BloomRenderer> bloomRenderer;
+	std::unique_ptr<SSAORenderer> aoRenderer;
+	std::unique_ptr<TonemapRenderer> tonemapRenderer;
+
+	std::unique_ptr<UiManager> uiManager;
+
+	// Framebuffer multisample level.
 	int multiSample;
 
-	double timestamp;
-	double deltaTime;
-	double deltaTimeAccumulator;
-
-	int frameLimit;
-
-	std::map<int, InputState> keyStates;
-	std::map<int, InputState> mouseButtonStates;
-
-	Turso3D::Vector2 prevCursorPos;
+	// The cursor position (in pixels).
+	Turso3D::Vector2 cursorPos;
 	// The cursor speed (in pixels) calculated from current cursor position and previous one.
 	Turso3D::Vector2 cursorSpeed;
-	// Determines whether the cursor is inside the client area.
-	bool cursorInside;
-	// Variable used to delay mouse movement capturing.
-	// Prevents sudden changes that happens in the same frame the mouse changed mode.
-	bool captureMouse;
-
-	float camYaw;
-	float camPitch;
+	// Current camera rotation.
+	// Used for look around.
+	Turso3D::Vector2 camRotation;
 
 	bool useOcclusion;
 	bool renderDebug;

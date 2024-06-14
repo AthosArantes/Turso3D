@@ -1,17 +1,15 @@
 #include "Application.h"
-#include "BlurRenderer.h"
-#include "BloomRenderer.h"
-#include "SSAORenderer.h"
-#include "ModelConverter.h"
-#include "RmlUi/RmlSystem.h"
-#include "RmlUi/RmlRenderer.h"
-#include "RmlUi/RmlFile.h"
+#include "Components/BloomRenderer.h"
+#include "Components/BlurRenderer.h"
+#include "Components/SSAORenderer.h"
+#include "Components/TonemapRenderer.h"
+#include "UiManager.h"
 #include <Turso3D/Core/WorkQueue.h>
 #include <Turso3D/Graphics/FrameBuffer.h>
 #include <Turso3D/Graphics/Graphics.h>
-#include <Turso3D/Graphics/Texture.h>
-#include <Turso3D/Graphics/VertexBuffer.h>
+#include <Turso3D/Graphics/RenderBuffer.h>
 #include <Turso3D/Graphics/ShaderProgram.h>
+#include <Turso3D/Graphics/Texture.h>
 #include <Turso3D/IO/Log.h>
 #include <Turso3D/Math/Math.h>
 #include <Turso3D/Math/Random.h>
@@ -21,7 +19,6 @@
 #include <Turso3D/Renderer/Camera.h>
 #include <Turso3D/Renderer/DebugRenderer.h>
 #include <Turso3D/Renderer/Light.h>
-#include <Turso3D/Renderer/LightEnvironment.h>
 #include <Turso3D/Renderer/Material.h>
 #include <Turso3D/Renderer/Model.h>
 #include <Turso3D/Renderer/Octree.h>
@@ -30,9 +27,7 @@
 #include <Turso3D/Resource/ResourceCache.h>
 #include <Turso3D/Scene/Scene.h>
 #include <GLFW/glfw3.h>
-#include <RmlUi/Core.h>
 #include <filesystem>
-#include <chrono>
 
 using namespace Turso3D;
 
@@ -47,133 +42,47 @@ inline Application* GetAppFromWindow(GLFWwindow* window)
 // ==========================================================================================
 Application::Application() :
 	multiSample(1),
-	timestamp(0),
-	deltaTime(0),
-	deltaTimeAccumulator(0),
-	frameLimit(0),
-	cursorInside(false),
-	camYaw(0),
-	camPitch(0),
+	cursorPos(Vector2::ZERO()),
+	cursorSpeed(Vector2::ZERO()),
+	camRotation(Vector2::ZERO()),
 	useOcclusion(true),
 	renderDebug(false),
 	character(nullptr)
 {
-	// Create subsystems that don't depend on the application window / OpenGL context
-	workQueue = std::make_unique<WorkQueue>();
 	workQueue->CreateWorkerThreads(2);
 
 	ResourceCache* cache = ResourceCache::Instance();
 	cache->AddResourceDir((std::filesystem::current_path() / "Shaders").string());
 	cache->AddResourceDir((std::filesystem::current_path() / "Data").string());
 
-	// Initialize graphics
-	graphics = std::make_unique<Graphics>();
-
-	if (graphics->Initialize("Turso3D renderer test", 1600, 900)) {
-		GLFWwindow* window = graphics->Window();
-		glfwSetWindowUserPointer(window, this);
-
-		// Setup glfw callbacks
-		glfwSetKeyCallback(window, [](GLFWwindow* window, int key, int scancode, int action, int mods) -> void
-		{
-			GetAppFromWindow(window)->OnKey(key, scancode, action, mods);
-		});
-		glfwSetMouseButtonCallback(window, [](GLFWwindow* window, int button, int action, int mods) -> void
-		{
-			GetAppFromWindow(window)->OnMouseButton(button, action, mods);
-		});
-		glfwSetCursorPosCallback(window, [](GLFWwindow* window, double xpos, double ypos) -> void
-		{
-			GetAppFromWindow(window)->OnMouseMove(xpos, ypos);
-		});
-		glfwSetCursorEnterCallback(window, [](GLFWwindow* window, int entered) -> void
-		{
-			GetAppFromWindow(window)->OnMouseEnterLeave(entered);
-		});
-		glfwSetFramebufferSizeCallback(window, [](GLFWwindow* window, int width, int height) -> void
-		{
-			GetAppFromWindow(window)->OnFramebufferSize(width, height);
-		});
-		glfwSetWindowFocusCallback(window, [](GLFWwindow* window, int focused) -> void
-		{
-			GetAppFromWindow(window)->OnWindowFocusChanged(focused);
-		});
-
-	} else {
-		graphics.reset();
-	}
-
 	blurRenderer = std::make_unique<BlurRenderer>();
 	bloomRenderer = std::make_unique<BloomRenderer>();
-	ssaoRenderer = std::make_unique<SSAORenderer>();
+	aoRenderer = std::make_unique<SSAORenderer>();
+	tonemapRenderer = std::make_unique<TonemapRenderer>();
+
+	uiManager = std::make_unique<UiManager>();
 }
 
 Application::~Application()
 {
-	// Shutdown RmlUi
-	Rml::Shutdown();
-	rmlRenderer.reset();
-	rmlSystem.reset();
-	rmlFile.reset();
 }
 
 bool Application::Initialize()
 {
-	if (!graphics) {
+	if (!ApplicationBase::Initialize()) {
 		return false;
 	}
 	graphics->SetVSync(true);
 
-	// Create subsystems that depend on the application window / OpenGL
-	renderer = std::make_unique<Renderer>(workQueue.get(), graphics.get());
+	// Configure renderer
 	renderer->SetupShadowMaps(DIRECTIONAL_LIGHT_SIZE, LIGHT_ATLAS_SIZE, FORMAT_D32_SFLOAT_PACK32);
-	debugRenderer = std::make_unique<DebugRenderer>(graphics.get());
 
 	blurRenderer->Initialize(graphics.get());
 	bloomRenderer->Initialize(graphics.get());
-	ssaoRenderer->Initialize(graphics.get());
+	aoRenderer->Initialize(graphics.get());
+	tonemapRenderer->Initialize(graphics.get());
 
-	tonemapProgram = graphics->CreateProgram("PostProcess/Tonemap.glsl", "", "");
-	uTonemapExposure = tonemapProgram->Uniform(StringHash {"exposure"});
-
-	guiProgram = graphics->CreateProgram("PostProcess/GuiCompose.glsl", "", "");
-
-	// Initialize RmlUi
-	rmlFile = std::make_unique<RmlFile>();
-	rmlSystem = std::make_unique<RmlSystem>();
-	rmlRenderer = std::make_unique<RmlRenderer>(graphics.get());
-	Rml::SetFileInterface(rmlFile.get());
-	Rml::SetSystemInterface(rmlSystem.get());
-	Rml::SetRenderInterface(rmlRenderer.get());
-	Rml::Initialise();
-
-	// Load base fonts
-	constexpr const char* fonts[] = {
-		"ui/fonts/FiraGO-Bold.ttf",
-		"ui/fonts/FiraGO-BoldItalic.ttf",
-		"ui/fonts/FiraGO-Book.ttf",
-		"ui/fonts/FiraGO-BookItalic.ttf",
-		"ui/fonts/FiraGO-ExtraBold.ttf",
-		"ui/fonts/FiraGO-ExtraBoldItalic.ttf",
-		"ui/fonts/FiraGO-Heavy.ttf",
-		"ui/fonts/FiraGO-HeavyItalic.ttf",
-		"ui/fonts/FiraGO-Italic.ttf",
-		"ui/fonts/FiraGO-Light.ttf",
-		"ui/fonts/FiraGO-LightItalic.ttf",
-		"ui/fonts/FiraGO-Medium.ttf",
-		"ui/fonts/FiraGO-MediumItalic.ttf",
-		"ui/fonts/FiraGO-Regular.ttf",
-		"ui/fonts/FiraGO-SemiBold.ttf",
-		"ui/fonts/FiraGO-SemiBoldItalic.ttf"
-	};
-	for (int i = 0; i < std::size(fonts); ++i) {
-		Rml::LoadFontFace(fonts[i]);
-	}
-
-	// Create main rml context
-	mainContext = Rml::CreateContext("main", Rml::Vector2i {graphics->RenderWidth(), graphics->RenderHeight()});
-	auto doc = mainContext->LoadDocument("ui/demo.rml");
-	doc->Show();
+	uiManager->Initialize(graphics.get());
 
 	// Create the scene and camera.
 	// Camera is created outside scene so it's not disturbed by scene clears
@@ -185,107 +94,131 @@ bool Application::Initialize()
 	OnFramebufferSize(graphics->RenderWidth(), graphics->RenderHeight());
 
 	// Create scene
-	CreateDefaultScene();
+	SetupEnvironmentLighting();
 	//CreateSpheresScene();
 	CreateThousandMushroomScene();
 	CreateWalkingCharacter();
+	//CreateHugeWalls();
 
 	return true;
 }
 
-void Application::Run()
+void Application::OnMouseMove(double xpos, double ypos)
 {
-	constexpr double fixedRate = 1.0 / 60.0;
-
-	GLFWwindow* window = graphics->Window();
-
-	// Main loop
-	while (true) {
-		if (glfwWindowShouldClose(window)) {
-			break;
-		}
-
-		// Calculate delta time
-		double now = glfwGetTime();
-		deltaTime = now - timestamp;
-		timestamp = now;
-
-		Update(deltaTime);
-
-		// Fixed time update
-		deltaTimeAccumulator += deltaTime;
-		if (deltaTimeAccumulator > 10.0) {
-			// TODO: Send an event, FixedTimeReset
-			deltaTimeAccumulator = 0;
-
-		} else {
-			while (deltaTimeAccumulator >= fixedRate) {
-				FixedUpdate(fixedRate);
-				deltaTimeAccumulator -= fixedRate;
-			}
-		}
-
-		PostUpdate(deltaTime);
-		Render(deltaTime);
-
-		glfwPollEvents();
-
-		ApplyFrameLimit();
+	if (!IsMouseInsideWindow() || !IsWindowFocused()) {
+		return;
 	}
+	Vector2 pos {static_cast<float>(xpos), static_cast<float>(ypos)};
+	cursorSpeed += pos - cursorPos;
+	cursorPos = pos;
 }
 
-void Application::ApplyFrameLimit()
+void Application::OnFramebufferSize(int width, int height)
 {
-	if (frameLimit == 0) {
+	IntVector2 sz {width, height};
+	if (sz.x <= 0 || sz.y <= 0 || sz == colorBuffer->Size2D()) {
 		return;
 	}
 
-	// Skip frame limiter if in fullscreen mode, vsync is on and the refresh rate matches the frame limit value.
-	if (graphics->VSync() && graphics->FullscreenRefreshRate() == frameLimit) {
-		return;
+	camera->SetAspectRatio(static_cast<float>(width) / static_cast<float>(height));
+
+	constexpr TextureAddressMode clamp = ADDRESS_CLAMP;
+	constexpr TextureFilterMode nearest = FILTER_POINT;
+
+	colorBuffer->Define(TARGET_2D, sz, FORMAT_RG11B10_UFLOAT_PACK32);
+	colorBuffer->DefineSampler(nearest, clamp, clamp, clamp);
+	normalBuffer->Define(TARGET_2D, sz, FORMAT_RGBA16_UNORM_PACK16);
+	normalBuffer->DefineSampler(nearest, clamp, clamp, clamp);
+	depthBuffer->Define(TARGET_2D, sz, FORMAT_D32_SFLOAT_PACK32);
+	depthBuffer->DefineSampler(nearest, clamp, clamp, clamp);
+
+	// Define render targets
+	if (multiSample > 1) {
+		colorRbo->Define(sz, colorBuffer->Format(), multiSample);
+		normalRbo->Define(sz, normalBuffer->Format(), multiSample);
+		depthRbo->Define(sz, depthBuffer->Format(), multiSample);
+
+		// Define dst/src framebuffers for multisample resolve
+		colorFbo[0]->Define(colorBuffer.get(), nullptr);
+		normalFbo[0]->Define(normalBuffer.get(), nullptr);
+		depthFbo[0]->Define(nullptr, depthBuffer.get());
+
+		colorFbo[1]->Define(colorRbo.get(), nullptr);
+		normalFbo[1]->Define(normalRbo.get(), nullptr);
+		depthFbo[1]->Define(nullptr, depthRbo.get());
+
+		RenderBuffer* mrt[] = {colorRbo.get(), normalRbo.get()};
+		hdrFbo->Define(mrt, 2, depthRbo.get());
+
+	} else {
+		// Release render buffers and the resolve framebuffers
+		colorRbo = std::make_unique<RenderBuffer>();
+		normalRbo = std::make_unique<RenderBuffer>();
+		depthRbo = std::make_unique<RenderBuffer>();
+
+		for (int i = 0; i < 2; ++i) {
+			colorFbo[i] = std::make_unique<FrameBuffer>();
+			normalFbo[i] = std::make_unique<FrameBuffer>();
+			depthFbo[i] = std::make_unique<FrameBuffer>();
+		}
+
+		Texture* mrt[] = {colorBuffer.get(), normalBuffer.get()};
+		hdrFbo->Define(mrt, 2, depthBuffer.get());
 	}
 
-	const double targetRate = 1.0 / (double)frameLimit;
-	while (true) {
-		double rate = glfwGetTime() - timestamp;
-		if (rate < targetRate) {
-			double d = (rate - targetRate);
-			if (d > 0.001) {
-				std::this_thread::yield();
-				//std::this_thread::sleep_for(std::chrono::duration<double> {d - 0.001});
-			}
-			// spin-lock on less than 1ms of desired frame rate
-		} else {
-			break;
-		}
+	ldrBuffer->Define(TARGET_2D, sz, FORMAT_RGBA8_SRGB_PACK32);
+	ldrBuffer->DefineSampler(nearest, clamp, clamp, clamp);
+	ldrFbo->Define(ldrBuffer.get(), depthBuffer.get());
+
+	blurRenderer->UpdateBuffers(sz / 2, ldrBuffer->Format(), IntVector2::ZERO(), 4);
+
+	// Bloom resources
+	if (bloomRenderer) {
+		bloomRenderer->UpdateBuffers(sz, colorBuffer->Format());
 	}
+
+	// SSAO resources
+	if (aoRenderer) {
+		aoRenderer->UpdateBuffers(sz);
+	}
+
+	// UI resources
+	if (uiManager) {
+		uiManager->UpdateBuffers(sz);
+	}
+
+	LOG_INFO("Framebuffer sized to: {:d}x{:d}", width, height);
 }
 
+// ==========================================================================================
 void Application::CreateTextures()
 {
+	colorBuffer = std::make_unique<Texture>();
+	normalBuffer = std::make_unique<Texture>();
+	depthBuffer = std::make_unique<Texture>();
+	colorRbo = std::make_unique<RenderBuffer>();
+	normalRbo = std::make_unique<RenderBuffer>();
+	depthRbo = std::make_unique<RenderBuffer>();
+	hdrFbo = std::make_unique<FrameBuffer>();
+
 	for (int i = 0; i < 2; ++i) {
-		mrtFbo[i] = std::make_unique<FrameBuffer>();
-		hdrBuffer[i] = std::make_unique<Texture>();
-		normalBuffer[i] = std::make_unique<Texture>();
-		depthStencilBuffer[i] = std::make_unique<Texture>();
+		colorFbo[i] = std::make_unique<FrameBuffer>();
+		normalFbo[i] = std::make_unique<FrameBuffer>();
+		depthFbo[i] = std::make_unique<FrameBuffer>();
 	}
 
-	ldrFbo = std::make_unique<FrameBuffer>();
 	ldrBuffer = std::make_unique<Texture>();
-
-	guiFbo = std::make_unique<FrameBuffer>();
-	guiTexture = std::make_unique<Texture>();
+	ldrFbo = std::make_unique<FrameBuffer>();
 }
 
-void Application::CreateDefaultScene()
+void Application::SetupEnvironmentLighting()
 {
 	ResourceCache* cache = ResourceCache::Instance();
 
 	scene->Clear();
-	Node* root = scene->GetRoot();
 
+	Node* root = scene->GetRoot();
 	Octree* octree = scene->GetOctree();
-	//octree->Resize(BoundingBox(-1000.0f, 1000.0f), 0);
 
 	LightEnvironment* lightEnvironment = scene->GetEnvironmentLighting();
 	{
@@ -316,7 +249,7 @@ void Application::CreateDefaultScene()
 	light->SetLightType(LIGHT_DIRECTIONAL);
 	light->SetCastShadows(true);
 
-	Vector3 color = 100.0f * Vector3 {1.0f, 1.0f, 0.6f};
+	Vector3 color = 1000.0f * Vector3 {1.0f, 1.0f, 0.6f};
 	light->SetColor(Color(color.x, color.y, color.z, 1.0f));
 	light->SetDirection(Vector3 {0.45f, -0.45f, 0.30f});
 	//light->SetRange(600.0f);
@@ -324,11 +257,7 @@ void Application::CreateDefaultScene()
 	light->SetShadowMaxDistance(50.0f);
 	light->SetMaxDistance(0.0f);
 	light->SetEnabled(true);
-
-	//static_cast<LightDrawable*>(light->GetDrawable())->SetAutoFocus(true);
-
 #elif 0
-
 	// Moon
 	Light* light = root->CreateChild<Light>();
 	//light->SetStatic(true);
@@ -343,10 +272,7 @@ void Application::CreateDefaultScene()
 	light->SetShadowMaxDistance(50.0f);
 	light->SetMaxDistance(0.0f);
 	light->SetEnabled(true);
-
-	//static_cast<LightDrawable*>(light->GetDrawable())->SetAutoFocus(true);
 #endif
-
 }
 
 void Application::CreateSpheresScene()
@@ -386,17 +312,24 @@ void Application::CreateSpheresScene()
 
 	bool lights = true;
 	if (lights) {
+		Vector3 lightPositions[] = {
+			Vector3(-1.0f, 1.0f, 1.0f),
+			Vector3(1.0f, 1.0f, 1.0f),
+			Vector3(-1.0f, -1.0f, 1.0f),
+			Vector3(1.0f, -1.0f, 1.0f)
+		};
+
 		for (unsigned i = 0; i < 4; ++i) {
 			Light* light = root->CreateChild<Light>();
+			light->SetPosition(lightPositions[i]);
 			//light->SetStatic(true);
 			light->SetLightType(LIGHT_POINT);
 			//light->SetCastShadows(true);
-			light->SetPosition(Vector3 {Random() * 2.0f - 1.0f, Random() * 2.0f - 2.0f, -1.0f} *3.0f);
-
+			//light->SetPosition(Vector3 {Random() * 2.0f - 1.0f, Random() * 2.0f - 1.0f, -1.0f} * 3.0f);
 			light->SetColor(Color::WHITE() * 10.0f);
-			light->SetRange(10.0f);
-			light->SetShadowMapSize(1024);
-			light->SetShadowMaxDistance(5.0f);
+			light->SetRange(5.0f);
+			light->SetShadowMapSize(512);
+			light->SetShadowMaxDistance(10.0f);
 			light->SetMaxDistance(50.0f);
 		}
 	}
@@ -418,45 +351,26 @@ void Application::CreateThousandMushroomScene()
 	for (int y = -55; y <= 55; ++y) {
 		for (int x = -55; x <= 55; ++x) {
 			StaticModel* floor = root->CreateChild<StaticModel>();
-			floor->SetStatic(true);
 			floor->SetPosition(Vector3(10.5f * x, 0.0f, 10.5f * y));
 			floor->SetScale(Vector3(10.0f, 1.0f, 10.0f));
+			floor->SetStatic(true);
 			floor->SetModel(floorModel);
 			floor->SetMaterial(floorMaterial);
 
 			for (int cx = -1; cx <= 1; ++cx) {
 				for (int cy = -1; cy <= 1; ++cy) {
-					StaticModel* object = root->CreateChild<StaticModel>();
-					object->SetStatic(true);
-					object->SetPosition(Vector3(10.5f * x + cx * 2, 0.0f, 10.5f * y + cy * 2));
-					object->SetRotation(Quaternion(0, Random() * 360, 0));
-					object->SetScale(0.5f);
-					object->SetModel(mushroomModel);
-					object->SetMaterial(mushroomMaterial);
-					object->SetCastShadows(true);
-					//object->SetLodBias(2000.0f);
-					object->SetMaxDistance(0.0f);
+					StaticModel* mushroom = root->CreateChild<StaticModel>();
+					mushroom->SetPosition(Vector3(10.5f * x + cx * 2, 0.0f, 10.5f * y + cy * 2));
+					mushroom->SetRotation(Quaternion(0, Random() * 360, 0));
+					mushroom->SetStatic(true);
+					mushroom->SetScale(0.5f);
+					mushroom->SetModel(mushroomModel);
+					mushroom->SetMaterial(mushroomMaterial);
+					mushroom->SetCastShadows(true);
 				}
 			}
 		}
 	}
-
-	// Crate huge walls
-	/*{
-		std::shared_ptr<Model> boxModel = cache->LoadResource<Model>("box.tmf");
-
-		float rotate[] = {0.0f, 90.f};
-		for (int i = 0; i < 2; ++i) {
-			StaticModel* wall = root->CreateChild<StaticModel>();
-			wall->SetStatic(true);
-			wall->SetPosition(Vector3 {0.0f, 14.0f, 0.0f});
-			wall->SetScale(Vector3(1000.0f, 30.0f, 0.1f));
-			wall->Rotate(Quaternion(0.0f, rotate[i], 0.0f));
-			wall->SetModel(boxModel);
-			wall->SetMaterial(floorMaterial);
-			wall->SetCastShadows(true);
-		}
-	}//*/
 }
 
 void Application::CreateWalkingCharacter()
@@ -477,193 +391,66 @@ void Application::CreateWalkingCharacter()
 	state->SetLooped(true);
 }
 
-bool Application::IsKeyDown(int key)
+void Application::CreateHugeWalls()
 {
-	auto it = keyStates.find(key);
-	if (it != keyStates.end()) {
-		return (it->second == InputState::Pressed) || (it->second == InputState::Down);
-	}
-	return false;
-}
+	ResourceCache* cache = ResourceCache::Instance();
+	Node* root = scene->GetRoot();
 
-bool Application::IsKeyPressed(int key)
-{
-	auto it = keyStates.find(key);
-	if (it != keyStates.end()) {
-		return (it->second == InputState::Pressed);
-	}
-	return false;
-}
+	std::shared_ptr<Model> boxModel = cache->LoadResource<Model>("box.tmf");
+	std::shared_ptr<Material> baseMaterial = Material::GetDefault();
 
-bool Application::IsMouseDown(int button)
-{
-	auto it = mouseButtonStates.find(button);
-	if (it != mouseButtonStates.end()) {
-		return (it->second == InputState::Pressed) || (it->second == InputState::Down);
-	}
-	return false;
-}
-
-// ==========================================================================================
-void Application::OnKey(int key, int scancode, int action, int mods)
-{
-	if (action == GLFW_PRESS) {
-		keyStates[key] = InputState::Pressed;
-	} else if (action == GLFW_RELEASE) {
-		keyStates[key] = InputState::Released;
-	}
-}
-
-void Application::OnMouseButton(int button, int action, int mods)
-{
-	if (!cursorInside) {
-		return;
-	}
-	if (action == GLFW_PRESS) {
-		mouseButtonStates[button] = InputState::Pressed;
-	} else if (action == GLFW_RELEASE) {
-		mouseButtonStates[button] = InputState::Released;
-	}
-}
-
-void Application::OnMouseMove(double xpos, double ypos)
-{
-	if (!cursorInside) {
-		return;
-	}
-	Vector2 newPos {(float)xpos, (float)ypos};
-	cursorSpeed = newPos - prevCursorPos;
-	prevCursorPos = newPos;
-}
-
-void Application::OnMouseEnterLeave(bool entered)
-{
-	cursorInside = entered;
-	if (entered) {
-		captureMouse = false;
-
-	} else {
-		// Release all mouse button when leaving
-		for (auto& it : mouseButtonStates) {
-			InputState& state = it.second;
-			if (state == InputState::Pressed || state == InputState::Down) {
-				state = InputState::Up;
-			}
-		}
-	}
-}
-
-void Application::OnFramebufferSize(int width, int height)
-{
-	IntVector2 sz {width, height};
-	if (width <= 0 || height <= 0 || hdrBuffer[0]->Size2D() == sz) {
-		return;
-	}
-
-	camera->SetAspectRatio((float)width / (float)height);
-
-	// Define the base rendertargets
+	float rotate[] = {0.0f, 90.f};
 	for (int i = 0; i < 2; ++i) {
-		hdrBuffer[i]->Define(TARGET_2D, sz, FORMAT_RG11B10_UFLOAT_PACK32, multiSample * i);
-		hdrBuffer[i]->DefineSampler(FILTER_POINT, ADDRESS_CLAMP, ADDRESS_CLAMP, ADDRESS_CLAMP);
-
-		normalBuffer[i]->Define(TARGET_2D, sz, FORMAT_RGB16_SNORM_PACK16, multiSample * i);
-		normalBuffer[i]->DefineSampler(FILTER_POINT, ADDRESS_CLAMP, ADDRESS_CLAMP, ADDRESS_CLAMP);
-
-		depthStencilBuffer[i]->Define(TARGET_2D, sz, FORMAT_D32_SFLOAT_PACK32, multiSample * i);
-		depthStencilBuffer[i]->DefineSampler(FILTER_POINT, ADDRESS_CLAMP, ADDRESS_CLAMP, ADDRESS_CLAMP);
-
-		Texture* colors[] = {
-			hdrBuffer[i].get(),
-			normalBuffer[i].get()
-		};
-		mrtFbo[i]->Define(colors, std::size(colors), depthStencilBuffer[i].get());
-
-		if (multiSample == 1) {
-			break;
-		}
+		StaticModel* wall = root->CreateChild<StaticModel>();
+		wall->SetStatic(true);
+		wall->SetPosition(Vector3 {0.0f, 14.0f, 0.0f});
+		wall->SetScale(Vector3(1000.0f, 30.0f, 0.1f));
+		wall->Rotate(Quaternion(0.0f, rotate[i], 0.0f));
+		wall->SetModel(boxModel);
+		wall->SetMaterial(baseMaterial);
+		wall->SetCastShadows(true);
 	}
-
-	ldrBuffer->Define(TARGET_2D, sz, FORMAT_RGBA8_SRGB_PACK32);
-	ldrBuffer->DefineSampler(FILTER_POINT, ADDRESS_CLAMP, ADDRESS_CLAMP, ADDRESS_CLAMP);
-	ldrFbo->Define(ldrBuffer.get(), depthStencilBuffer[0].get());
-
-	guiTexture->Define(TARGET_2D, sz, ldrBuffer->Format());
-	guiTexture->DefineSampler(FILTER_POINT, ADDRESS_CLAMP, ADDRESS_CLAMP, ADDRESS_CLAMP);
-	guiFbo->Define(guiTexture.get(), nullptr);
-
-	blurRenderer->UpdateBuffers(sz / 2, ldrBuffer->Format(), IntVector2::ZERO(), 4);
-
-	// Bloom resources
-	if (bloomRenderer) {
-		bloomRenderer->UpdateBuffers(sz, hdrBuffer[0]->Format());
-	}
-
-	// SSAO resources
-	if (ssaoRenderer) {
-		ssaoRenderer->UpdateBuffers(sz);
-	}
-
-	if (rmlRenderer) {
-		rmlRenderer->UpdateBuffers(sz, 4);
-
-		mainContext->SetDimensions(Rml::Vector2i(sz.x, sz.y));
-		mainContext->Update();
-	}
-
-	LOG_INFO("Framebuffer sized to: {:d}x{:d}", width, height);
-}
-
-void Application::OnWindowFocusChanged(int focused)
-{
-	// TODO
 }
 
 // ==========================================================================================
 void Application::Update(double dt)
 {
+	GLFWwindow* window = graphics->Window();
 	const float dtf = static_cast<float>(dt);
 
-	double delay = mainContext->GetNextUpdateDelay();
-	if (delay <= dt) {
-		mainContext->Update();
+	// Ui
+	if (uiManager) {
+		uiManager->Update(dt);
 	}
 
-	// ==================================
-	// Only for sample purposes
-#if 1
-	float moveSpeed = (IsKeyDown(GLFW_KEY_LEFT_SHIFT) || IsKeyDown(GLFW_KEY_RIGHT_SHIFT)) ? 50.0f : 5.0f;
-	moveSpeed *= (IsKeyDown(GLFW_KEY_LEFT_ALT) || IsKeyDown(GLFW_KEY_RIGHT_ALT)) ? 0.25f : 1.0f;
+	// Camera move
+	{
+		float moveSpeed = (IsKeyDown(GLFW_KEY_LEFT_SHIFT) || IsKeyDown(GLFW_KEY_RIGHT_SHIFT)) ? 15.0f : 2.0f;
+		moveSpeed *= (IsKeyDown(GLFW_KEY_LEFT_ALT) || IsKeyDown(GLFW_KEY_RIGHT_ALT)) ? 0.25f : 1.0f;
 
-	Vector3 camTranslation = Vector3::ZERO();
-	if (IsKeyDown(GLFW_KEY_W)) camTranslation += Vector3::FORWARD();
-	if (IsKeyDown(GLFW_KEY_S)) camTranslation += Vector3::BACK();
-	if (IsKeyDown(GLFW_KEY_A)) camTranslation += Vector3::LEFT();
-	if (IsKeyDown(GLFW_KEY_D)) camTranslation += Vector3::RIGHT();
-	camera->Translate(camTranslation * moveSpeed * dtf);
+		Vector3 cam_tr = Vector3::ZERO();
+		if (IsKeyDown(GLFW_KEY_W)) cam_tr += Vector3::FORWARD();
+		if (IsKeyDown(GLFW_KEY_S)) cam_tr += Vector3::BACK();
+		if (IsKeyDown(GLFW_KEY_A)) cam_tr += Vector3::LEFT();
+		if (IsKeyDown(GLFW_KEY_D)) cam_tr += Vector3::RIGHT();
+		camera->Translate(cam_tr * moveSpeed * dtf);
+	}
 
-	GLFWwindow* window = graphics->Window();
-	int mouseMode = glfwGetInputMode(window, GLFW_CURSOR);
+	// Camera look-around
+	{
+		int mouseMode = glfwGetInputMode(window, GLFW_CURSOR);
+		if (IsMouseInsideWindow() && IsMouseDown(GLFW_MOUSE_BUTTON_RIGHT)) {
+			if (mouseMode != GLFW_CURSOR_DISABLED) {
+				glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+			} else {
+				camRotation += cursorSpeed * 0.05f;
+				camRotation.y = Clamp(camRotation.y, -90.0f, 90.0f);
+				camera->SetRotation(Quaternion(camRotation.y, camRotation.x, 0.0f));
+			}
 
-	if (cursorInside && IsMouseDown(GLFW_MOUSE_BUTTON_RIGHT)) {
-		if (mouseMode != GLFW_CURSOR_DISABLED) {
-			glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-			captureMouse = false;
-		} else if (!captureMouse) {
-			captureMouse = true;
-			cursorSpeed = Vector2::ZERO();
+		} else if (mouseMode != GLFW_CURSOR_NORMAL) {
+			glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 		}
-
-		if (captureMouse) {
-			camYaw += (cursorSpeed.x * 0.1f);
-			camPitch += (cursorSpeed.y * 0.1f);
-			camPitch = Clamp(camPitch, -90.0f, 90.0f);
-
-			camera->SetRotation(Quaternion(camPitch, camYaw, 0.0f));
-		}
-
-	} else if (mouseMode != GLFW_CURSOR_NORMAL) {
-		glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 	}
 
 	if (IsKeyPressed(GLFW_KEY_1)) useOcclusion = !useOcclusion;
@@ -684,31 +471,11 @@ void Application::Update(double dt)
 		}
 	}
 
-#endif
-
 	Render(dt);
 }
 
 void Application::PostUpdate(double dt)
 {
-	// Update key states
-	for (auto it = keyStates.begin(); it != keyStates.end(); ++it) {
-		if (it->second == InputState::Released) {
-			it->second = InputState::Up;
-		} else if (it->second == InputState::Pressed) {
-			it->second = InputState::Down;
-		}
-	}
-
-	// Update mouse button states
-	for (auto it = mouseButtonStates.begin(); it != mouseButtonStates.end(); ++it) {
-		if (it->second == InputState::Released) {
-			it->second = InputState::Up;
-		} else if (it->second == InputState::Pressed) {
-			it->second = InputState::Down;
-		}
-	}
-
 	cursorSpeed = Vector2::ZERO();
 }
 
@@ -718,7 +485,7 @@ void Application::FixedUpdate(double dt)
 
 void Application::Render(double dt)
 {
-	const IntRect viewRect {0, 0, hdrBuffer[0]->Width(), hdrBuffer[0]->Height()};
+	const IntRect viewRect {IntVector2::ZERO(), colorBuffer->Size2D()};
 
 	// Collect geometries and lights in frustum.
 	// Also set debug renderer to use the correct camera view.
@@ -730,78 +497,45 @@ void Application::Render(double dt)
 	graphics->SetViewport(viewRect);
 
 	// The default opaque shaders can write both color (first RT) and view-space normals (second RT).
-	mrtFbo[(multiSample > 1) ? 1 : 0]->Bind();
+	hdrFbo->Bind();
 	renderer->RenderOpaque();
 	renderer->RenderAlpha();
 
 	// Resolve MSAA
 	if (multiSample > 1) {
-		graphics->Blit(mrtFbo[0].get(), viewRect, mrtFbo[1].get(), viewRect, true, false, FILTER_BILINEAR);
-		graphics->Blit(mrtFbo[0].get(), viewRect, mrtFbo[1].get(), viewRect, false, true, FILTER_POINT);
+		graphics->Blit(colorFbo[0].get(), viewRect, colorFbo[1].get(), viewRect, true, false, FILTER_BILINEAR);
+		graphics->Blit(normalFbo[0].get(), viewRect, normalFbo[1].get(), viewRect, true, false, FILTER_BILINEAR);
+		graphics->Blit(depthFbo[0].get(), viewRect, depthFbo[1].get(), viewRect, false, true, FILTER_POINT);
 	}
 
-	Texture* color = hdrBuffer[0].get(); // Resolved HDR color texture
-	Texture* normal = normalBuffer[0].get(); // Resolved normal texture
-	Texture* depth = depthStencilBuffer[0].get(); // Resolved Depth texture
+	Texture* color = colorBuffer.get(); // Resolved HDR color texture
+	//Texture* normal = normalBuffer[0].get(); // Resolved normal texture
+	//Texture* depth = depthStencilBuffer[0].get(); // Resolved Depth texture
+
+	// SSAO
+	if (aoRenderer) {
+		TURSO3D_GL_MARKER("SAO");
+		aoRenderer->Render(camera.get(), normalBuffer.get(), depthBuffer.get(), ldrFbo.get(), viewRect);
+	}
 
 	// HDR Bloom
 	if (bloomRenderer) {
 		TURSO3D_GL_MARKER("Bloom");
-
-		bloomRenderer->Render(color, 0.03f);
+		bloomRenderer->Render(color, 0.02f);
 		color = bloomRenderer->GetTexture();
 	}
 
 	// Tonemap
-	{
+	if (tonemapRenderer) {
 		TURSO3D_GL_MARKER("Tonemap");
-
 		ldrFbo->Bind();
-		tonemapProgram->Bind();
-
-		graphics->SetUniform(uTonemapExposure, 1.0f);
-		color->Bind(0);
-
-		graphics->SetViewport(viewRect);
-		graphics->SetRenderState(BLEND_REPLACE, CULL_NONE, CMP_ALWAYS, true, false);
-		graphics->DrawQuad();
-	}
-
-	// SSAO
-	if (ssaoRenderer) {
-		TURSO3D_GL_MARKER("SSAO");
-
-		ssaoRenderer->Render(camera.get(), normal, depth, ldrFbo.get(), viewRect);
+		tonemapRenderer->Render(color);
 	}
 
 	// Optional render of debug geometry
 	if (renderDebug) {
-#if 0
-		// Raycast into the scene using the camera forward vector.
-		// If has a hit, draw a small debug sphere at the hit location.
-		{
-			Octree* octree = scene->GetOctree();
-			Ray cameraRay(camera->WorldPosition(), camera->WorldDirection());
-			RaycastResult res = scene->GetOctree()->RaycastSingle(cameraRay, Drawable::FLAG_GEOMETRY);
-			if (res.drawable) {
-				debugRenderer->AddSphere(Sphere(res.position, 0.05f), Color::WHITE(), true);
-			}
-		}
-#endif
-
 		renderer->RenderDebug(debugRenderer.get());
 		debugRenderer->Render();
-	}
-
-	graphics->SetViewport(viewRect);
-
-	// RmlUi
-	{
-		TURSO3D_GL_MARKER("Rml Ui");
-
-		rmlRenderer->BeginRender();
-		mainContext->Render();
-		rmlRenderer->EndRender();
 	}
 
 	graphics->SetRenderState(BLEND_REPLACE, CULL_NONE, CMP_ALWAYS, true, false);
@@ -809,27 +543,15 @@ void Application::Render(double dt)
 	// Blur scene for UI transparent backgrounds
 	{
 		TURSO3D_GL_MARKER("Scene Blur");
-
 		blurRenderer->Downsample(ldrBuffer.get());
 		blurRenderer->Upsample();
-
 		graphics->SetViewport(viewRect);
-		graphics->Blit(guiFbo.get(), viewRect, blurRenderer->GetFramebuffer(), IntRect {IntVector2::ZERO(), blurRenderer->GetTexture()->Size2D()}, true, false, FILTER_BILINEAR);
 	}
 
 	// Compose UI
-	{
-		TURSO3D_GL_MARKER("UI Compose");
-
-		guiProgram->Bind();
-
-		ldrBuffer->Bind(0);
-		guiTexture->Bind(1);
-		rmlRenderer->GetTexture()->Bind(2);
-		rmlRenderer->GetMaskTexture()->Bind(3);
-
+	if (uiManager) {
 		FrameBuffer::Unbind();
-		graphics->DrawQuad();
+		uiManager->Compose(ldrBuffer.get(), blurRenderer->GetTexture());
 	}
 
 	graphics->Present();
