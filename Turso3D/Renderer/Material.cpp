@@ -10,14 +10,9 @@
 #include <set>
 #include <filesystem>
 
-namespace Turso3D
+namespace
 {
-	const char* PassTypeNames[] = {
-		"shadow",
-		"opaque",
-		"alpha",
-		nullptr
-	};
+	using namespace Turso3D;
 
 	const char* GeometryDefines[] =
 	{
@@ -28,11 +23,12 @@ namespace Turso3D
 		nullptr
 	};
 
-	// ==========================================================================================
-	static std::set<Material*> allMaterials;
+	static std::set<Material*> AllMaterials;
 	static std::string GlobalDefines[MAX_SHADER_TYPES];
+}
 
-	// ==========================================================================================
+namespace Turso3D
+{
 	struct Material::LoadBuffer
 	{
 		// Load from an xml node.
@@ -66,13 +62,15 @@ namespace Turso3D
 			if (xml_node node = root.child("passes"); node) {
 				for (xml_node pass : node.children()) {
 					for (int t = 0; t < MAX_PASS_TYPES; ++t) {
+						PassType pt = static_cast<PassType>(t);
+
 						std::string passName {pass.name()};
-						if (passName != PassTypeNames[t]) {
+						if (passName != PassTypeName(pt)) {
 							continue;
 						}
 
 						PassData& data = passes.emplace_back();
-						data.type = (PassType)t;
+						data.type = pt;
 						data.blendMode = BLEND_REPLACE;
 						data.depthTest = CMP_LESS_EQUAL;
 						data.colorWrite = pass.attribute("colorWrite").as_bool(true);
@@ -243,12 +241,12 @@ namespace Turso3D
 		cullMode(CULL_BACK),
 		uniformsDirty(false)
 	{
-		allMaterials.insert(this);
+		AllMaterials.insert(this);
 	}
 
 	Material::~Material()
 	{
-		allMaterials.erase(this);
+		AllMaterials.erase(this);
 	}
 
 	bool Material::BeginLoad(Stream& source)
@@ -309,6 +307,7 @@ namespace Turso3D
 			}
 		}
 
+		SetCullMode(loadBuffer->cullMode);
 		SetShaderDefines(loadBuffer->defines[SHADER_VS], loadBuffer->defines[SHADER_FS]);
 		DefineUniforms(loadBuffer->uniforms);
 
@@ -541,7 +540,7 @@ namespace Turso3D
 			}
 		}
 
-		for (Material* material : allMaterials) {
+		for (Material* material : AllMaterials) {
 			for (size_t i = 0; i < MAX_PASS_TYPES; ++i) {
 				if (material->passes[i]) {
 					material->passes[i]->ResetShaderPrograms();

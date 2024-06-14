@@ -22,7 +22,16 @@ namespace Turso3D
 		PASS_ALPHA,
 		MAX_PASS_TYPES
 	};
-	extern const char* PassTypeNames[];
+	constexpr const char* PassTypeName(PassType value)
+	{
+		constexpr const char* data[] = {
+			"shadow",
+			"opaque",
+			"alpha",
+			nullptr
+		};
+		return data[value];
+	}
 
 	// Shader program bits
 	constexpr unsigned SP_STATIC = 0x0;
