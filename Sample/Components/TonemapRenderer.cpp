@@ -35,6 +35,5 @@ void TonemapRenderer::Render(Texture* hdrColor)
 	graphics->SetUniform(uExposure, 0.1f);
 	hdrColor->Bind(0);
 
-	graphics->SetRenderState(BLEND_REPLACE, CULL_NONE, CMP_ALWAYS, true, false);
 	graphics->DrawQuad();
 }

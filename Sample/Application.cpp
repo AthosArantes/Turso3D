@@ -538,8 +538,6 @@ void Application::Render(double dt)
 		debugRenderer->Render();
 	}
 
-	graphics->SetRenderState(BLEND_REPLACE, CULL_NONE, CMP_ALWAYS, true, false);
-
 	// Blur scene for UI transparent backgrounds
 	{
 		TURSO3D_GL_MARKER("Scene Blur");

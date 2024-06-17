@@ -45,10 +45,10 @@ void BloomRenderer::UpdateBuffers(const IntVector2& size, ImageFormat format)
 
 void BloomRenderer::Render(Texture* hdrColor, float intensity)
 {
-	graphics->SetRenderState(BLEND_REPLACE, CULL_NONE, CMP_ALWAYS, true, false);
+	graphics->SetRenderState(BLEND_REPLACE, CULL_BACK, CMP_ALWAYS, true, false);
 	blurRenderer->Downsample(hdrColor);
 
-	graphics->SetRenderState(BLEND_ADD, CULL_NONE, CMP_ALWAYS, true, false);
+	graphics->SetRenderState(BLEND_ADD, CULL_BACK, CMP_ALWAYS, true, false);
 	blurRenderer->Upsample();
 
 	// Compose
@@ -60,6 +60,6 @@ void BloomRenderer::Render(Texture* hdrColor, float intensity)
 	blurRenderer->GetTexture()->Bind(1);
 
 	graphics->SetViewport(IntRect {IntVector2::ZERO(), buffer->Size2D()});
-	graphics->SetRenderState(BLEND_REPLACE, CULL_NONE, CMP_ALWAYS, true, false);
+	graphics->SetRenderState(BLEND_REPLACE, CULL_BACK, CMP_ALWAYS, true, false);
 	graphics->DrawQuad();
 }

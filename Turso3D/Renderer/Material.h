@@ -53,7 +53,7 @@ namespace Turso3D
 
 		// Set shader and shader defines.
 		// Existing shader programs will be cleared.
-		void SetShader(const std::shared_ptr<Shader>& shader, const std::string& vsDefines, const std::string& fsDefines);
+		void SetShader(std::shared_ptr<Shader> shader, const std::string& vsDefines, const std::string& fsDefines);
 		// Set render state.
 		void SetRenderState(BlendMode blendMode, CompareMode depthTest = CMP_LESS, bool colorWrite = true, bool depthWrite = true);
 
@@ -149,7 +149,7 @@ namespace Turso3D
 		void RemovePass(PassType type);
 
 		// Set a texture.
-		void SetTexture(size_t index, const std::shared_ptr<Texture>& texture);
+		void SetTexture(size_t index, std::shared_ptr<Texture> texture);
 		// Reset all texture assignments.
 		void ResetTextures();
 

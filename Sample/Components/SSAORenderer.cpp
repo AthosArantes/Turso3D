@@ -93,7 +93,7 @@ void SSAORenderer::Render(Camera* camera, Texture* normal, Texture* depth, Frame
 
 	ssaoUniformBuffer->Bind(UB_CUSTOM);
 
-	graphics->SetRenderState(BLEND_REPLACE, CULL_NONE, CMP_ALWAYS, true, false);
+	graphics->SetRenderState(BLEND_REPLACE, CULL_BACK, CMP_ALWAYS, true, false);
 	graphics->DrawQuad();
 
 	//UniformBuffer::Unbind(UB_CUSTOM);
@@ -106,7 +106,7 @@ void SSAORenderer::Render(Camera* camera, Texture* normal, Texture* depth, Frame
 	resultTexture->Bind(0);
 	graphics->SetUniform(uBlurInvSize, Vector2 {1.0f / resultTexture->Width(), 1.0f / resultTexture->Height()});
 
-	graphics->SetRenderState(BLEND_SUBTRACT, CULL_NONE, CMP_ALWAYS, true, false);
+	graphics->SetRenderState(BLEND_SUBTRACT, CULL_BACK, CMP_ALWAYS, true, false);
 	graphics->DrawQuad();
 }
 

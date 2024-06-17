@@ -146,7 +146,9 @@
 		<ClInclude Include="Scene\Node.h" />
 		<ClInclude Include="Scene\Scene.h" />
 		<ClInclude Include="Scene\SpatialNode.h" />
+		<ClInclude Include="Utils\ShaderPermutation.h" />
 		<ClInclude Include="Utils\StringHash.h" />
+		<ClInclude Include="fwd.h" />
 	</ItemGroup>
 	<ItemGroup>
 		<ClCompile Include="Core\Allocator.cpp" />
@@ -192,6 +194,7 @@
 		<ClCompile Include="Scene\Node.cpp" />
 		<ClCompile Include="Scene\Scene.cpp" />
 		<ClCompile Include="Scene\SpatialNode.cpp" />
+		<ClCompile Include="Utils\ShaderPermutation.cpp" />
 	</ItemGroup>
 
 	<Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

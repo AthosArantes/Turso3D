@@ -51,6 +51,8 @@ namespace Turso3D
 
 		// Set a float preset uniform.
 		void SetUniform(PresetUniform uniform, float value);
+		// Set a unsigned preset uniform.
+		void SetUniform(PresetUniform uniform, unsigned value);
 		// Set a Vector2 preset uniform.
 		void SetUniform(PresetUniform uniform, const Vector2& value);
 		// Set a Vector3 preset uniform.

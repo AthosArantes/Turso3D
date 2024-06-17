@@ -6,6 +6,7 @@
 #include <Turso3D/IO/Log.h>
 #include <Turso3D/IO/MemoryStream.h>
 #include <Turso3D/Resource/ResourceCache.h>
+#include <Turso3D/Utils/ShaderPermutation.h>
 #include <pugixml/pugixml.hpp>
 #include <set>
 #include <filesystem>
@@ -195,7 +196,7 @@ namespace Turso3D
 	{
 	}
 
-	void Pass::SetShader(const std::shared_ptr<Shader>& shader_, const std::string& vsDefines_, const std::string& fsDefines_)
+	void Pass::SetShader(std::shared_ptr<Shader> shader_, const std::string& vsDefines_, const std::string& fsDefines_)
 	{
 		shader = shader_;
 		vsDefines = vsDefines_;
@@ -230,8 +231,8 @@ namespace Turso3D
 	{
 		uint8_t geomBits = programBits & SP_GEOMETRYBITS;
 		std::shared_ptr<ShaderProgram> newShaderProgram = shader->Program(
-			GlobalDefines[SHADER_VS] + parent->VSDefines() + vsDefines + GeometryDefines[geomBits],
-			GlobalDefines[SHADER_FS] + parent->FSDefines() + fsDefines
+			ShaderPermutation {GlobalDefines[SHADER_VS], parent->VSDefines(), vsDefines, GeometryDefines[geomBits]},
+			ShaderPermutation {GlobalDefines[SHADER_FS], parent->FSDefines(), fsDefines}
 		);
 		shaderPrograms[programBits] = newShaderProgram;
 	}
@@ -357,7 +358,7 @@ namespace Turso3D
 		passes[type].reset();
 	}
 
-	void Material::SetTexture(size_t index, const std::shared_ptr<Texture>& texture)
+	void Material::SetTexture(size_t index, std::shared_ptr<Texture> texture)
 	{
 		if (index < MAX_MATERIAL_TEXTURE_UNITS) {
 			textures[index] = texture;

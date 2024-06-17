@@ -8,6 +8,7 @@
 #include <Turso3D/Graphics/VertexBuffer.h>
 #include <Turso3D/IO/Log.h>
 #include <Turso3D/Resource/ResourceCache.h>
+#include <Turso3D/Utils/ShaderPermutation.h>
 #include <glew/glew.h>
 #include <GLFW/glfw3.h>
 #include <chrono>
@@ -180,6 +181,13 @@ namespace Turso3D
 			return false;
 		}
 
+		GLint maxSizeUBO = 0;
+		glGetIntegerv(GL_MAX_UNIFORM_BLOCK_SIZE, &maxSizeUBO);
+		if (maxSizeUBO < 64000) {
+			LOG_ERROR("Max size of uniform buffer object is less than 64kb.");
+			return false;
+		}
+
 		if (!GLEW_VERSION_4_0 && !GLEW_ARB_texture_cube_map_array) {
 			LOG_ERROR("ARB_texture_cube_map_array not supported.");
 			return false;
@@ -306,7 +314,7 @@ namespace Turso3D
 		ResourceCache* cache = ResourceCache::Instance();
 		std::shared_ptr<Shader> shader = cache->LoadResource<Shader>(shaderName);
 		if (shader) {
-			return shader->Program(vsDefines, fsDefines);
+			return shader->Program(ShaderPermutation {vsDefines}, ShaderPermutation {fsDefines});
 		}
 		return {};
 	}

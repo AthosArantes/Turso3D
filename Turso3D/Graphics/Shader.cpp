@@ -4,6 +4,7 @@
 #include <Turso3D/IO/MemoryStream.h>
 #include <Turso3D/Resource/ResourceCache.h>
 #include <Turso3D/Utils/StringHash.h>
+#include <Turso3D/Utils/ShaderPermutation.h>
 #include <GLEW/glew.h>
 #include <cassert>
 #include <algorithm>
@@ -171,48 +172,17 @@ namespace
 
 		return output;
 	}
+}
 
-	// ==========================================================================================
-	struct Permutation
+namespace Turso3D
+{
+	struct Shader::LinkedProgram
 	{
-		// Defines used when compiling the shader.
-		std::vector<std::string> defines;
-		// The combined hash of all defines.
-		size_t hash;
+		// The linked shader program.
+		std::shared_ptr<ShaderProgram> program;
+		// The shader defines.
+		//ShaderPermutation permutation;
 	};
-
-	static void CreatePermutation(const std::string& inDefines, Permutation& outInfo)
-	{
-		outInfo.defines.clear();
-		outInfo.hash = 0;
-
-		std::string_view str {inDefines};
-		while (str.size()) {
-			// Trim leading whitespace
-			while (str.size() && std::isspace(static_cast<const unsigned char&>(str.front()))) {
-				str.remove_prefix(1);
-			}
-
-			// Iterate to next whitespace
-			auto it = str.begin();
-			for (; it != str.end(); ++it) {
-				const unsigned char& c = static_cast<const unsigned char&>(*it);
-				if (std::isspace(c)) {
-					break;
-				}
-			}
-
-			size_t count = it - str.begin();
-
-			std::string def {str.substr(0, count)};
-			if (!def.empty()) {
-				outInfo.hash ^= StringHash {def};
-				outInfo.defines.push_back(std::move(def));
-			}
-
-			str.remove_prefix(count);
-		}
-	}
 }
 
 namespace Turso3D
@@ -301,53 +271,54 @@ namespace Turso3D
 		return true;
 	}
 
-	std::shared_ptr<ShaderProgram> Shader::Program(const std::string& vsDefines, const std::string& fsDefines)
+	std::shared_ptr<ShaderProgram> Shader::Program(const ShaderPermutation& vsPermutation, const ShaderPermutation& fsPermutation)
 	{
-		Permutation permutation[MAX_SHADER_TYPES];
-		CreatePermutation(vsDefines, permutation[SHADER_VS]);
-		CreatePermutation(fsDefines, permutation[SHADER_FS]);
-
-		// Check for a program already created for the shader vs/fs permutation combination.
+		// Check for a program already created for the vs/fs permutation combination.
 		size_t program_hash;
 		{
-			size_t v = permutation[SHADER_VS].hash;
-			program_hash = (v << 24 | v >> 40 & 0xFFFFFFFFFFu) ^ permutation[SHADER_FS].hash;
+			size_t v = vsPermutation.Hash();
+			program_hash = (v << 24 | v >> 40 & 0xFFFFFFFFFFu) ^ fsPermutation.Hash();
 		}
 
 		if (auto it = programs.find(program_hash); it != programs.end()) {
-			return it->second;
+			return it->second.program;
 		}
 
 		// Compile shaders for program linking
-		unsigned gl_shader[MAX_SHADER_TYPES];
-		for (int i = 0; i < MAX_SHADER_TYPES; ++i) {
-			gl_shader[i] = Compile((ShaderType)i, permutation[i].defines);
-
-#ifdef _DEBUG
-			// TODO: set a nice name
-			//glObjectLabel(GL_SHADER, new_shader, name.size(), name.c_str());
-#endif
-
-		}
+		unsigned vs = Compile(SHADER_VS, vsPermutation);
+		unsigned fs = Compile(SHADER_FS, fsPermutation);
 
 		std::shared_ptr<ShaderProgram> program = std::make_shared<ShaderProgram>();
-		if (program->Create(gl_shader[SHADER_VS], gl_shader[SHADER_FS])) {
-			programs[program_hash] = program;
+		if (program->Create(vs, fs)) {
+			programs[program_hash].program = program;
 
 #ifdef _DEBUG
-			// TODO: set a nice name
-			//glObjectLabel(GL_PROGRAM, program->GLProgram(), name.size(), name.c_str());
+			std::string defines[MAX_SHADER_TYPES];
+			const ShaderPermutation* permutation[] = {&vsPermutation, &fsPermutation};
+			for (size_t i = 0; i < MAX_SHADER_TYPES; ++i) {
+				for (const std::string_view& def : permutation[i]->Defines()) {
+					if (defines[i].length()) {
+						defines[i].push_back(';');
+					}
+					defines[i].append(def);
+				}
+			}
+			std::string name = fmt::format("{:s}[{:s}][{:s}]", Name(), defines[SHADER_VS], defines[SHADER_FS]);
+			glObjectLabel(GL_PROGRAM, program->GLProgram(), name.size(), name.c_str());
 #endif
 
 			return program;
 		}
 
-		return {};
+		return std::shared_ptr<ShaderProgram> {};
 	}
 
-	unsigned Shader::Compile(ShaderType type, const std::vector<std::string>& defines)
+	unsigned Shader::Compile(ShaderType type, const ShaderPermutation& permutation)
 	{
-		std::string shader_code {version};
+		std::string shader_code;
+		shader_code.reserve(version.length() + sharedCode.length() + sourceCode[type].length());
+
+		shader_code.append(version);
 
 		GLenum gl_type;
 		switch (type) {
@@ -364,12 +335,23 @@ namespace Turso3D
 				return 0;
 		}
 
-		for (std::string define : defines) {
-			std::replace_if(define.begin(), define.end(), [](const char& c)
-			{
-				return c == '=';
-			}, ' ');
-			shader_code += "#define " + define + '\n';
+		const std::vector<std::string_view>& defines = permutation.Defines();
+		for (size_t i = 0; i < defines.size(); ++i) {
+			std::string_view define = defines[i];
+
+			shader_code.append("#define ");
+
+			std::string_view v = ShaderPermutation::ValuePart(define);
+			if (v.empty()) {
+				shader_code.append(define);
+			} else {
+				std::string_view n = ShaderPermutation::NamePart(define);
+				shader_code.append(n);
+				shader_code.push_back(' ');
+				shader_code.append(v);
+			}
+
+			shader_code.push_back('\n');
 		}
 
 		shader_code.append(sharedCode);

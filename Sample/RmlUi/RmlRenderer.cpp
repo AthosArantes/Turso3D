@@ -334,7 +334,7 @@ void RmlRenderer::BeginRender()
 	glClearColor(0, 0, 0, 0);
 	glClear(GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
-	graphics->SetRenderState(BLEND_ADDALPHA, CULL_NONE, CMP_ALWAYS, true, false);
+	graphics->SetRenderState(BLEND_ADDALPHA, CULL_FRONT, CMP_ALWAYS, true, false);
 
 	glEnable(GL_STENCIL_TEST);
 	glStencilFunc(GL_ALWAYS, 0, GLuint(-1));
@@ -356,4 +356,5 @@ void RmlRenderer::EndRender()
 	}
 
 	graphics->DefaultVao().Bind();
+	graphics->SetRenderState(BLEND_REPLACE, CULL_BACK, CMP_ALWAYS, true, false);
 }

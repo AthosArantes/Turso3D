@@ -54,6 +54,11 @@ namespace Turso3D
 		glUniform1f(Uniform(uniform), value);
 	}
 
+	void ShaderProgram::SetUniform(PresetUniform uniform, unsigned value)
+	{
+		glUniform1ui(Uniform(uniform), value);
+	}
+
 	void ShaderProgram::SetUniform(PresetUniform uniform, const Vector2& value)
 	{
 		glUniform2fv(Uniform(uniform), 1, value.Data());

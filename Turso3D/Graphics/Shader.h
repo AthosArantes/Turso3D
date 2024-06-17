@@ -11,28 +11,28 @@ namespace Turso3D
 {
 	class Stream;
 	class ShaderProgram;
+	class ShaderPermutation;
 
 	// Shader resource.
-	// Defines shader source code, from which shader programs can be compiled & linked by specifying defines.
+	// Stores shader source code, from which shader programs can be compiled & linked by specifying permutations (defines).
 	class Shader : public Resource
 	{
+		struct LinkedProgram;
+
 	public:
 		Shader();
 		~Shader();
 
 		bool BeginLoad(Stream& source) override;
 
-		// Create and return a shader program with defines.
+		// Create, compile and link a shader program.
 		// Graphics must have been initialized.
 		// Existing program is returned if possible.
-		// Defines should be separated by space.
-		// A define can have a value (Make sure there's no space around the equal sign).
-		//	e.g.: SAMPLES=2
-		std::shared_ptr<ShaderProgram> Program(const std::string& vsDefines, const std::string& fsDefines);
+		std::shared_ptr<ShaderProgram> Program(const ShaderPermutation& vsPermutation, const ShaderPermutation& fsPermutation);
 
 	private:
-		// Compile the shader with defines.
-		unsigned Compile(ShaderType type, const std::vector<std::string>& defines);
+		// Compile the shader.
+		unsigned Compile(ShaderType type, const ShaderPermutation& permutation);
 
 	private:
 		// Explicit shader version.
@@ -43,7 +43,7 @@ namespace Turso3D
 		std::string sourceCode[MAX_SHADER_TYPES];
 
 		// Shader programs.
-		// key is a combination hash of vs/fs defines.
-		std::unordered_map<size_t, std::shared_ptr<ShaderProgram>> programs;
+		// key is a combination of permutation hashes.
+		std::unordered_map<size_t, LinkedProgram> programs;
 	};
 }
