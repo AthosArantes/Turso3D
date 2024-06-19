@@ -1,20 +1,24 @@
 layout(std140) uniform PerViewData0
 {
-	uniform mat3x4 viewMatrix;
-	uniform mat4x4 projectionMatrix;
-	uniform mat4x4 viewProjMatrix;
-	uniform vec4 depthParameters;
-	uniform vec3 cameraPosition;
-	uniform vec4 ambientColor;
-	uniform vec3 fogColor;
-	uniform vec2 fogParameters;
-	uniform vec4 iblParameters; // x = max lod level of PMREM texture
-	uniform vec3 dirLightDirection;
-	uniform vec4 dirLightColor;
-	uniform vec4 dirLightShadowSplits;
-	uniform vec4 dirLightShadowParameters;
-	uniform mat4x4 dirLightShadowMatrices[2];
+	mat3x4 viewMatrix;
+	mat4x4 projectionMatrix;
+	mat4x4 viewProjMatrix;
+	vec4 depthParameters;
+	vec3 cameraPosition;
+	vec4 ambientColor;
+	vec3 fogColor;
+	vec2 fogParameters;
+	vec4 iblParameters; // x = max lod level of PMREM texture
+	vec3 dirLightDirection;
+	vec4 dirLightColor;
+	vec4 dirLightShadowSplits;
+	vec4 dirLightShadowParameters;
+	mat4x4 dirLightShadowMatrices[2];
 };
+
+#ifdef LIGHTMASK
+	uniform uint modelLightMask;
+#endif
 
 struct Light
 {
@@ -22,6 +26,7 @@ struct Light
 	vec4 direction;
 	vec4 attenuation;
 	vec4 color;
+	uint viewMask;
 	vec4 shadowParameters;
 	mat4 shadowMatrix;
 };

@@ -12,9 +12,19 @@ namespace Turso3D
 	// Sorting modes for batches.
 	enum BatchSortMode
 	{
-		SORT_STATE = 0,
-		SORT_STATE_AND_DISTANCE,
-		SORT_DISTANCE
+		BATCH_SORT_STATE = 0,
+		BATCH_SORT_STATE_DISTANCE,
+		BATCH_SORT_DISTANCE
+	};
+
+	enum BatchType
+	{
+		// Simple static geometry rendering, the batch contains a worldTransform.
+		BATCH_TYPE_STATIC,
+		// Complex geometry rendering, the batch contains a drawable.
+		BATCH_TYPE_COMPLEX,
+		// The batch was converted from Static to instance, the batch contains instance count.
+		BATCH_TYPE_INSTANCED
 	};
 
 	// Stored draw call.
@@ -34,17 +44,23 @@ namespace Turso3D
 		Pass* pass;
 		// Geometry.
 		Geometry* geometry;
-		// Shader variation bits.
-		unsigned char programBits;
 		// Geometry index.
-		unsigned char geomIndex;
+		unsigned geomIndex;
+
+		// The content type of this batch.
+		BatchType type;
+		// Drawable flags.
+		unsigned drawableFlags;
+		// Drawable light contribution mask.
+		unsigned lightMask;
 
 		union
 		{
-			// Associated drawable. Called into for complex rendering like skinning.
-			GeometryDrawable* drawable;
 			// Pointer to world transform matrix for static geometry rendering.
 			const Matrix3x4* worldTransform;
+			// Associated drawable.
+			// Called into for complex rendering like skinning.
+			GeometryDrawable* drawable;
 			// Instance count if instanced.
 			unsigned instanceCount;
 		};

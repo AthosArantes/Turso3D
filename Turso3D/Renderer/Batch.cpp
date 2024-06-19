@@ -23,7 +23,7 @@ namespace Turso3D
 	void BatchQueue::Sort(std::vector<Matrix3x4>& instanceTransforms, BatchSortMode sortMode, bool convertToInstanced)
 	{
 		switch (sortMode) {
-			case SORT_STATE:
+			case BATCH_SORT_STATE:
 				for (auto it = batches.begin(); it < batches.end(); ++it) {
 					unsigned short materialId = (unsigned short)((size_t)it->pass / sizeof(Pass));
 					unsigned short geomId = (unsigned short)((size_t)it->geometry / sizeof(Geometry));
@@ -33,7 +33,7 @@ namespace Turso3D
 				std::sort(batches.begin(), batches.end(), CompareBatchKeys);
 				break;
 
-			case SORT_STATE_AND_DISTANCE:
+			case BATCH_SORT_STATE_DISTANCE:
 				for (auto it = batches.begin(); it < batches.end(); ++it) {
 					unsigned short materialId = it->pass->lastSortKey.second;
 					unsigned short geomId = it->geometry->lastSortKey.second;
@@ -43,7 +43,7 @@ namespace Turso3D
 				std::sort(batches.begin(), batches.end(), CompareBatchKeys);
 				break;
 
-			case SORT_DISTANCE:
+			case BATCH_SORT_DISTANCE:
 				std::sort(batches.begin(), batches.end(), CompareBatchDistance);
 				break;
 
@@ -55,23 +55,23 @@ namespace Turso3D
 
 		for (auto it = batches.begin(); it < batches.end() - 1; ++it) {
 			// Check if batch is static geometry and can be converted to instanced
-			if (it->programBits) {
+			if (it->type != BATCH_TYPE_STATIC) {
 				continue;
 			}
 
 			size_t start = instanceTransforms.size();
 			auto next = it + 1;
 
-			if (next->pass == it->pass && next->geometry == it->geometry && !next->programBits) {
+			if (next->pass == it->pass && next->geometry == it->geometry && next->type == BATCH_TYPE_STATIC) {
 				// Convert to instances if at least one batch with same state found, then loop for more of the same
 				it->instanceStart = (unsigned)start;
-				it->programBits = SP_INSTANCED;
+				it->type = BATCH_TYPE_INSTANCED;
 				instanceTransforms.push_back(*it->worldTransform);
 				instanceTransforms.push_back(*next->worldTransform);
 				++next;
 
 				for (; next < batches.end(); ++next) {
-					if (next->pass == it->pass && next->geometry == it->geometry && !next->programBits) {
+					if (next->pass == it->pass && next->geometry == it->geometry && next->type == BATCH_TYPE_STATIC) {
 						instanceTransforms.push_back(*next->worldTransform);
 					} else {
 						break;

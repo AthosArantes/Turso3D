@@ -721,8 +721,8 @@ namespace Turso3D
 			}
 		}
 
-		opaqueBatches.Sort(instanceTransforms, SORT_STATE_AND_DISTANCE, hasInstancing);
-		alphaBatches.Sort(instanceTransforms, SORT_DISTANCE, hasInstancing);
+		opaqueBatches.Sort(instanceTransforms, BATCH_SORT_STATE_DISTANCE, hasInstancing);
+		alphaBatches.Sort(instanceTransforms, BATCH_SORT_DISTANCE, hasInstancing);
 	}
 
 	void Renderer::SortShadowBatches(ShadowMap& shadowMap)
@@ -740,11 +740,11 @@ namespace Turso3D
 			BatchQueue* destDynamic = &shadowMap.shadowBatches[view.dynamicQueueIdx];
 
 			if (destStatic && destStatic->HasBatches()) {
-				destStatic->Sort(shadowMap.instanceTransforms, SORT_STATE, hasInstancing);
+				destStatic->Sort(shadowMap.instanceTransforms, BATCH_SORT_STATE, hasInstancing);
 			}
 
 			if (destDynamic->HasBatches()) {
-				destDynamic->Sort(shadowMap.instanceTransforms, SORT_STATE, hasInstancing);
+				destDynamic->Sort(shadowMap.instanceTransforms, BATCH_SORT_STATE, hasInstancing);
 			}
 		}
 	}
@@ -844,9 +844,23 @@ namespace Turso3D
 		for (size_t i = 0; i < batches.size(); ++i) {
 			const Batch& batch = batches[i];
 
-			unsigned char geometryBits = batch.programBits & SP_GEOMETRYBITS;
+			// Select permutation for pass program
+			ShaderProgram* program;
+			{
+				Pass::GeometryPermutation gp = Pass::GeometryPermutation::None;
+				if (batch.type == BATCH_TYPE_INSTANCED) {
+					gp = Pass::GeometryPermutation::Instanced;
+				} else if (batch.drawableFlags & Drawable::FLAG_SKINNED_GEOMETRY) {
+					gp = Pass::GeometryPermutation::Skinned;
+				}
 
-			ShaderProgram* program = batch.pass->GetShaderProgram(batch.programBits);
+				Pass::LightMaskPermutation lmp = Pass::LightMaskPermutation::Disabled;
+				if (batch.lightMask) {
+					lmp = Pass::LightMaskPermutation::Enabled;
+				}
+
+				program = batch.pass->GetShaderProgram(gp, lmp);
+			}
 			if (!program || !program->Bind()) {
 				continue;
 			}
@@ -889,7 +903,11 @@ namespace Turso3D
 				ib->Bind();
 			}
 
-			if (geometryBits == GEOM_INSTANCED) {
+			if (batch.lightMask) {
+				program->SetUniform(U_LIGHTMASK, batch.lightMask);
+			}
+
+			if (batch.type == BATCH_TYPE_INSTANCED) {
 				if (ib) {
 					graphics->DrawIndexedInstanced(PT_TRIANGLE_LIST, geometry->drawStart, geometry->drawCount, instanceVertexBuffer.get(), batch.instanceStart, batch.instanceCount);
 				} else {
@@ -898,7 +916,7 @@ namespace Turso3D
 				i += static_cast<size_t>(batch.instanceCount) - 1;
 
 			} else {
-				if (!geometryBits) {
+				if (batch.type == BATCH_TYPE_STATIC) {
 					program->SetUniform(U_WORLDMATRIX, *batch.worldTransform);
 				} else {
 					batch.drawable->OnRender(program, batch.geomIndex);
@@ -1211,6 +1229,7 @@ namespace Turso3D
 			lightData[i + 1].direction = Vector4(-light->WorldDirection(), 0.0f);
 			lightData[i + 1].attenuation = Vector4(1.0f / std::max(light->Range(), M_EPSILON), cutoff, 1.0f / (1.0f - cutoff), 1.0f);
 			lightData[i + 1].color = light->EffectiveColor();
+			lightData[i + 1].viewMask = light->ViewMask();
 			lightData[i + 1].shadowParameters = Vector4::ONE(); // Assume unshadowed
 
 			// Check if not shadowcasting or beyond shadow range
@@ -1348,10 +1367,13 @@ namespace Turso3D
 							// Assume opaque first
 							newBatch.pass = material->GetPass(PASS_OPAQUE);
 							newBatch.geometry = batches.GetGeometry(j);
-							newBatch.programBits = (unsigned char)(drawable->Flags() & Drawable::FLAG_GEOMETRY_TYPE_BITS);
-							newBatch.geomIndex = (unsigned char)j;
+							newBatch.geomIndex = j;
 
-							if (!newBatch.programBits) {
+							newBatch.type = drawable->IsGeometryStatic() ? BATCH_TYPE_STATIC : BATCH_TYPE_COMPLEX;
+							newBatch.drawableFlags = drawable->Flags();
+							newBatch.lightMask = drawable->LightMask();
+
+							if (newBatch.type == BATCH_TYPE_STATIC) {
 								newBatch.worldTransform = &drawable->WorldTransform();
 							} else {
 								newBatch.drawable = static_cast<GeometryDrawable*>(drawable);
@@ -1622,10 +1644,13 @@ namespace Turso3D
 						}
 
 						newBatch.geometry = batches.GetGeometry(j);
-						newBatch.programBits = (unsigned char)(drawable->Flags() & Drawable::FLAG_GEOMETRY_TYPE_BITS);
-						newBatch.geomIndex = (unsigned char)j;
+						newBatch.geomIndex = j;
 
-						if (!newBatch.programBits) {
+						newBatch.type = drawable->IsGeometryStatic() ? BATCH_TYPE_STATIC : BATCH_TYPE_COMPLEX;
+						newBatch.drawableFlags = drawable->Flags();
+						newBatch.lightMask = 0;
+
+						if (newBatch.type == BATCH_TYPE_STATIC) {
 							newBatch.worldTransform = &drawable->WorldTransform();
 						} else {
 							newBatch.drawable = static_cast<GeometryDrawable*>(drawable);

@@ -780,6 +780,7 @@ namespace Turso3D
 	enum PresetUniform
 	{
 		U_WORLDMATRIX,
+		U_LIGHTMASK,
 		MAX_PRESET_UNIFORMS
 	};
 
@@ -787,6 +788,7 @@ namespace Turso3D
 	{
 		constexpr const char* data[] = {
 			"worldMatrix",
+			"modelLightMask",
 			nullptr
 		};
 		return data[value];
@@ -800,15 +802,6 @@ namespace Turso3D
 		UB_OBJECTDATA,
 		UB_MATERIALDATA,
 		UB_CUSTOM
-	};
-
-	// Geometry types for vertex shader.
-	enum GeometryType
-	{
-		GEOM_STATIC = 0,
-		GEOM_SKINNED,
-		GEOM_INSTANCED,
-		GEOM_CUSTOM
 	};
 
 	// Types of shaders

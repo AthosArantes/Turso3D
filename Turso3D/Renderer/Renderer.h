@@ -172,8 +172,10 @@ namespace Turso3D
 		Vector4 attenuation;
 		// Light color.
 		Color color;
+		// Light view mask
+		unsigned viewMask;
 		// Shadow parameters.
-		Vector4 shadowParameters;
+		alignas(16) Vector4 shadowParameters;
 		// Shadow matrix. For point lights, contains extra parameters.
 		Matrix4 shadowMatrix;
 	};

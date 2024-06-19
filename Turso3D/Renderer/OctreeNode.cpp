@@ -15,7 +15,8 @@ namespace Turso3D
 		lastUpdateFrameNumber(0),
 		distance(0.0f),
 		maxDistance(0.0f),
-		viewMask(1u)
+		viewMask(1),
+		lightMask(0)
 	{
 		SetFlag(FLAG_BOUNDING_BOX_DIRTY, true);
 	}
@@ -112,6 +113,11 @@ namespace Turso3D
 		unsigned old_mask = drawable->viewMask;
 		drawable->viewMask = mask;
 		OnViewMaskChanged(old_mask);
+	}
+
+	void OctreeNode::SetLightMask(unsigned mask)
+	{
+		drawable->lightMask = mask;
 	}
 
 	void OctreeNode::OnViewMaskChanged(unsigned oldViewMask)

@@ -33,20 +33,29 @@ namespace Turso3D
 		return data[value];
 	}
 
-	// Shader program bits
-	constexpr unsigned SP_STATIC = 0x0;
-	constexpr unsigned SP_SKINNED = 0x1;
-	constexpr unsigned SP_INSTANCED = 0x2;
-	constexpr unsigned SP_CUSTOMGEOM = 0x3;
-	constexpr unsigned SP_GEOMETRYBITS = 0x3;
-
-	constexpr size_t MAX_SHADER_VARIATIONS = 4;
-
 	// ==========================================================================================
 	// Render pass, which defines render state and shaders.
 	// A material may define several of these.
 	class Pass
 	{
+	public:
+		enum class GeometryPermutation
+		{
+			None,
+			Skinned,
+			Instanced
+		};
+		enum class LightMaskPermutation
+		{
+			Disabled,
+			Enabled
+		};
+
+	private:
+		constexpr static size_t MaxGeometryPermutation = 3;
+		constexpr static size_t MaxLightMaskPermutation = 2;
+		constexpr static size_t MaxPassPermutations = MaxGeometryPermutation * MaxLightMaskPermutation;
+
 	public:
 		// Construct.
 		Pass(Material* parent);
@@ -58,18 +67,21 @@ namespace Turso3D
 		void SetRenderState(BlendMode blendMode, CompareMode depthTest = CMP_LESS, bool colorWrite = true, bool depthWrite = true);
 
 		// Get a shader program and cache for later use.
-		ShaderProgram* GetShaderProgram(uint8_t programBits)
+		ShaderProgram* GetShaderProgram(GeometryPermutation geometry, LightMaskPermutation lightmask)
 		{
-			if (shaderPrograms[programBits]) {
-				return shaderPrograms[programBits].get();
+			size_t index = (size_t)geometry + (size_t)lightmask +
+				(MaxGeometryPermutation * (size_t)lightmask);
+
+			if (shaderPrograms[index]) {
+				return shaderPrograms[index].get();
 			}
 
 			if (!shader) {
 				return nullptr;
 			}
 
-			CreateShaderProgram(programBits);
-			return shaderPrograms[programBits].get();
+			shaderPrograms[index] = CreateShaderProgram(geometry, lightmask);
+			return shaderPrograms[index].get();
 		}
 
 		// Reset existing shader programs.
@@ -77,12 +89,6 @@ namespace Turso3D
 
 		// Return parent material.
 		Material* Parent() const { return parent; }
-		// Return shader.
-		const std::shared_ptr<Shader>& GetShader() const { return shader; }
-		// Return vertex shader defines.
-		const std::string& VSDefines() const { return vsDefines; }
-		// Return fragment shader defines.
-		const std::string& FSDefines() const { return fsDefines; }
 		// Return blend mode.
 		BlendMode GetBlendMode() const { return blendMode; }
 		// Return depth test mode.
@@ -92,8 +98,15 @@ namespace Turso3D
 		// Return depth write flag.
 		bool GetDepthWrite() const { return depthWrite; }
 
+		// Return shader.
+		const std::shared_ptr<Shader>& GetShader() const { return shader; }
+		// Return vertex shader defines.
+		const std::string& VSDefines() const { return vsDefines; }
+		// Return fragment shader defines.
+		const std::string& FSDefines() const { return fsDefines; }
+
 	private:
-		void CreateShaderProgram(uint8_t programBits);
+		std::shared_ptr<ShaderProgram> CreateShaderProgram(GeometryPermutation geometry, LightMaskPermutation lightmask);
 
 	public:
 		// Last sort key for combined distance and state sorting. Used by Renderer.
@@ -110,14 +123,16 @@ namespace Turso3D
 		bool colorWrite;
 		// Depth write flag.
 		bool depthWrite;
-		// Cached shader variations.
-		std::shared_ptr<ShaderProgram> shaderPrograms[MAX_SHADER_VARIATIONS];
+
 		// Shader resource.
 		std::shared_ptr<Shader> shader;
 		// Vertex shader defines.
 		std::string vsDefines;
 		// Fragment shader defines.
 		std::string fsDefines;
+
+		// Cached shader variations.
+		std::shared_ptr<ShaderProgram> shaderPrograms[MaxPassPermutations];
 	};
 
 	// Material resource, which describes how to render 3D geometry and refers to textures.
@@ -164,12 +179,9 @@ namespace Turso3D
 		void DefineUniforms(const std::vector<std::pair<std::string, Vector4>>& uniforms);
 		// Set an uniform value by index.
 		void SetUniform(size_t index, const Vector4& value);
-		// Set an uniform value by name.
-		void SetUniform(const std::string& name, const Vector4& value);
-		// Set an uniform value by name.
-		void SetUniform(const char* name, const Vector4& value);
 		// Set an uniform value by name hash.
 		void SetUniform(StringHash nameHash, const Vector4& value);
+
 		// Set culling mode, shared by all passes.
 		void SetCullMode(CullMode mode);
 
@@ -188,10 +200,6 @@ namespace Turso3D
 		size_t NumUniforms() const { return uniformValues.size(); }
 		// Return uniform value by index.
 		const Vector4& Uniform(size_t index) const { return uniformValues[index]; }
-		// Return uniform value by name.
-		const Vector4& Uniform(const std::string& name) const;
-		// Return uniform value by name.
-		const Vector4& Uniform(const char* name) const;
 		// Return uniform value by name hash.
 		const Vector4& Uniform(StringHash nameHash) const;
 		// Return culling mode.
@@ -216,10 +224,12 @@ namespace Turso3D
 	private:
 		// Culling mode.
 		CullMode cullMode;
+
 		// Passes.
 		std::shared_ptr<Pass> passes[MAX_PASS_TYPES];
 		// Material textures.
 		std::shared_ptr<Texture> textures[MAX_MATERIAL_TEXTURE_UNITS];
+
 		// Uniform buffer.
 		mutable std::shared_ptr<UniformBuffer> uniformBuffer;
 		// Uniform name hashes.

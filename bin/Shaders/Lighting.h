@@ -136,6 +136,12 @@ vec3 CalculateDirLight(const in vec4 worldPos, const in vec3 normal, const in ve
 
 vec3 CalculateLight(const in uint index, const in vec4 worldPos, const in vec3 normal, const in vec3 albedo, const in vec3 f0, const in float metallic, const in float roughness)
 {
+#ifdef LIGHTMASK
+	if ((lights[index].viewMask & modelLightMask) == 0u) {
+		return vec3(0.0);
+	}
+#endif
+
 	vec3 V = normalize(cameraPosition - worldPos.xyz);
 
 	vec3 lightPosition = lights[index].position.xyz;
@@ -154,6 +160,10 @@ vec3 CalculateLight(const in uint index, const in vec4 worldPos, const in vec3 n
 	float HdotV = max(dot(H, V), 0.0);
 
 	float attenuation = max(1.0 - dot(scaledLightVec, scaledLightVec), 0.0);
+	if (attenuation == 0.0) {
+		return vec3(0.0);
+	}
+
 	float shadow = max(SampleShadow(index, worldPos, lightVec, L), 0.0);
 
 	return CookTorranceBRDF(NdotV, NdotH, NdotL, HdotV, lightColor.rgb, albedo, f0, metallic, roughness) * attenuation * shadow;

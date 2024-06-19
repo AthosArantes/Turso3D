@@ -242,7 +242,7 @@ void Application::SetupEnvironmentLighting()
 	Material::SetGlobalShaderDefines("", "HQSHADOW");
 	renderer->SetShadowDepthBiasMul(biasMul, biasMul);
 
-#if 1
+#if 0
 	// Sun
 	Light* light = root->CreateChild<Light>();
 	//light->SetStatic(true);
@@ -257,7 +257,7 @@ void Application::SetupEnvironmentLighting()
 	light->SetShadowMaxDistance(50.0f);
 	light->SetMaxDistance(0.0f);
 	light->SetEnabled(true);
-#elif 0
+#elif 1
 	// Moon
 	Light* light = root->CreateChild<Light>();
 	//light->SetStatic(true);
@@ -369,6 +369,18 @@ void Application::CreateThousandMushroomScene()
 					mushroom->SetCastShadows(true);
 				}
 			}
+
+			if (x == 0 && (y % 2) == 0) {
+				Light* light = root->CreateChild<Light>();
+				light->SetPosition(floor->Position() + Vector3 {0.0f, 3.0f, 0.0f});
+				light->SetLightType(LIGHT_POINT);
+				light->SetCastShadows(true);
+				light->SetColor(Color::WHITE() * 60.0f);
+				light->SetRange(20.0f);
+				light->SetShadowMapSize(512);
+				//light->SetShadowMaxDistance(10.0f);
+				//light->SetMaxDistance(50.0f);
+			}
 		}
 	}
 }
@@ -385,6 +397,9 @@ void Application::CreateWalkingCharacter()
 	character->SetModel(charModel);
 	character->SetCastShadows(true);
 	character->SetMaxDistance(600.0f);
+
+	// Uncomment this line and the character will no longer be lit by the point lights.
+	//character->SetLightMask(0x2);
 
 	AnimationState* state = character->AddAnimationState(cache->LoadResource<Animation>("Jack_Walk.ani"));
 	state->SetWeight(1.0f);

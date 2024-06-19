@@ -49,16 +49,18 @@ namespace Turso3D
 		{
 			FLAG_STATIC_GEOMETRY = 0x0,
 			FLAG_SKINNED_GEOMETRY = 0x1,
-			FLAG_INSTANCED_GEOMETRY = 0x2,
 			FLAG_CUSTOM_GEOMETRY = 0x3,
-			FLAG_GEOMETRY_TYPE_BITS = 0x3,
+
 			FLAG_LIGHT = 0x4,
 			FLAG_GEOMETRY = 0x8,
+
 			FLAG_STATIC = 0x10,
 			FLAG_CAST_SHADOWS = 0x20,
+
 			FLAG_UPDATE_INVISIBLE = 0x40,
 			FLAG_HAS_LOD_LEVELS = 0x80,
 			FLAG_OCTREE_UPDATE_CALL = 0x100,
+
 			FLAG_WORLD_TRANSFORM_DIRTY = 0x200,
 			FLAG_BOUNDING_BOX_DIRTY = 0x400,
 			FLAG_OCTREE_REINSERT_QUEUED = 0x800
@@ -74,7 +76,7 @@ namespace Turso3D
 		virtual void OnWorldBoundingBoxUpdate() const;
 		// Do processing before octree reinsertion, e.g. animation.
 		// Called by Octree in worker threads.
-		// Must be opted-in by setting DF_OCTREE_UPDATE_CALL flag.
+		// Must be opted-in by setting FLAG_OCTREE_UPDATE_CALL flag.
 		virtual void OnOctreeUpdate(unsigned short frameNumber);
 		// Prepare object for rendering.
 		// Reset framenumber and calculate distance from camera.
@@ -94,6 +96,9 @@ namespace Turso3D
 		// Return current octree octant this drawable resides in.
 		Octant* GetOctant() const { return octant; }
 
+		// Returns whether the geometry type is static.
+		bool IsGeometryStatic() const { return (flags & FLAG_CUSTOM_GEOMETRY) == FLAG_STATIC_GEOMETRY; }
+
 		// Return whether is static.
 		bool IsStatic() const { return TestFlag(FLAG_STATIC); }
 		// Return distance from camera in the current view.
@@ -102,6 +107,8 @@ namespace Turso3D
 		float MaxDistance() const { return maxDistance; }
 		// Return the view mask used for selective rendering.
 		unsigned ViewMask() const { return viewMask; }
+		// Return the light mask used to control which lights contribute to this geometry.
+		unsigned LightMask() const { return lightMask; }
 
 		// Return last frame number when was visible.
 		// The frames are counted by Renderer internally and have no significance outside it.
@@ -191,6 +198,8 @@ namespace Turso3D
 		float maxDistance;
 		// Mask used for selective rendering.
 		unsigned viewMask;
+		// Mask used to control which light contribute to this geometry.
+		unsigned lightMask;
 
 		// Owner scene node.
 		OctreeNodeBase* owner;
@@ -214,6 +223,9 @@ namespace Turso3D
 		void SetMaxDistance(float distance);
 		// Set view mask.
 		void SetViewMask(unsigned mask);
+		// Set light mask.
+		// Only effective if the FLAG_USE_LIGHTMASK is set.
+		void SetLightMask(unsigned mask);
 
 		// Return whether is static.
 		bool IsStatic() const { return drawable->TestFlag(Drawable::FLAG_STATIC); }
@@ -225,8 +237,10 @@ namespace Turso3D
 		float Distance() const { return drawable->Distance(); }
 		// Return max distance for rendering, or 0 for unlimited.
 		float MaxDistance() const { return drawable->MaxDistance(); }
-		// Return view mask.
+		// Return the view mask used for selective rendering.
 		unsigned ViewMask() const { return drawable->ViewMask(); }
+		// Return the light mask used to control which lights contribute to this geometry.
+		unsigned LightMask() const { return drawable->LightMask(); }
 
 		// Return last frame number when was visible.
 		// The frames are counted by Renderer internally and have no significance outside it.

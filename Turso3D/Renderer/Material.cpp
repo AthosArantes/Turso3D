@@ -15,15 +15,6 @@ namespace
 {
 	using namespace Turso3D;
 
-	const char* GeometryDefines[] =
-	{
-		"",
-		"SKINNED ",
-		"INSTANCED ",
-		"",
-		nullptr
-	};
-
 	static std::set<Material*> AllMaterials;
 	static std::string GlobalDefines[MAX_SHADER_TYPES];
 }
@@ -222,19 +213,26 @@ namespace Turso3D
 
 	void Pass::ResetShaderPrograms()
 	{
-		for (size_t i = 0; i < MAX_SHADER_VARIATIONS; ++i) {
+		for (size_t i = 0; i < MaxPassPermutations; ++i) {
 			shaderPrograms[i].reset();
 		}
 	}
 
-	void Pass::CreateShaderProgram(uint8_t programBits)
+	std::shared_ptr<ShaderProgram> Pass::CreateShaderProgram(GeometryPermutation geometry, LightMaskPermutation lightmask)
 	{
-		uint8_t geomBits = programBits & SP_GEOMETRYBITS;
-		std::shared_ptr<ShaderProgram> newShaderProgram = shader->Program(
-			ShaderPermutation {GlobalDefines[SHADER_VS], parent->VSDefines(), vsDefines, GeometryDefines[geomBits]},
-			ShaderPermutation {GlobalDefines[SHADER_FS], parent->FSDefines(), fsDefines}
+		constexpr std::string_view geometryDefines[] = {
+			{},
+			{"SKINNED"},
+			{"INSTANCED"}
+		};
+		constexpr std::string_view lightmaskDefines[] = {
+			{},
+			{"LIGHTMASK"}
+		};
+		return shader->Program(
+			ShaderPermutation {GlobalDefines[SHADER_VS], parent->VSDefines(), vsDefines, geometryDefines[(size_t)geometry]},
+			ShaderPermutation {GlobalDefines[SHADER_FS], parent->FSDefines(), fsDefines, lightmaskDefines[(size_t)lightmask]}
 		);
-		shaderPrograms[programBits] = newShaderProgram;
 	}
 
 	// ==========================================================================================
@@ -430,16 +428,6 @@ namespace Turso3D
 		uniformsDirty = true;
 	}
 
-	void Material::SetUniform(const std::string& name_, const Vector4& value)
-	{
-		SetUniform(StringHash(name_), value);
-	}
-
-	void Material::SetUniform(const char* name_, const Vector4& value)
-	{
-		SetUniform(StringHash(name_), value);
-	}
-
 	void Material::SetUniform(StringHash nameHash_, const Vector4& value)
 	{
 		for (size_t i = 0; i < uniformNameHashes.size(); ++i) {
@@ -475,16 +463,6 @@ namespace Turso3D
 			uniformsDirty = false;
 		}
 		return uniformBuffer.get();
-	}
-
-	const Vector4& Material::Uniform(const std::string& name_) const
-	{
-		return Uniform(StringHash(name_));
-	}
-
-	const Vector4& Material::Uniform(const char* name_) const
-	{
-		return Uniform(StringHash(name_));
 	}
 
 	const Vector4& Material::Uniform(StringHash nameHash_) const
