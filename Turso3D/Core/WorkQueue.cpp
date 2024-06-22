@@ -74,14 +74,12 @@ namespace Turso3D
 		assert(task->numDependencies.load() == 0);
 
 		if (threads.size()) {
-			assert(task->numDependencies.load() == 0);
+			numPendingTasks.fetch_add(1);
 			{
 				std::lock_guard<std::mutex> lock(queueMutex);
 				tasks.push(task);
 			}
-
 			numQueuedTasks.fetch_add(1);
-			numPendingTasks.fetch_add(1);
 
 			signal.notify_one();
 		} else {
@@ -93,6 +91,7 @@ namespace Turso3D
 	void WorkQueue::QueueTasks(size_t count, Task** tasks_)
 	{
 		if (threads.size()) {
+			numPendingTasks.fetch_add((int)count);
 			{
 				std::lock_guard<std::mutex> lock(queueMutex);
 				for (size_t i = 0; i < count; ++i) {
@@ -101,9 +100,7 @@ namespace Turso3D
 					tasks.push(tasks_[i]);
 				}
 			}
-
 			numQueuedTasks.fetch_add((int)count);
-			numPendingTasks.fetch_add((int)count);
 
 			if (count >= threads.size()) {
 				signal.notify_all();
@@ -125,12 +122,12 @@ namespace Turso3D
 		assert(task);
 		assert(dependency);
 
-		dependency->dependentTasks.push_back(task);
-
 		// If this is the first dependency added, increment the global pending task counter so we know to wait for the dependent task in Complete().
 		if (task->numDependencies.fetch_add(1) == 0) {
 			numPendingTasks.fetch_add(1);
 		}
+
+		dependency->dependentTasks.push_back(task);
 	}
 
 	void WorkQueue::Complete()
@@ -139,23 +136,14 @@ namespace Turso3D
 			return;
 		}
 
-		for (;;) {
-			if (!numPendingTasks.load()) {
-				break;
-			}
-
-			// Avoid locking the queue mutex if do not have tasks in queue, just wait for the workers to finish
-			if (!numQueuedTasks.load()) {
-				continue;
-			}
-
-			// Otherwise if have still tasks, execute them in the main thread
+		// Execute queued tasks in main thread to speed up
+		while (numQueuedTasks.load()) {
 			Task* task;
 
 			{
 				std::lock_guard<std::mutex> lock(queueMutex);
 				if (!tasks.size()) {
-					continue;
+					break;
 				}
 
 				task = tasks.front();
@@ -165,11 +153,15 @@ namespace Turso3D
 			numQueuedTasks.fetch_add(-1);
 			CompleteTask(task, 0);
 		}
+
+		// Finally wait for all tasks to finish
+		while (numPendingTasks.load()) {
+		}
 	}
 
 	bool WorkQueue::TryComplete()
 	{
-		if (!threads.size() || !numPendingTasks.load() || !numQueuedTasks.load()) {
+		if (!threads.size() || !numQueuedTasks.load()) {
 			return false;
 		}
 
@@ -235,8 +227,6 @@ namespace Turso3D
 							std::lock_guard<std::mutex> lock(queueMutex);
 							tasks.push(dependentTask);
 						}
-
-						// Note: numPendingTasks counter was already incremented when adding the first dependency, do not do again here
 						numQueuedTasks.fetch_add(1);
 
 						signal.notify_one();
