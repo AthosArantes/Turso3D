@@ -393,10 +393,15 @@ void Application::CreateWalkingCharacter()
 	std::shared_ptr<Model> charModel = cache->LoadResource<Model>("jack.tmf");
 
 	character = root->CreateChild<AnimatedModel>();
-	character->SetStatic(false);
 	character->SetModel(charModel);
 	character->SetCastShadows(true);
 	character->SetMaxDistance(600.0f);
+
+	// Create skinned attachment that will use the bones animated by character.
+	SkinnedModel* attachment = character->CreateAttachment(charModel);
+	attachment->SetCastShadows(true);
+	attachment->SetPosition(Vector3 {0.5f, 0.0f, 0.0f});
+	attachment->SetUseParentTransform(true);
 
 	// Uncomment this line and the character will no longer be lit by the point lights.
 	//character->SetLightMask(0x2);

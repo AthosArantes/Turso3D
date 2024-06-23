@@ -140,6 +140,7 @@
 		<ClInclude Include="Renderer\Octree.h" />
 		<ClInclude Include="Renderer\OctreeNode.h" />
 		<ClInclude Include="Renderer\Renderer.h" />
+		<ClInclude Include="Renderer\SkinnedModel.h" />
 		<ClInclude Include="Renderer\StaticModel.h" />
 		<ClInclude Include="Resource\Resource.h" />
 		<ClInclude Include="Resource\ResourceCache.h" />
@@ -188,6 +189,7 @@
 		<ClCompile Include="Renderer\Octree.cpp" />
 		<ClCompile Include="Renderer\OctreeNode.cpp" />
 		<ClCompile Include="Renderer\Renderer.cpp" />
+		<ClCompile Include="Renderer\SkinnedModel.cpp" />
 		<ClCompile Include="Renderer\StaticModel.cpp" />
 		<ClCompile Include="Resource\Resource.cpp" />
 		<ClCompile Include="Resource\ResourceCache.cpp" />

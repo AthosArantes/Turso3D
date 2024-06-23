@@ -6,13 +6,17 @@
 #include <Turso3D/Renderer/Octree.h>
 #include <Turso3D/Resource/ResourceCache.h>
 
-namespace Turso3D
+namespace
 {
+	using namespace Turso3D;
+
 	static Vector3 DOT_SCALE(1 / 3.0f, 1 / 3.0f, 1 / 3.0f);
 
 	static Allocator<StaticModelDrawable> drawableAllocator;
+}
 
-	// ==========================================================================================
+namespace Turso3D
+{
 	StaticModelDrawable::StaticModelDrawable() :
 		lodBias(1.0f)
 	{
