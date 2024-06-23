@@ -91,6 +91,13 @@ namespace Turso3D
 		}
 	}
 
+	void Node::RemoveSelf()
+	{
+		if (parent) {
+			parent->RemoveChild(this);
+		}
+	}
+
 	void Node::DestroyChild(Node* child)
 	{
 		if (child && child->parent == this) {
@@ -108,13 +115,6 @@ namespace Turso3D
 	void Node::DestroyAllChildren()
 	{
 		children.clear();
-	}
-
-	void Node::RemoveSelf()
-	{
-		if (parent) {
-			parent->RemoveChild(this);
-		}
 	}
 
 	size_t Node::NumPersistentChildren() const
@@ -144,6 +144,8 @@ namespace Turso3D
 	void Node::SetParent(Node* newParent)
 	{
 		Node* oldParent = parent;
+		RemoveSelf();
+
 		parent = newParent;
 		SetScene(newParent ? newParent->scene : nullptr);
 

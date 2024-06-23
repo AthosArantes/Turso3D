@@ -49,7 +49,8 @@ namespace Turso3D
 		{
 			FLAG_STATIC_GEOMETRY = 0x0,
 			FLAG_SKINNED_GEOMETRY = 0x1,
-			FLAG_CUSTOM_GEOMETRY = 0x3,
+			FLAG_CUSTOM_GEOMETRY = 0x2,
+			FLAG_COMPLEX_GEOMETRY = 0x3,
 
 			FLAG_LIGHT = 0x4,
 			FLAG_GEOMETRY = 0x8,
@@ -97,7 +98,7 @@ namespace Turso3D
 		Octant* GetOctant() const { return octant; }
 
 		// Returns whether the geometry type is static.
-		bool IsGeometryStatic() const { return (flags & FLAG_CUSTOM_GEOMETRY) == FLAG_STATIC_GEOMETRY; }
+		bool IsGeometryStatic() const { return (flags & FLAG_COMPLEX_GEOMETRY) == FLAG_STATIC_GEOMETRY; }
 
 		// Return whether is static.
 		bool IsStatic() const { return TestFlag(FLAG_STATIC); }
@@ -224,7 +225,6 @@ namespace Turso3D
 		// Set view mask.
 		void SetViewMask(unsigned mask);
 		// Set light mask.
-		// Only effective if the FLAG_USE_LIGHTMASK is set.
 		void SetLightMask(unsigned mask);
 
 		// Return whether is static.
