@@ -93,10 +93,10 @@ namespace Turso3D
 		// Return all animation states.
 		const std::vector<std::shared_ptr<AnimationState>>& AnimationStates() const { return GetDrawable()->animationStates; }
 
-		// Create a new skinned model as attachment to this model.
-		SkinnedModel* CreateAttachment(std::shared_ptr<Model> model);
-		// Destroy an attached skinned model.
-		void DestroyAttachment(SkinnedModel* model);
+		// Add a skinned model as attachment to this model.
+		void AddAttachment(SkinnedModel* model);
+		// Remove an attached skinned model.
+		void RemoveAttachment(SkinnedModel* model);
 		// Return all attachments.
 		const std::vector<SkinnedModel*>& GetAttachments() const { return attachments; }
 

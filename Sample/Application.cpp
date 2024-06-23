@@ -398,10 +398,17 @@ void Application::CreateWalkingCharacter()
 	character->SetMaxDistance(600.0f);
 
 	// Create skinned attachment that will use the bones animated by character.
-	SkinnedModel* attachment = character->CreateAttachment(charModel);
+	// If the model is created as child of character, then no additional transformations will be performed.
+	// In this case, creating the attachment as child of character will make it appear as one (because same model).
+	// However, in order to show the additional skinned object, it is created as child of the root bone, so that
+	// the parent transform is properly calculated.
+	SkinnedModel* attachment = character->RootBone()->CreateChild<SkinnedModel>();
+	attachment->SetModel(charModel);
+	attachment->SetupBones(character->RootBone());
 	attachment->SetCastShadows(true);
 	attachment->SetPosition(Vector3 {0.5f, 0.0f, 0.0f});
-	attachment->SetUseParentTransform(true);
+
+	character->AddAttachment(attachment);
 
 	// Uncomment this line and the character will no longer be lit by the point lights.
 	//character->SetLightMask(0x2);

@@ -30,18 +30,30 @@ namespace Turso3D
 	{
 		const std::vector<Bone*>& bones = Bones();
 		if (model && !bones.empty()) {
+			const Bone* root_bone = RootBone();
+
 			// Recalculate bounding box from bones only if they moved individually
 			if (skinFlags & FLAG_BONE_BOUNDING_BOX_DIRTY) {
 				const std::vector<ModelBone>& modelBones = model->Bones();
 
 				// Use a temporary bounding box for calculations in case many threads call this simultaneously
 				BoundingBox tempBox;
-				for (size_t i = 0; i < bones.size(); ++i) {
-					if (modelBones[i].active) {
-						if (skinFlags & FLAG_APPLY_PARENT_TRANSFORM) {
-							const Matrix3x4& bone_space = RootBone()->WorldTransform().Inverse() * bones[i]->WorldTransform();
-							tempBox.Merge(modelBones[i].boundingBox.Transformed(RootBone()->WorldTransform() * (owner->Transform() * bone_space)));
-						} else {
+
+				// Apply additional transformations if not sharing the same parent node from the root bone.
+				if (owner->Parent() != root_bone->Parent()) {
+					const Matrix3x4& wt = root_bone->WorldTransform();
+					const Matrix3x4& wti = wt.Inverse();
+					const Matrix3x4& drawable_space = wti * owner->WorldTransform();
+
+					for (size_t i = 0; i < bones.size(); ++i) {
+						if (modelBones[i].active) {
+							const Matrix3x4& bone_space = wti * bones[i]->WorldTransform();
+							tempBox.Merge(modelBones[i].boundingBox.Transformed(wt * (drawable_space * bone_space)));
+						}
+					}
+				} else {
+					for (size_t i = 0; i < bones.size(); ++i) {
+						if (modelBones[i].active) {
 							tempBox.Merge(modelBones[i].boundingBox.Transformed(bones[i]->WorldTransform()));
 						}
 					}
@@ -71,9 +83,7 @@ namespace Turso3D
 		if (!StaticModelDrawable::OnPrepareRender(frameNumber, camera)) {
 			return false;
 		}
-
 		PrepareForRender();
-
 		return true;
 	}
 
@@ -93,6 +103,11 @@ namespace Turso3D
 
 	void SkinnedModelDrawable::OnRaycast(std::vector<RaycastResult>& dest, const Ray& ray, float maxDistance_)
 	{
+		const Bone* root_bone = RootBone();
+		if (!root_bone) {
+			return;
+		}
+
 		if (ray.HitDistance(WorldBoundingBox()) < maxDistance_ && model) {
 			RaycastResult res;
 			res.distance = M_INFINITY;
@@ -100,16 +115,22 @@ namespace Turso3D
 			// Perform raycast against each bone in its local space
 			const std::vector<ModelBone>& modelBones = model->Bones();
 
+			const Matrix3x4& wt = root_bone->WorldTransform();
+			const Matrix3x4& wti = wt.Inverse();
+			const Matrix3x4& drawable_space = wti * owner->WorldTransform();
+
 			const std::vector<Bone*>& bones = Bones();
 			for (size_t i = 0; i < bones.size(); ++i) {
 				if (!modelBones[i].active) {
 					continue;
 				}
 
-				Matrix3x4 transform = bones[i]->WorldTransform();
-				if (skinFlags & FLAG_APPLY_PARENT_TRANSFORM) {
-					const Matrix3x4& bone_space = RootBone()->WorldTransform().Inverse() * bones[i]->WorldTransform();
-					transform = RootBone()->WorldTransform() * (owner->Transform() * bone_space);
+				Matrix3x4 transform;
+				if (owner->Parent() != root_bone->Parent()) {
+					const Matrix3x4& bone_space = wti * bones[i]->WorldTransform();
+					transform = wt * (drawable_space * bone_space);
+				} else {
+					transform = bones[i]->WorldTransform();
 				}
 
 				Ray localRay = ray.Transformed(transform.Inverse());
@@ -142,7 +163,7 @@ namespace Turso3D
 		debug->AddBoundingBox(WorldBoundingBox(), Color::GREEN(), false);
 
 		// Do not render the bone hierarchy as it'll be done by the owner.
-		Bone* root_bone = RootBone();
+		const Bone* root_bone = RootBone();
 		if (!root_bone || root_bone->Parent() != owner) {
 			return;
 		}
@@ -160,13 +181,19 @@ namespace Turso3D
 
 	void SkinnedModelDrawable::UpdateSkinning()
 	{
+		const Bone* root_bone = RootBone();
 		const std::vector<Bone*>& bones = Bones();
 		const std::vector<ModelBone>& modelBones = model->Bones();
 
-		if (skinFlags & FLAG_APPLY_PARENT_TRANSFORM) {
+		// Apply additional transformations if not sharing the same parent node from the root bone.
+		if (owner->Parent() != root_bone->Parent()) {
+			const Matrix3x4& wt = root_bone->WorldTransform();
+			const Matrix3x4& wti = wt.Inverse();
+			const Matrix3x4& drawable_space = wti * owner->WorldTransform();
+
 			for (size_t i = 0; i < bones.size(); ++i) {
-				const Matrix3x4& bone_space = RootBone()->WorldTransform().Inverse() * bones[i]->WorldTransform();
-				skinMatrices[i] = (RootBone()->WorldTransform() * (owner->Transform() * bone_space)) * modelBones[i].offsetMatrix;
+				const Matrix3x4& bone_space = wti * bones[i]->WorldTransform();
+				skinMatrices[i] = (wt * (drawable_space * bone_space)) * modelBones[i].offsetMatrix;
 			}
 		} else {
 			for (size_t i = 0; i < bones.size(); ++i) {
@@ -284,16 +311,6 @@ namespace Turso3D
 			RemoveFromOctree();
 			drawableAllocator.Free(static_cast<SkinnedModelDrawable*>(drawable));
 			drawable = nullptr;
-		}
-	}
-
-	void SkinnedModel::SetUseParentTransform(bool enable)
-	{
-		SkinnedModelDrawable* drawable = GetDrawable();
-		if (enable) {
-			drawable->skinFlags |= SkinnedModelDrawable::FLAG_APPLY_PARENT_TRANSFORM;
-		} else {
-			drawable->skinFlags &= ~SkinnedModelDrawable::FLAG_APPLY_PARENT_TRANSFORM;
 		}
 	}
 

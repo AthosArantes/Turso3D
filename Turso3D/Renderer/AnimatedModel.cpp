@@ -254,24 +254,21 @@ namespace Turso3D
 		return index < drawable->animationStates.size() ? drawable->animationStates[index].get() : nullptr;
 	}
 
-	SkinnedModel* AnimatedModel::CreateAttachment(std::shared_ptr<Model> model)
+	void AnimatedModel::AddAttachment(SkinnedModel* model)
 	{
-		SkinnedModel* attachment = CreateChild<SkinnedModel>();
-		attachment->SetModel(model);
-
-		// Use the root bone from this animated model.
-		attachment->SetupBones(rootBone);
-		attachment->SetSkinningDirty();
-
-		attachments.push_back(attachment);
-		return attachment;
+		for (size_t i = 0; i < attachments.size(); ++i) {
+			if (attachments[i] == model) {
+				return;
+			}
+		}
+		attachments.push_back(model);
+		model->SetSkinningDirty();
 	}
 
-	void AnimatedModel::DestroyAttachment(SkinnedModel* attachment)
+	void AnimatedModel::RemoveAttachment(SkinnedModel* attachment)
 	{
 		for (size_t i = 0; i < attachments.size(); ++i) {
 			if (attachments[i] == attachment) {
-				DestroyChild(attachments[i]);
 				std::swap(attachments.back(), attachments[i]);
 				attachments.pop_back();
 				return;

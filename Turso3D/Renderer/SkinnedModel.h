@@ -20,8 +20,7 @@ namespace Turso3D
 		{
 			FLAG_SKINNING_DIRTY = 0x1,
 			FLAG_SKINNING_BUFFER_DIRTY = 0x2,
-			FLAG_BONE_BOUNDING_BOX_DIRTY = 0x4,
-			FLAG_APPLY_PARENT_TRANSFORM = 0x8
+			FLAG_BONE_BOUNDING_BOX_DIRTY = 0x4
 		};
 
 	public:
@@ -139,11 +138,6 @@ namespace Turso3D
 
 		// Return derived drawable.
 		SkinnedModelDrawable* GetDrawable() const { return static_cast<SkinnedModelDrawable*>(drawable); }
-
-		// Sets whether to apply parent transform when calculating skin matrices.
-		void SetUseParentTransform(bool enable);
-		// Gets whether parent transform is being used when calculating skin matrices.
-		bool IsUsingParentTransform() const { return GetDrawable()->skinFlags & SkinnedModelDrawable::FLAG_APPLY_PARENT_TRANSFORM; }
 
 		// Create bone scene nodes from the model.
 		// If compatible bones already exist in the root hierarchy, they are taken into use instead of creating new.
