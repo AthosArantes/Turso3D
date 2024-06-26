@@ -296,8 +296,6 @@ namespace Turso3D
 		bool shadowMapsDirty;
 		// Cluster frustums dirty flag.
 		bool clusterFrustumsDirty;
-		// Instancing supported flag.
-		bool hasInstancing;
 		// Previous frame camera position for occlusion culling bounding box elongation.
 		Vector3 previousCameraPosition;
 		// Last frame time for occlusion query staggering.

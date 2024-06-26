@@ -132,7 +132,7 @@ void UiManager::Update(double dt)
 
 	// Render
 	{
-		TURSO3D_GL_MARKER("Rml Ui");
+		TURSO3D_GRAPHICS_MARKER("Ui");
 		impl->rmlRenderer->BeginRender();
 
 		impl->frameStatsContext->Render();
@@ -143,7 +143,7 @@ void UiManager::Update(double dt)
 
 void UiManager::Compose(Texture* background, Texture* blurredBackground)
 {
-	TURSO3D_GL_MARKER("UI Compose");
+	TURSO3D_GRAPHICS_MARKER("UI Compose");
 
 	composeProgram->Bind();
 

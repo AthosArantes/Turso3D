@@ -287,8 +287,6 @@ namespace Turso3D
 
 	void DebugRenderer::Render()
 	{
-		TURSO3D_GL_MARKER("Render Debug Lines");
-
 		// Early-out if no geometry to render or shader failed to load
 		if (!vertices.size() || !shaderProgram) {
 			return;
@@ -319,8 +317,8 @@ namespace Turso3D
 		int location = shaderProgram->Uniform(viewProjMatrixHash);
 		graphics->SetUniform(location, projection * view);
 
-		graphics->SetVertexBuffer(vertexBuffer.get(), shaderProgram.get());
-		graphics->SetIndexBuffer(indexBuffer.get());
+		vertexBuffer->Bind(shaderProgram->Attributes());
+		indexBuffer->Bind();
 
 		if (indices.size()) {
 			graphics->SetRenderState(BLEND_REPLACE, CULL_NONE, CMP_LESS, true, false);

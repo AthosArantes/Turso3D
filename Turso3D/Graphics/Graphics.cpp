@@ -20,16 +20,16 @@ extern "C" {
 	__declspec(dllexport) int AmdPowerXpressRequestHighPerformance = 1;
 }
 
-namespace Turso3D
+namespace
 {
-	static const unsigned glPrimitiveTypes[] =
-	{
+	using namespace Turso3D;
+
+	static const unsigned glPrimitiveTypes[] = {
 		GL_LINES,
 		GL_TRIANGLES
 	};
 
-	static const unsigned glCompareFuncs[] =
-	{
+	static const unsigned glCompareFuncs[] = {
 		GL_NEVER,
 		GL_LESS,
 		GL_EQUAL,
@@ -40,8 +40,7 @@ namespace Turso3D
 		GL_ALWAYS,
 	};
 
-	static const unsigned glSrcBlend[] =
-	{
+	static const unsigned glSrcBlend[] = {
 		GL_ONE,
 		GL_ONE,
 		GL_DST_COLOR,
@@ -53,8 +52,7 @@ namespace Turso3D
 		GL_SRC_ALPHA
 	};
 
-	static const unsigned glDestBlend[] =
-	{
+	static const unsigned glDestBlend[] = {
 		GL_ZERO,
 		GL_ONE,
 		GL_ZERO,
@@ -66,8 +64,7 @@ namespace Turso3D
 		GL_ONE
 	};
 
-	static const unsigned glBlendOp[] =
-	{
+	static const unsigned glBlendOp[] = {
 		GL_FUNC_ADD,
 		GL_FUNC_ADD,
 		GL_FUNC_ADD,
@@ -77,6 +74,12 @@ namespace Turso3D
 		GL_FUNC_ADD,
 		GL_FUNC_REVERSE_SUBTRACT,
 		GL_FUNC_REVERSE_SUBTRACT
+	};
+
+	static const unsigned glCullMode[] = {
+		0,
+		GL_FRONT,
+		GL_BACK
 	};
 
 #ifdef _DEBUG
@@ -98,18 +101,29 @@ namespace Turso3D
 		}
 	}
 #endif
+}
 
-	// ==========================================================================================
-	Graphics::Marker::Marker(const char* name)
+// ==========================================================================================
+
+#ifdef _DEBUG
+namespace Turso3D
+{
+	GraphicsMarker::GraphicsMarker(const char* name)
 	{
 		glPushDebugGroup(GL_DEBUG_SOURCE_APPLICATION, 0, -1, name);
 	}
-	Graphics::Marker::~Marker()
+
+	GraphicsMarker::~GraphicsMarker()
 	{
 		glPopDebugGroup();
 	}
+}
+#endif
 
-	// ==========================================================================================
+// ==========================================================================================
+
+namespace Turso3D
+{
 	Graphics::Graphics() :
 		window(nullptr),
 		context(nullptr),
@@ -120,7 +134,6 @@ namespace Turso3D
 		lastDepthWrite(true),
 		lastDepthBias(false),
 		vsync(false),
-		hasInstancing(false),
 		instancingEnabled(false)
 	{
 	}
@@ -222,19 +235,21 @@ namespace Turso3D
 
 		glPixelStorei(GL_PACK_ALIGNMENT, 1);
 		glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+
 		glEnable(GL_DEPTH_TEST);
 		glEnable(GL_MULTISAMPLE);
 		glEnable(GL_FRAMEBUFFER_SRGB);
 		glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
+
 		glClearDepth(1.0f);
 		glDepthRange(0.0f, 1.0f);
 		glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 		glDepthMask(GL_TRUE);
+		glFrontFace(GL_CW); // Use Direct3D convention, ie. clockwise vertices define a front face
 
 		defaultVAO.Define();
 
 		// Use texcoords 3-5 for instancing if supported
-		hasInstancing = true;
 		glVertexAttribDivisor(ATTR_TEXCOORD3, 1);
 		glVertexAttribDivisor(ATTR_TEXCOORD4, 1);
 		glVertexAttribDivisor(ATTR_TEXCOORD5, 1);
@@ -284,15 +299,6 @@ namespace Turso3D
 	void Graphics::Present()
 	{
 		glfwSwapBuffers(window);
-	}
-
-	void Graphics::SetFrameBuffer(FrameBuffer* buffer)
-	{
-		if (buffer) {
-			buffer->Bind();
-		} else {
-			FrameBuffer::Unbind();
-		}
 	}
 
 	void Graphics::SetViewport(const IntRect& viewRect)
@@ -354,45 +360,15 @@ namespace Turso3D
 		glUniformMatrix4fv(location, 1, GL_FALSE, value.Data());
 	}
 
-	void Graphics::SetUniformBuffer(size_t index, UniformBuffer* buffer)
-	{
-		if (buffer) {
-			buffer->Bind(index);
-		} else {
-			UniformBuffer::Unbind(index);
-		}
-	}
-
-	void Graphics::SetTexture(size_t index, Texture* texture)
-	{
-		if (texture) {
-			texture->Bind(index);
-		} else {
-			Texture::Unbind(index);
-		}
-	}
-
-	void Graphics::SetVertexBuffer(VertexBuffer* buffer, ShaderProgram* program)
-	{
-		if (buffer && program) {
-			buffer->Bind(program->Attributes());
-		}
-	}
-
-	void Graphics::SetIndexBuffer(IndexBuffer* buffer)
-	{
-		if (buffer) {
-			buffer->Bind();
-		}
-	}
-
 	void Graphics::SetRenderState(BlendMode blendMode, CullMode cullMode, CompareMode depthTest, bool colorWrite, bool depthWrite)
 	{
 		if (blendMode != lastBlendMode) {
 			if (blendMode == BLEND_REPLACE) {
 				glDisable(GL_BLEND);
 			} else {
-				glEnable(GL_BLEND);
+				if (lastBlendMode == BLEND_REPLACE) {
+					glEnable(GL_BLEND);
+				}
 				glBlendFunc(glSrcBlend[blendMode], glDestBlend[blendMode]);
 				glBlendEquation(glBlendOp[blendMode]);
 			}
@@ -403,9 +379,10 @@ namespace Turso3D
 			if (cullMode == CULL_NONE) {
 				glDisable(GL_CULL_FACE);
 			} else {
-				// Use Direct3D convention, ie. clockwise vertices define a front face
-				glEnable(GL_CULL_FACE);
-				glCullFace(cullMode == CULL_BACK ? GL_FRONT : GL_BACK);
+				if (lastCullMode == CULL_NONE) {
+					glEnable(GL_CULL_FACE);
+				}
+				glCullFace(glCullMode[cullMode]);
 			}
 			lastCullMode = cullMode;
 		}
@@ -536,7 +513,7 @@ namespace Turso3D
 
 	void Graphics::DrawInstanced(PrimitiveType type, size_t drawStart, size_t drawCount, VertexBuffer* instanceVertexBuffer, size_t instanceStart, size_t instanceCount)
 	{
-		if (!hasInstancing || !instanceVertexBuffer) {
+		if (!instanceVertexBuffer) {
 			return;
 		}
 
@@ -560,7 +537,7 @@ namespace Turso3D
 	{
 		unsigned indexSize = (unsigned)IndexBuffer::BoundIndexSize();
 
-		if (!hasInstancing || !instanceVertexBuffer || !indexSize) {
+		if (!instanceVertexBuffer || !indexSize) {
 			return;
 		}
 

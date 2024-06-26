@@ -222,14 +222,16 @@ void Application::SetupEnvironmentLighting()
 
 	LightEnvironment* lightEnvironment = scene->GetEnvironmentLighting();
 	{
+		constexpr TextureAddressMode clamp = ADDRESS_CLAMP;
+
 		std::shared_ptr<Texture> iemTex = cache->LoadResource<Texture>("ibl/daysky_iem.dds");
-		iemTex->DefineSampler(FILTER_BILINEAR, ADDRESS_CLAMP, ADDRESS_CLAMP, ADDRESS_CLAMP);
+		iemTex->DefineSampler(FILTER_BILINEAR, clamp, clamp, clamp);
 
 		std::shared_ptr<Texture> pmremTex = cache->LoadResource<Texture>("ibl/daysky_pmrem.dds");
-		pmremTex->DefineSampler(FILTER_TRILINEAR, ADDRESS_CLAMP, ADDRESS_CLAMP, ADDRESS_CLAMP);
+		pmremTex->DefineSampler(FILTER_TRILINEAR, clamp, clamp, clamp);
 
 		std::shared_ptr<Texture> brdfTex = cache->LoadResource<Texture>("ibl/brdf.dds");
-		brdfTex->DefineSampler(FILTER_BILINEAR, ADDRESS_CLAMP, ADDRESS_CLAMP, ADDRESS_CLAMP);
+		brdfTex->DefineSampler(FILTER_BILINEAR, clamp, clamp, clamp);
 
 		lightEnvironment->SetIBLMaps(iemTex, pmremTex, brdfTex);
 	}
@@ -322,7 +324,7 @@ void Application::CreateSpheresScene()
 		for (unsigned i = 0; i < 4; ++i) {
 			Light* light = root->CreateChild<Light>();
 			light->SetPosition(lightPositions[i]);
-			//light->SetStatic(true);
+			light->SetStatic(true);
 			light->SetLightType(LIGHT_POINT);
 			//light->SetCastShadows(true);
 			//light->SetPosition(Vector3 {Random() * 2.0f - 1.0f, Random() * 2.0f - 1.0f, -1.0f} * 3.0f);
@@ -373,6 +375,7 @@ void Application::CreateThousandMushroomScene()
 			if (x == 0 && (y % 2) == 0) {
 				Light* light = root->CreateChild<Light>();
 				light->SetPosition(floor->Position() + Vector3 {0.0f, 3.0f, 0.0f});
+				light->SetStatic(true);
 				light->SetLightType(LIGHT_POINT);
 				light->SetCastShadows(true);
 				light->SetColor(Color::WHITE() * 60.0f);
@@ -409,6 +412,20 @@ void Application::CreateWalkingCharacter()
 	attachment->SetPosition(Vector3 {0.5f, 0.0f, 0.0f});
 
 	character->AddAttachment(attachment);
+
+	// Head lamp
+	{
+		Light* light = character->CreateChild<Light>();
+		light->SetPosition(Vector3 {0.0f, 2.0f, 0.0f});
+		light->Pitch(20.0f);
+		light->SetStatic(true);
+		light->SetLightType(LIGHT_SPOT);
+		light->SetCastShadows(true);
+		light->SetColor(Color::WHITE() * 100.0f);
+		light->SetRange(30.0f);
+		light->SetFov(90.0f);
+		light->SetShadowMapSize(512);
+	}
 
 	// Uncomment this line and the character will no longer be lit by the point lights.
 	//character->SetLightMask(0x2);
@@ -520,13 +537,23 @@ void Application::Render(double dt)
 	debugRenderer->SetView(camera.get());
 
 	// Now render the scene, starting with shadowmaps and opaque geometries
-	renderer->RenderShadowMaps();
+	{
+		TURSO3D_GRAPHICS_MARKER("Shadow Maps");
+		renderer->RenderShadowMaps();
+	}
 	graphics->SetViewport(viewRect);
 
 	// The default opaque shaders can write both color (first RT) and view-space normals (second RT).
 	hdrFbo->Bind();
-	renderer->RenderOpaque();
-	renderer->RenderAlpha();
+
+	{
+		TURSO3D_GRAPHICS_MARKER("Opaque Geometries");
+		renderer->RenderOpaque();
+	}
+	{
+		TURSO3D_GRAPHICS_MARKER("Alpha Geometries");
+		renderer->RenderAlpha();
+	}
 
 	// Resolve MSAA
 	if (multiSample > 1) {
@@ -541,20 +568,20 @@ void Application::Render(double dt)
 
 	// SSAO
 	if (aoRenderer) {
-		TURSO3D_GL_MARKER("SAO");
-		aoRenderer->Render(camera.get(), normalBuffer.get(), depthBuffer.get(), ldrFbo.get(), viewRect);
+		TURSO3D_GRAPHICS_MARKER("SAO");
+		aoRenderer->Render(camera.get(), normalBuffer.get(), depthBuffer.get(), colorFbo[0].get(), viewRect);
 	}
 
 	// HDR Bloom
 	if (bloomRenderer) {
-		TURSO3D_GL_MARKER("Bloom");
+		TURSO3D_GRAPHICS_MARKER("Bloom");
 		bloomRenderer->Render(color, 0.02f);
 		color = bloomRenderer->GetTexture();
 	}
 
 	// Tonemap
 	if (tonemapRenderer) {
-		TURSO3D_GL_MARKER("Tonemap");
+		TURSO3D_GRAPHICS_MARKER("Tonemap");
 		ldrFbo->Bind();
 		tonemapRenderer->Render(color);
 	}
@@ -567,7 +594,7 @@ void Application::Render(double dt)
 
 	// Blur scene for UI transparent backgrounds
 	{
-		TURSO3D_GL_MARKER("Scene Blur");
+		TURSO3D_GRAPHICS_MARKER("Scene Blur");
 		blurRenderer->Downsample(ldrBuffer.get());
 		blurRenderer->Upsample();
 		graphics->SetViewport(viewRect);

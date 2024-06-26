@@ -31,17 +31,18 @@ namespace Turso3D
 		bool visible;
 	};
 
+#ifdef _DEBUG
+	class GraphicsMarker
+	{
+	public:
+		GraphicsMarker(const char* name);
+		~GraphicsMarker();
+	};
+#endif
+
 	// Graphics rendering context and application window.
 	class Graphics
 	{
-	public:
-		class Marker
-		{
-		public:
-			Marker(const char* name);
-			~Marker();
-		};
-
 	public:
 		// Construct.
 		Graphics();
@@ -61,10 +62,6 @@ namespace Turso3D
 		// Present the contents of the backbuffer.
 		void Present();
 
-		// Bind a framebuffer for rendering.
-		// Null buffer parameter to unbind and return to backbuffer rendering.
-		// Provided for convenience.
-		void SetFrameBuffer(FrameBuffer* buffer);
 		// Set the viewport rectangle.
 		void SetViewport(const IntRect& viewRect);
 
@@ -90,22 +87,6 @@ namespace Turso3D
 		void SetUniform(int location, const Matrix3x4& value);
 		// Set a Matrix4 uniform.
 		void SetUniform(int location, const Matrix4& value);
-
-		// Bind a uniform buffer for use in slot index.
-		// Null buffer parameter to unbind.
-		// Provided for convenience.
-		void SetUniformBuffer(size_t index, UniformBuffer* buffer);
-
-		// Bind a texture for use in texture unit.
-		// Null texture parameter to unbind.
-		// Provided for convenience.
-		void SetTexture(size_t index, Texture* texture);
-		// Bind a vertex buffer for use with the specified shader program's attribute bindings.
-		// Provided for convenience.
-		void SetVertexBuffer(VertexBuffer* buffer, ShaderProgram* program);
-		// Bind an index buffer for use.
-		// Provided for convenience.
-		void SetIndexBuffer(IndexBuffer* buffer);
 
 		// Set basic renderstates.
 		void SetRenderState(BlendMode blendMode, CullMode cullMode = CULL_BACK, CompareMode depthTest = CMP_LESS, bool colorWrite = true, bool depthWrite = true);
@@ -146,8 +127,6 @@ namespace Turso3D
 
 		// Return whether is initialized.
 		bool IsInitialized() const { return context != nullptr; }
-		// Return whether has instancing support.
-		bool HasInstancing() const { return hasInstancing; }
 
 		// Return current window size.
 		IntVector2 Size() const;
@@ -202,8 +181,6 @@ namespace Turso3D
 		bool lastDepthBias;
 		// Vertical sync flag.
 		bool vsync;
-		// Instancing support flag.
-		bool hasInstancing;
 		// Whether instance vertex elements are enabled.
 		bool instancingEnabled;
 		// Pending occlusion queries.
@@ -221,7 +198,7 @@ namespace Turso3D
 }
 
 #ifdef _DEBUG
-#define TURSO3D_GL_MARKER(name) Turso3D::Graphics::Marker glscope__ {name}
+#define TURSO3D_GRAPHICS_MARKER(name) Turso3D::GraphicsMarker gl_scope__ {name}
 #else
-#define TURSO3D_GL_MARKER(name)
+#define TURSO3D_GRAPHICS_MARKER(name)
 #endif

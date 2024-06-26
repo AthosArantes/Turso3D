@@ -35,7 +35,7 @@ void main()
 }
 
 #pragma shader fs //===============================================================================
-#include <Lighting.h>
+#include <PBR.h>
 #include <Utils.h>
 
 uniform sampler2D albedoTex0;

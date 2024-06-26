@@ -27,7 +27,7 @@ void main()
 }
 
 #pragma shader fs //===============================================================================
-#include <Lighting.h>
+#include <PBR.h>
 
 in vec4 vWorldPos;
 in vec3 vNormal;

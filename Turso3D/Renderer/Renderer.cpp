@@ -163,13 +163,10 @@ namespace Turso3D
 	{
 		assert(graphics->IsInitialized());
 
-		hasInstancing = graphics->HasInstancing();
-		if (hasInstancing) {
-			instanceVertexBuffer = std::make_unique<VertexBuffer>();
-			instanceVertexElements.push_back(VertexElement(ELEM_VECTOR4, SEM_TEXCOORD, 3));
-			instanceVertexElements.push_back(VertexElement(ELEM_VECTOR4, SEM_TEXCOORD, 4));
-			instanceVertexElements.push_back(VertexElement(ELEM_VECTOR4, SEM_TEXCOORD, 5));
-		}
+		instanceVertexBuffer = std::make_unique<VertexBuffer>();
+		instanceVertexElements.push_back(VertexElement(ELEM_VECTOR4, SEM_TEXCOORD, 3));
+		instanceVertexElements.push_back(VertexElement(ELEM_VECTOR4, SEM_TEXCOORD, 4));
+		instanceVertexElements.push_back(VertexElement(ELEM_VECTOR4, SEM_TEXCOORD, 5));
 
 		clusterTexture = std::make_unique<Texture>();
 		clusterTexture->Define(TARGET_3D, IntVector3 {NUM_CLUSTER_X, NUM_CLUSTER_Y, NUM_CLUSTER_Z}, FORMAT_RGBA32_UINT_PACK32);
@@ -371,8 +368,6 @@ namespace Turso3D
 			return;
 		}
 
-		TURSO3D_GL_MARKER("Render Shadow Maps");
-
 		// Unbind shadow textures before rendering to
 		Texture::Unbind(TU_DIRLIGHTSHADOW);
 		Texture::Unbind(TU_SHADOWATLAS);
@@ -448,8 +443,6 @@ namespace Turso3D
 
 	void Renderer::RenderOpaque(bool clear)
 	{
-		TURSO3D_GL_MARKER("Render Opaque");
-
 		// Update main batches' instance transforms & light data
 		UpdateInstanceTransforms(instanceTransforms);
 		UpdateLightData();
@@ -487,8 +480,6 @@ namespace Turso3D
 
 	void Renderer::RenderAlpha()
 	{
-		TURSO3D_GL_MARKER("Render Alpha");
-
 		if (shadowMaps) {
 			shadowMaps[0].texture->Bind(TU_DIRLIGHTSHADOW);
 			shadowMaps[1].texture->Bind(TU_SHADOWATLAS);
@@ -721,8 +712,8 @@ namespace Turso3D
 			}
 		}
 
-		opaqueBatches.Sort(instanceTransforms, BATCH_SORT_STATE_DISTANCE, hasInstancing);
-		alphaBatches.Sort(instanceTransforms, BATCH_SORT_DISTANCE, hasInstancing);
+		opaqueBatches.Sort(instanceTransforms, BATCH_SORT_STATE_DISTANCE, true);
+		alphaBatches.Sort(instanceTransforms, BATCH_SORT_DISTANCE, true);
 	}
 
 	void Renderer::SortShadowBatches(ShadowMap& shadowMap)
@@ -740,18 +731,18 @@ namespace Turso3D
 			BatchQueue* destDynamic = &shadowMap.shadowBatches[view.dynamicQueueIdx];
 
 			if (destStatic && destStatic->HasBatches()) {
-				destStatic->Sort(shadowMap.instanceTransforms, BATCH_SORT_STATE, hasInstancing);
+				destStatic->Sort(shadowMap.instanceTransforms, BATCH_SORT_STATE, true);
 			}
 
 			if (destDynamic->HasBatches()) {
-				destDynamic->Sort(shadowMap.instanceTransforms, BATCH_SORT_STATE, hasInstancing);
+				destDynamic->Sort(shadowMap.instanceTransforms, BATCH_SORT_STATE, true);
 			}
 		}
 	}
 
 	void Renderer::UpdateInstanceTransforms(const std::vector<Matrix3x4>& transforms)
 	{
-		if (hasInstancing && transforms.size()) {
+		if (transforms.size()) {
 			if (instanceVertexBuffer->NumVertices() < transforms.size()) {
 				instanceVertexBuffer->Define(USAGE_DYNAMIC, transforms.size(), instanceVertexElements, &transforms[0]);
 			} else {
