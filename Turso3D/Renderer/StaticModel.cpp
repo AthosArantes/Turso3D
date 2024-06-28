@@ -81,11 +81,28 @@ namespace Turso3D
 			const Matrix3x4& transform = WorldTransform();
 			Ray localRay = ray.Transformed(transform.Inverse());
 
-			size_t numGeometries = batches.NumGeometries();
+			for (size_t i = 0; i < batches.NumGeometries(); ++i) {
+				Geometry* geometry = batches.GetGeometry(i);
+				HullGroup* hullGroup = geometry->hullGroup.get();
 
-			for (size_t i = 0; i < numGeometries; ++i) {
-				Geometry* geom = batches.GetGeometry(i);
-				float localDistance = geom->HitDistance(localRay, &res.normal);
+				if (!hullGroup) {
+					continue;
+				}
+
+				float localDistance = M_INFINITY;
+
+				if (hullGroup->GetCountMeshes() == 1) {
+					localDistance = ray.HitDistance(hullGroup->GetVertices(0), sizeof(Vector3), 0, hullGroup->GetVertexCount(0), &res.normal);
+				} else {
+					for (size_t j = 0; j < hullGroup->GetCountMeshes(); ++j) {
+						Vector3 n;
+						float d = ray.HitDistance(hullGroup->GetVertices(j), sizeof(Vector3), 0, hullGroup->GetVertexCount(j), &n);
+						if (d < localDistance) {
+							localDistance = d;
+							res.normal = n;
+						}
+					}
+				}
 
 				if (localDistance < M_INFINITY) {
 					// If has a hit, transform it back to world space

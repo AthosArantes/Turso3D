@@ -12,8 +12,8 @@
 namespace Turso3D
 {
 	class IndexBuffer;
-	class Model;
 	class VertexBuffer;
+	class Model;
 	struct Geometry;
 
 	// Model bone description.
@@ -42,6 +42,38 @@ namespace Turso3D
 		size_t parentIndex;
 		// Whether contributes to bounding boxes.
 		bool active;
+	};
+
+	// ==========================================================================================
+	// Class used to store hull meshes
+	class HullGroup
+	{
+		struct HullInfo
+		{
+			Vector3* vertices;
+			size_t numVertices;
+		};
+
+	public:
+		HullGroup();
+
+		void Define(const std::vector<std::vector<Vector3>>& meshes);
+
+		// Get the number of hull meshes in this set.
+		size_t GetCountMeshes() const { return numMeshes; }
+
+		// Get the first vertex of the specified hull index.
+		const Vector3* GetVertices(size_t hullIndex) const { return info[hullIndex].vertices; }
+		// Get the number of vertices of the specified hull index.
+		size_t GetVertexCount(size_t hullIndex) const { return info[hullIndex].numVertices; }
+
+	private:
+		// The buffer containing all data.
+		std::unique_ptr<uint8_t[]> data;
+		// The indices for each mesh.
+		HullInfo* info;
+		// The number of meshes.
+		size_t numMeshes;
 	};
 
 	// ==========================================================================================
@@ -134,6 +166,8 @@ namespace Turso3D
 		std::vector<std::vector<std::shared_ptr<Geometry>>> geometries;
 		// Combined buffer if in use.
 		std::shared_ptr<CombinedBuffer> combinedBuffer;
+		// Hull meshes group.
+		std::shared_ptr<HullGroup> hullGroup;
 
 		// Temporary buffer used for loading. Internal use only.
 		std::unique_ptr<LoadBuffer> loadBuffer;

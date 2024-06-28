@@ -1,25 +1,26 @@
 #include <Turso3D/IO/FileStream.h>
 #include <cstdio>
 
-static const char* OpenModes[] =
+namespace
 {
-	"rb",
-	"r+b",
-	"w+b"
-};
+	static const char* OpenModes[] = {
+		"rb",
+		"r+b",
+		"w+b"
+	};
+}
 
 namespace Turso3D
 {
 	FileStream::FileStream() :
-		mode(FILE_READ),
+		mode(Mode::Read),
 		handle(nullptr),
 		readSyncNeeded(false),
 		writeSyncNeeded(false)
 	{
 	}
 
-	FileStream::FileStream(const std::string& fileName, FileMode mode) :
-		mode(FILE_READ),
+	FileStream::FileStream(const std::string& fileName, Mode mode) :
 		handle(nullptr),
 		readSyncNeeded(false),
 		writeSyncNeeded(false)
@@ -32,7 +33,7 @@ namespace Turso3D
 		Close();
 	}
 
-	bool FileStream::Open(const std::string& fileName, FileMode fileMode)
+	bool FileStream::Open(const std::string& fileName, Mode fileMode)
 	{
 		Close();
 
@@ -51,11 +52,11 @@ namespace Turso3D
 			}
 		}
 #endif
-		handle = fopen(filepath.c_str(), OpenModes[fileMode]);
+		handle = fopen(filepath.c_str(), OpenModes[static_cast<size_t>(fileMode)]);
 
 		// If file did not exist in readwrite mode, retry with truncate mode
-		if (mode == FILE_READWRITE && !handle) {
-			handle = fopen(filepath.c_str(), OpenModes[FILE_READWRITE_TRUNCATE]);
+		if (fileMode == Mode::ReadWrite && !handle) {
+			handle = fopen(filepath.c_str(), OpenModes[static_cast<size_t>(Mode::ReadWriteTruncate)]);
 		}
 
 		if (!handle) {
@@ -107,11 +108,7 @@ namespace Turso3D
 
 	size_t FileStream::Write(const void* data, size_t numBytes)
 	{
-		if (!handle || mode == FILE_READ) {
-			return 0;
-		}
-
-		if (!numBytes) {
+		if (!handle || mode == Mode::Read || numBytes == 0) {
 			return 0;
 		}
 
@@ -143,7 +140,7 @@ namespace Turso3D
 		}
 
 		// Allow sparse seeks if writing
-		if (mode == FILE_READ && newPosition > size) {
+		if (mode == Mode::Read && newPosition > size) {
 			newPosition = size;
 		}
 
@@ -161,7 +158,7 @@ namespace Turso3D
 
 	bool FileStream::IsWritable() const
 	{
-		return handle != 0 && mode != FILE_READ;
+		return handle != 0 && mode != Mode::Read;
 	}
 
 	void FileStream::Close()

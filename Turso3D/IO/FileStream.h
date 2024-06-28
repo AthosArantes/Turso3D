@@ -4,22 +4,22 @@
 
 namespace Turso3D
 {
-	// File open mode.
-	enum FileMode
-	{
-		FILE_READ = 0,
-		FILE_READWRITE,
-		FILE_READWRITE_TRUNCATE
-	};
-
 	// Filesystem file.
 	class FileStream : public Stream
 	{
 	public:
+		enum class Mode
+		{
+			Read,
+			ReadWrite,
+			ReadWriteTruncate
+		};
+
+	public:
 		// Construct.
 		FileStream();
 		// Construct and open a file.
-		FileStream(const std::string& fileName, FileMode fileMode = FILE_READ);
+		FileStream(const std::string& fileName, Mode fileMode = Mode::Read);
 		// Destruct.
 		// Close the file if open.
 		~FileStream();
@@ -38,15 +38,14 @@ namespace Turso3D
 		// Return whether write operations are allowed.
 		bool IsWritable() const override;
 
-		// Open a file. Return true on success.
-		bool Open(const std::string& fileName, FileMode fileMode = FILE_READ);
+		// Open a file.
+		// Return true on success.
+		bool Open(const std::string& fileName, Mode fileMode = Mode::Read);
 		// Close the file.
 		void Close();
 		// Flush any buffered output to the file.
 		void Flush();
 
-		// Return the open mode.
-		FileMode Mode() const { return mode; }
 		// Return whether is open.
 		bool IsOpen() const;
 		// Return the file handle.
@@ -57,7 +56,7 @@ namespace Turso3D
 
 	private:
 		// Open mode.
-		FileMode mode;
+		Mode mode;
 		// File handle.
 		void* handle;
 		// Synchronization needed before read -flag.

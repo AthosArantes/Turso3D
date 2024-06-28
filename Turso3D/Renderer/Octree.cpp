@@ -280,18 +280,18 @@ namespace Turso3D
 	}
 
 #if 0
-	void Octree::Raycast(std::vector<RaycastResult>& result, const Ray& ray, unsigned nodeFlags, unsigned viewMask, float maxDistance) const
+	void Octree::Raycast(std::vector<RaycastResult>& result, const Ray& ray, unsigned drawableFlags, unsigned viewMask, float maxDistance) const
 	{
 		result.clear();
-		CollectDrawables(result, const_cast<Octant*>(&root), ray, nodeFlags, viewMask, maxDistance);
+		CollectDrawables(result, const_cast<Octant*>(&root), ray, drawableFlags, viewMask, maxDistance);
 		std::sort(result.begin(), result.end(), CompareRaycastResults);
 	}
 
-	RaycastResult Octree::RaycastSingle(const Ray& ray, unsigned nodeFlags, unsigned viewMask, float maxDistance) const
+	RaycastResult Octree::RaycastSingle(const Ray& ray, unsigned drawableFlags, unsigned viewMask, float maxDistance) const
 	{
 		// Get the potential hits first
 		initialRayResult.clear();
-		CollectDrawables(initialRayResult, const_cast<Octant*>(&root), ray, nodeFlags, viewMask, maxDistance);
+		CollectDrawables(initialRayResult, const_cast<Octant*>(&root), ray, drawableFlags, viewMask, maxDistance);
 		std::sort(initialRayResult.begin(), initialRayResult.end(), CompareDrawableDistances);
 
 		// Then perform actual per-node ray tests and early-out when possible

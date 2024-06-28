@@ -285,7 +285,7 @@ namespace Turso3DUtils
 		BoundingBox bbox = source.Read<BoundingBox>();
 
 		// -----------------------
-		FileStream output(dst, FILE_READWRITE_TRUNCATE);
+		FileStream output(dst, FileStream::Mode::ReadWriteTruncate);
 
 		char newHeader[4] {'T', 'M', 'F', '\0'};
 		output.Write(newHeader, 4);

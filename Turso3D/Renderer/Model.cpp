@@ -8,8 +8,10 @@
 #include <Turso3D/Scene/Node.h>
 #include <algorithm>
 
-namespace Turso3D
+namespace
 {
+	using namespace Turso3D;
+
 	// Vertex and index allocation for the combined model buffers
 	constexpr size_t COMBINEDBUFFER_VERTICES = 384 * 1024;
 	constexpr size_t COMBINEDBUFFER_INDICES = 1024 * 1024;
@@ -18,6 +20,39 @@ namespace Turso3D
 	constexpr float BONE_SIZE_THRESHOLD = 0.05f;
 
 	static std::map<unsigned, std::vector<std::weak_ptr<CombinedBuffer>>> CombinedBufferMap;
+}
+
+namespace Turso3D
+{
+	HullGroup::HullGroup() :
+		info(nullptr),
+		numMeshes(0)
+	{
+	}
+
+	void HullGroup::Define(const std::vector<std::vector<Vector3>>& meshes)
+	{
+		numMeshes = meshes.size();
+		size_t sz = 0;
+		for (size_t i = 0; i < numMeshes; ++i) {
+			sz += sizeof(Vector3) * meshes[i].size();
+		}
+
+		data = std::make_unique<uint8_t[]>(sz + sizeof(HullInfo) * numMeshes);
+		info = reinterpret_cast<HullInfo*>(data.get() + sz);
+
+		size_t offset = 0;
+		for (size_t i = 0; i < numMeshes; ++i) {
+			const std::vector<Vector3>& vertices = meshes[i];
+
+			info[i].vertices = reinterpret_cast<Vector3*>(data.get() + offset);
+			info[i].numVertices = vertices.size();
+
+			size_t byte_size = sizeof(Vector3) * vertices.size();
+			memcpy(data.get() + offset, vertices.data(), byte_size);
+			offset += byte_size;
+		}
+	}
 
 	// ==========================================================================================
 	struct Model::LoadBuffer
@@ -274,6 +309,23 @@ namespace Turso3D
 		// Read bounding box
 		boundingBox = source.Read<BoundingBox>();
 
+		if (!source.IsEof()) {
+			// Read hull meshes
+			unsigned numHull = source.Read<unsigned>();
+
+			std::vector<std::vector<Vector3>> buffer;
+			buffer.resize(numHull);
+
+			for (unsigned i = 0; i < numHull; ++i) {
+				unsigned numVertices = source.Read<unsigned>();
+				buffer[i].resize(numVertices);
+				source.Read(buffer[i].data(), sizeof(Vector3) * numVertices);
+			}
+
+			hullGroup = std::make_shared<HullGroup>();
+			hullGroup->Define(buffer);
+		}
+
 		return true;
 	}
 
@@ -348,6 +400,7 @@ namespace Turso3D
 					geom->drawStart = geomDesc.drawStart + indexStarts[geomDesc.ibIndex];
 					geom->drawCount = geomDesc.drawCount;
 					geom->lodDistance = geomDesc.lodDistance;
+					geom->hullGroup = hullGroup;
 
 					geometries[i][j].swap(geom);
 				}
@@ -398,6 +451,7 @@ namespace Turso3D
 				geom->drawStart = geomDesc.drawStart;
 				geom->drawCount = geomDesc.drawCount;
 				geom->lodDistance = geomDesc.lodDistance;
+				geom->hullGroup = hullGroup;
 
 				geometries[i][j].swap(geom);
 			}

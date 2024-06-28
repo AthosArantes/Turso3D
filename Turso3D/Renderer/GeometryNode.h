@@ -10,18 +10,16 @@
 namespace Turso3D
 {
 	class GeometryNode;
-	class IndexBuffer;
-	class Material;
-	class ShaderProgram;
 	class VertexBuffer;
+	class IndexBuffer;
+	class HullGroup;
+	class ShaderProgram;
+	class Material;
 
 	// Description of geometry to be rendered.
 	// Scene nodes that render the same object can share these to reduce memory load and allow instancing.
 	struct Geometry
 	{
-		// Return ray hit distance if has CPU-side data, or infinity if no hit or no data.
-		float HitDistance(const Ray& ray, Vector3* outNormal = nullptr) const;
-
 		// Last sort key for combined distance and state sorting.
 		// Used by Renderer.
 		std::pair<unsigned short, unsigned short> lastSortKey;
@@ -32,14 +30,15 @@ namespace Turso3D
 		std::shared_ptr<IndexBuffer> indexBuffer;
 		// Draw range start in GPU buffer.
 		// Specifies index start if index buffer defined, vertex start otherwise.
-		size_t drawStart = 0;
+		size_t drawStart;
 		// Draw range count.
 		// Specifies number of indices if index buffer defined, number of vertices otherwise.
-		size_t drawCount = 0;
+		size_t drawCount;
 		// LOD transition distance.
-		float lodDistance = 0.0f;
+		float lodDistance;
 
-		// TODO: Hull geometry vertices
+		// Hull mesh group.
+		std::shared_ptr<HullGroup> hullGroup;
 	};
 
 	// Draw call source data with optimal memory storage.
