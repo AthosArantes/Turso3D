@@ -81,41 +81,38 @@ namespace Turso3D
 			const Matrix3x4& transform = WorldTransform();
 			Ray localRay = ray.Transformed(transform.Inverse());
 
-			for (size_t i = 0; i < batches.NumGeometries(); ++i) {
-				Geometry* geometry = batches.GetGeometry(i);
-				HullGroup* hullGroup = geometry->hullGroup.get();
+			const HullGroup& hull = model->GetHullGroup();
 
-				if (!hullGroup) {
-					continue;
-				}
+			size_t numHulls = hull.GetCountMeshes();
+			if (numHulls == 0) {
+				return;
+			}
 
-				float localDistance = M_INFINITY;
-
-				if (hullGroup->GetCountMeshes() == 1) {
-					localDistance = ray.HitDistance(hullGroup->GetVertices(0), sizeof(Vector3), 0, hullGroup->GetVertexCount(0), &res.normal);
-				} else {
-					for (size_t j = 0; j < hullGroup->GetCountMeshes(); ++j) {
-						Vector3 n;
-						float d = ray.HitDistance(hullGroup->GetVertices(j), sizeof(Vector3), 0, hullGroup->GetVertexCount(j), &n);
-						if (d < localDistance) {
-							localDistance = d;
-							res.normal = n;
-						}
+			float localDistance = M_INFINITY;
+			if (numHulls == 1) {
+				localDistance = localRay.HitDistance(hull.GetVertices(0), sizeof(Vector3), hull.GetIndices(0), sizeof(unsigned), 0, hull.GetIndexCount(0), &res.normal);
+			} else {
+				for (size_t i = 0; i < numHulls; ++i) {
+					Vector3 n;
+					float d = localRay.HitDistance(hull.GetVertices(i), sizeof(Vector3), hull.GetIndices(i), sizeof(unsigned), 0, hull.GetIndexCount(i), &n);
+					if (d < localDistance) {
+						localDistance = d;
+						res.normal = n;
 					}
 				}
+			}
 
-				if (localDistance < M_INFINITY) {
-					// If has a hit, transform it back to world space
-					Vector3 hitPosition = transform * (localRay.origin + localDistance * localRay.direction);
-					float hitDistance = (hitPosition - ray.origin).Length();
+			if (localDistance < M_INFINITY) {
+				// If has a hit, transform it back to world space
+				Vector3 hitPosition = transform * (localRay.origin + localDistance * localRay.direction);
+				float hitDistance = (hitPosition - ray.origin).Length();
 
-					if (hitDistance < maxDistance_ && hitDistance < res.distance) {
-						res.position = hitPosition;
-						res.normal = (transform * Vector4(res.normal, 0.0f)).Normalized();
-						res.distance = hitDistance;
-						res.drawable = this;
-						res.subObject = i;
-					}
+				if (hitDistance < maxDistance_ && hitDistance < res.distance) {
+					res.position = hitPosition;
+					res.normal = (transform * Vector4(res.normal, 0.0f)).Normalized();
+					res.distance = hitDistance;
+					res.drawable = this;
+					res.subObject = 0; // TODO: Hull mesh index?
 				}
 			}
 

@@ -12,7 +12,6 @@ namespace Turso3D
 	class GeometryNode;
 	class VertexBuffer;
 	class IndexBuffer;
-	class HullGroup;
 	class ShaderProgram;
 	class Material;
 
@@ -36,9 +35,6 @@ namespace Turso3D
 		size_t drawCount;
 		// LOD transition distance.
 		float lodDistance;
-
-		// Hull mesh group.
-		std::shared_ptr<HullGroup> hullGroup;
 	};
 
 	// Draw call source data with optimal memory storage.

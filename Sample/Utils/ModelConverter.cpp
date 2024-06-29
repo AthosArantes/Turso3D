@@ -345,5 +345,8 @@ namespace Turso3DUtils
 		}
 
 		output.Write(bbox);
+
+		unsigned numHulls = 0;
+		output.Write(numHulls);
 	}
 }

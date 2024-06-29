@@ -588,6 +588,28 @@ void Application::Render(double dt)
 
 	// Optional render of debug geometry
 	if (renderDebug) {
+#if 1
+		Octree* octree = scene->GetOctree();
+		Ray cameraRay {camera->WorldPosition(), camera->WorldDirection()};
+		RaycastResult res = octree->RaycastSingle(cameraRay, Drawable::FLAG_GEOMETRY, M_MAX_UNSIGNED);
+		if (res.drawable) {
+			// Draw hull meshes
+			StaticModel* model = static_cast<StaticModel*>(res.drawable->Owner());
+			const HullGroup& hull = model->GetModel()->GetHullGroup();
+			const Matrix3x4& transform = model->WorldTransform();
+			for (size_t i = 0; i < hull.GetCountMeshes(); ++i) {
+				const Vector3* vertices = hull.GetVertices(i);
+				const unsigned* indices = hull.GetIndices(i);
+				for (size_t j = 0; j < hull.GetIndexCount(i); j += 3) {
+					debugRenderer->AddLine(transform * vertices[indices[j]], transform * vertices[indices[j + 1]], Color::MAGENTA());
+					debugRenderer->AddLine(transform * vertices[indices[j + 1]], transform * vertices[indices[j + 2]], Color::MAGENTA());
+					debugRenderer->AddLine(transform * vertices[indices[j + 2]], transform * vertices[indices[j]], Color::MAGENTA());
+				}
+			}
+
+			debugRenderer->AddSphere(Sphere(res.position, 0.05f), Color::WHITE(), true);
+		}
+#endif
 		renderer->RenderDebug(debugRenderer.get());
 		debugRenderer->Render();
 	}

@@ -24,34 +24,44 @@ namespace
 
 namespace Turso3D
 {
-	HullGroup::HullGroup() :
-		info(nullptr),
-		numMeshes(0)
+	void HullGroup::Define(const std::vector<MeshInfo>& srcMeshes)
 	{
-	}
-
-	void HullGroup::Define(const std::vector<std::vector<Vector3>>& meshes)
-	{
-		numMeshes = meshes.size();
 		size_t sz = 0;
-		for (size_t i = 0; i < numMeshes; ++i) {
-			sz += sizeof(Vector3) * meshes[i].size();
+		for (size_t i = 0; i < srcMeshes.size(); ++i) {
+			sz += sizeof(Vector3) * srcMeshes[i].numVertices;
+			sz += sizeof(unsigned) * srcMeshes[i].numIndices;
 		}
 
-		data = std::make_unique<uint8_t[]>(sz + sizeof(HullInfo) * numMeshes);
-		info = reinterpret_cast<HullInfo*>(data.get() + sz);
+		numMeshes = srcMeshes.size();
+		data = std::make_unique<uint8_t[]>(sz + sizeof(MeshInfo) * numMeshes);
+		meshes = reinterpret_cast<MeshInfo*>(data.get() + sz);
 
 		size_t offset = 0;
 		for (size_t i = 0; i < numMeshes; ++i) {
-			const std::vector<Vector3>& vertices = meshes[i];
+			const MeshInfo& src = srcMeshes[i];
+			MeshInfo& dst = meshes[i];
 
-			info[i].vertices = reinterpret_cast<Vector3*>(data.get() + offset);
-			info[i].numVertices = vertices.size();
+			const size_t vertex_stride = sizeof(Vector3) * src.numVertices;
+			const size_t index_stride = sizeof(unsigned) * src.numIndices;
 
-			size_t byte_size = sizeof(Vector3) * vertices.size();
-			memcpy(data.get() + offset, vertices.data(), byte_size);
-			offset += byte_size;
+			dst.vertices = reinterpret_cast<Vector3*>(data.get() + offset);
+			dst.numVertices = src.numVertices;
+
+			dst.indices = reinterpret_cast<unsigned*>(data.get() + offset + vertex_stride);
+			dst.numIndices = src.numIndices;
+
+			memcpy(dst.vertices, src.vertices, vertex_stride);
+			memcpy(dst.indices, src.indices, index_stride);
+
+			offset += vertex_stride + index_stride;
 		}
+	}
+
+	void HullGroup::Clear()
+	{
+		data.reset();
+		meshes = nullptr;
+		numMeshes = 0;
 	}
 
 	// ==========================================================================================
@@ -309,21 +319,36 @@ namespace Turso3D
 		// Read bounding box
 		boundingBox = source.Read<BoundingBox>();
 
-		if (!source.IsEof()) {
-			// Read hull meshes
-			unsigned numHull = source.Read<unsigned>();
+		// Read hull meshes
+		unsigned numHull = source.IsEof() ? 0 : source.Read<unsigned>();
+		if (numHull > 0) {
+			std::vector<std::vector<Vector3>> vertices;
+			std::vector<std::vector<unsigned>> indices;
+			std::vector<HullGroup::MeshInfo> buffer;
 
-			std::vector<std::vector<Vector3>> buffer;
+			vertices.resize(numHull);
+			indices.resize(numHull);
 			buffer.resize(numHull);
 
 			for (unsigned i = 0; i < numHull; ++i) {
 				unsigned numVertices = source.Read<unsigned>();
-				buffer[i].resize(numVertices);
-				source.Read(buffer[i].data(), sizeof(Vector3) * numVertices);
+				vertices[i].resize(numVertices);
+				source.Read(vertices[i].data(), sizeof(Vector3) * numVertices);
+
+				unsigned numIndices = source.Read<unsigned>();
+				indices[i].resize(numIndices);
+				source.Read(indices[i].data(), sizeof(unsigned) * numIndices);
+
+				buffer[i].vertices = vertices[i].data();
+				buffer[i].numVertices = numVertices;
+				buffer[i].indices = indices[i].data();
+				buffer[i].numIndices = numIndices;
 			}
 
-			hullGroup = std::make_shared<HullGroup>();
-			hullGroup->Define(buffer);
+			hullGroup.Define(buffer);
+
+		} else {
+			hullGroup.Clear();
 		}
 
 		return true;
@@ -400,7 +425,6 @@ namespace Turso3D
 					geom->drawStart = geomDesc.drawStart + indexStarts[geomDesc.ibIndex];
 					geom->drawCount = geomDesc.drawCount;
 					geom->lodDistance = geomDesc.lodDistance;
-					geom->hullGroup = hullGroup;
 
 					geometries[i][j].swap(geom);
 				}
@@ -451,7 +475,6 @@ namespace Turso3D
 				geom->drawStart = geomDesc.drawStart;
 				geom->drawCount = geomDesc.drawCount;
 				geom->lodDistance = geomDesc.lodDistance;
-				geom->hullGroup = hullGroup;
 
 				geometries[i][j].swap(geom);
 			}

@@ -279,7 +279,6 @@ namespace Turso3D
 		root.OnRenderDebug(debug);
 	}
 
-#if 0
 	void Octree::Raycast(std::vector<RaycastResult>& result, const Ray& ray, unsigned drawableFlags, unsigned viewMask, float maxDistance) const
 	{
 		result.clear();
@@ -321,7 +320,6 @@ namespace Turso3D
 			return emptyRes;
 		}
 	}
-#endif
 
 	void Octree::QueueUpdate(Drawable* drawable)
 	{

@@ -48,30 +48,39 @@ namespace Turso3D
 	// Class used to store hull meshes
 	class HullGroup
 	{
-		struct HullInfo
+		friend class Model;
+
+		struct MeshInfo
 		{
 			Vector3* vertices;
 			size_t numVertices;
+			unsigned* indices;
+			unsigned numIndices;
 		};
 
 	public:
-		HullGroup();
-
-		void Define(const std::vector<std::vector<Vector3>>& meshes);
-
 		// Get the number of hull meshes in this set.
 		size_t GetCountMeshes() const { return numMeshes; }
 
-		// Get the first vertex of the specified hull index.
-		const Vector3* GetVertices(size_t hullIndex) const { return info[hullIndex].vertices; }
-		// Get the number of vertices of the specified hull index.
-		size_t GetVertexCount(size_t hullIndex) const { return info[hullIndex].numVertices; }
+		// Get the first vertex of the specified hull mesh.
+		const Vector3* GetVertices(size_t meshIndex) const { return meshes[meshIndex].vertices; }
+		// Get the number of vertices of the specified hull mesh.
+		size_t GetVertexCount(size_t meshIndex) const { return meshes[meshIndex].numVertices; }
+
+		// Return the indices of the specified hull mesh.
+		const unsigned* GetIndices(size_t meshIndex) const { return meshes[meshIndex].indices; }
+		// Return the number of indices of the specified hull mesh.
+		unsigned GetIndexCount(size_t meshIndex) const { return meshes[meshIndex].numIndices; }
 
 	private:
-		// The buffer containing all data.
+		void Define(const std::vector<MeshInfo>& srcMeshes);
+		void Clear();
+
+	private:
+		// The buffer containing all data of all hull meshes.
 		std::unique_ptr<uint8_t[]> data;
-		// The indices for each mesh.
-		HullInfo* info;
+		// The data for each mesh.
+		MeshInfo* meshes;
 		// The number of meshes.
 		size_t numMeshes;
 	};
@@ -157,6 +166,9 @@ namespace Turso3D
 		// Return the model's bone descriptions.
 		const std::vector<ModelBone>& Bones() const { return bones; }
 
+		// Return the hull meshes group.
+		const HullGroup& GetHullGroup() const { return hullGroup; }
+
 	private:
 		// Local space bounding box.
 		BoundingBox boundingBox;
@@ -167,7 +179,7 @@ namespace Turso3D
 		// Combined buffer if in use.
 		std::shared_ptr<CombinedBuffer> combinedBuffer;
 		// Hull meshes group.
-		std::shared_ptr<HullGroup> hullGroup;
+		HullGroup hullGroup;
 
 		// Temporary buffer used for loading. Internal use only.
 		std::unique_ptr<LoadBuffer> loadBuffer;

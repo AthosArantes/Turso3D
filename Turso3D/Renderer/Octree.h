@@ -253,12 +253,10 @@ namespace Turso3D
 		// Visualizes the whole octree.
 		void OnRenderDebug(DebugRenderer* debug);
 
-#if 0
 		// Query for drawables with a raycast and return all results.
 		void Raycast(std::vector<RaycastResult>& result, const Ray& ray, unsigned nodeFlags, unsigned viewMask, float maxDistance = M_INFINITY) const;
 		// Query for drawables with a raycast and return the closest result.
 		RaycastResult RaycastSingle(const Ray& ray, unsigned drawableFlags, unsigned viewMask, float maxDistance = M_INFINITY) const;
-#endif
 
 		// Query for drawables using a volume such as frustum or sphere.
 		template <class T>
@@ -397,12 +395,10 @@ namespace Turso3D
 		// Intermediate reinsert queues for threaded execution.
 		std::unique_ptr<std::vector<Drawable*>[]> reinsertQueues;
 
-#if 0
 		// RaycastSingle initial coarse result.
 		mutable std::vector<std::pair<Drawable*, float>> initialRayResult;
 		// RaycastSingle final result.
 		mutable std::vector<RaycastResult> finalRayResult;
-#endif
 
 		// Remaining drawable reinsertion tasks.
 		std::atomic<int> numPendingReinsertionTasks;
