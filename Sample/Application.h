@@ -29,6 +29,7 @@ protected:
 	void CreateThousandMushroomScene();
 	void CreateWalkingCharacter();
 	void CreateHugeWalls();
+	void CreateScene();
 
 	void Update(double dt) override;
 	void PostUpdate(double dt) override;

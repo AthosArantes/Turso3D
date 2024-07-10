@@ -96,9 +96,10 @@ bool Application::Initialize()
 	// Create scene
 	SetupEnvironmentLighting();
 	//CreateSpheresScene();
-	CreateThousandMushroomScene();
-	CreateWalkingCharacter();
+	//CreateThousandMushroomScene();
+	//CreateWalkingCharacter();
 	//CreateHugeWalls();
+	CreateScene();
 
 	return true;
 }
@@ -237,7 +238,10 @@ void Application::SetupEnvironmentLighting()
 	}
 
 	camera->SetFarClip(1000.0f);
-	camera->SetPosition(Vector3(-10.0f, 20.0f, 0.0f));
+	camera->SetPosition(Vector3 {-10.0f, 10.0f, 0.0f});
+
+	camRotation = Vector2 {90.0f, 35.0f};
+	camera->SetRotation(Quaternion {camRotation.y, camRotation.x, 0.0f});
 
 	// Set high quality shadows
 	constexpr float biasMul = 1.25f;
@@ -453,6 +457,35 @@ void Application::CreateHugeWalls()
 		wall->SetModel(boxModel);
 		wall->SetMaterial(baseMaterial);
 		wall->SetCastShadows(true);
+	}
+}
+
+void Application::CreateScene()
+{
+	ResourceCache* cache = ResourceCache::Instance();
+	Node* root = scene->GetRoot();
+
+	std::shared_ptr<Model> boxModel = cache->LoadResource<Model>("box.tmf");
+	std::shared_ptr<Model> planeModel = cache->LoadResource<Model>("plane.tmf");
+
+	// Ground
+	{
+		StaticModel* floor = root->CreateChild<StaticModel>();
+		floor->SetModel(planeModel);
+		floor->SetScale(50.0f);
+		floor->SetCastShadows(true);
+	}
+
+	// Model
+	{
+		StaticModel* model = root->CreateChild<StaticModel>();
+		model->Translate(Vector3 {0.0f, 0.5f, 0.0f});
+		model->SetModel(boxModel);
+		model->SetCastShadows(true);
+
+		std::shared_ptr<Material> mtl = Material::GetDefault()->Clone();
+		mtl->SetUniform(StringHash {"BaseColor"}, Vector4 {1.0f, 0.0f, 0.0f, 1.0f});
+		model->SetMaterial(mtl);
 	}
 }
 
