@@ -2,7 +2,7 @@
 
 #include <Uniforms.h>
 
-#pragma shader vs //===============================================================================
+#pragma shader:VS //===============================================================================
 #include <Transform.h>
 
 in vec3 position;
@@ -25,7 +25,7 @@ void main()
 	gl_Position = vec4(worldPos, 1.0) * viewProjMatrix;
 }
 
-#pragma shader fs //===============================================================================
+#pragma shader:FS //===============================================================================
 #ifdef ALPHAMASK
 	in vec2 vTexCoord;
 

@@ -32,7 +32,7 @@ namespace
 		return str.substr(0, static_cast<size_t>(eit - str.begin()));
 	}
 
-	static std::string_view GetShaderPragma(std::string_view line)
+	static ShaderType GetShaderPragma(std::string_view line)
 	{
 		std::string_view directive {"pragma"};
 		std::string_view value {"shader"};
@@ -56,16 +56,34 @@ namespace
 				}
 				if (line.compare(0, value.size(), value) == 0) {
 					line.remove_prefix(value.size());
-					// Trim spaces after the '#pragma shader'
-					while (line.size() && std::isblank(static_cast<const unsigned char&>(line.front()))) {
+
+					if (line.front() == ':') {
 						line.remove_prefix(1);
+
+						size_t sz = 0;
+						while ((line.size() - sz) && !std::isblank(static_cast<const unsigned char&>(line.at(sz)))) {
+							++sz;
+						}
+
+						std::string_view stage = line.substr(0, sz);
+						if (stage.size()) {
+							for (size_t i = 0; i < MAX_SHADER_TYPES; ++i) {
+								ShaderType t = static_cast<ShaderType>(i);
+								if (stage == ShaderTypeName(t)) {
+									return t;
+								}
+							}
+						}
+
+#ifdef _DEBUG
+						LOG_ERROR("Invalid pragma shader type specified: \"{:s}\"", stage);
+#endif
 					}
-					return line;
 				}
 			}
 		}
 
-		return std::string_view {};
+		return MAX_SHADER_TYPES;
 	}
 
 	static std::string_view GetVersion(std::string_view line)
@@ -242,20 +260,14 @@ namespace Turso3D
 			codev.remove_prefix(line.size());
 
 			// Read a shader pragma to change the destination string.
-			std::string_view ps = GetShaderPragma(line);
-			if (ps.size()) {
-				std::string_view stages[] = {{"vs"}, {"fs"}};
-				for (int i = 0; i < MAX_SHADER_TYPES; ++i) {
-					if (ps.compare(0, stages[i].size(), stages[i]) == 0) {
-						stage = i;
-						break;
-					}
-				}
+			ShaderType toStage = GetShaderPragma(line);
+			if (toStage != MAX_SHADER_TYPES) {
+				stage = toStage;
 				continue;
 			}
 
 			if (stage == -1) {
-				// Extract #version directive
+				// Extract #version directive (only from the common code section).
 				std::string_view sv = GetVersion(line);
 				if (sv.size()) {
 					version = std::string {line};

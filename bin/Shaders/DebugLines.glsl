@@ -1,6 +1,6 @@
 #version 330 core
 
-#pragma shader vs //===============================================================================
+#pragma shader:VS //===============================================================================
 uniform mat4 viewProjMatrix;
 
 in vec3 position;
@@ -14,7 +14,7 @@ void main()
 	gl_Position = vec4(position, 1.0) * viewProjMatrix;
 }
 
-#pragma shader fs //===============================================================================
+#pragma shader:FS //===============================================================================
 in vec4 vColor;
 out vec4 fragColor;
 
