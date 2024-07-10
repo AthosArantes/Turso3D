@@ -91,8 +91,6 @@ namespace Turso3D
 		std::unique_ptr<VertexBuffer> vertexBuffer;
 		// Index buffer for the debug geometry.
 		std::unique_ptr<IndexBuffer> indexBuffer;
-		// Vertex elements for the debug vertices.
-		std::vector<VertexElement> vertexElements;
 		// Cached shader program.
 		std::shared_ptr<ShaderProgram> shaderProgram;
 	};

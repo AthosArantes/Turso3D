@@ -111,7 +111,7 @@ namespace Turso3D
 		usedIndices(0)
 	{
 		vertexBuffer = std::make_shared<VertexBuffer>();
-		vertexBuffer->Define(USAGE_DEFAULT, COMBINEDBUFFER_VERTICES, elements);
+		vertexBuffer->Define(USAGE_DEFAULT, COMBINEDBUFFER_VERTICES, elements.data(), elements.size());
 		indexBuffer = std::make_shared<IndexBuffer>();
 		indexBuffer->Define(USAGE_DEFAULT, COMBINEDBUFFER_INDICES, sizeof(unsigned));
 	}
@@ -442,7 +442,7 @@ namespace Turso3D
 			const LoadBuffer::VertexDesc& vbDesc = loadBuffer->vertexBuffers[i];
 
 			std::shared_ptr<VertexBuffer> vb = std::make_shared<VertexBuffer>();
-			vb->Define(USAGE_DEFAULT, vbDesc.numVertices, vbDesc.vertexElements, vbDesc.vertexData.get());
+			vb->Define(USAGE_DEFAULT, vbDesc.numVertices, vbDesc.vertexElements.data(), vbDesc.vertexElements.size(), vbDesc.vertexData.get());
 
 			vbs[i].swap(vb);
 		}

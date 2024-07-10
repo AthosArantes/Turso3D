@@ -15,9 +15,6 @@ namespace Turso3D
 		assert(graphics->IsInitialized());
 
 		vertexBuffer = std::make_unique<VertexBuffer>();
-		vertexElements.push_back(VertexElement(ELEM_VECTOR3, SEM_POSITION));
-		vertexElements.push_back(VertexElement(ELEM_UBYTE4, SEM_COLOR));
-
 		indexBuffer = std::make_unique<IndexBuffer>();
 
 		shaderProgram = graphics->CreateProgram("DebugLines.glsl", "", "");
@@ -293,7 +290,11 @@ namespace Turso3D
 		}
 
 		if (vertexBuffer->NumVertices() < vertices.size()) {
-			vertexBuffer->Define(USAGE_DYNAMIC, vertices.size(), vertexElements);
+			const VertexElement elements[] = {
+				VertexElement {ELEM_VECTOR3, SEM_POSITION},
+				VertexElement {ELEM_UBYTE4, SEM_COLOR}
+			};
+			vertexBuffer->Define(USAGE_DYNAMIC, vertices.size(), elements, 2);
 		}
 		if (vertices.size()) {
 			vertexBuffer->SetData(0, vertices.size(), &vertices[0]);

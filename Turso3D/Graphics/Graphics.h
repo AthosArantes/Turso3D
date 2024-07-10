@@ -1,7 +1,6 @@
 #pragma once
 
 #include <Turso3D/Graphics/GraphicsDefs.h>
-#include <Turso3D/Graphics/VertexArrayObject.h>
 #include <Turso3D/Math/Color.h>
 #include <Turso3D/Math/IntRect.h>
 #include <Turso3D/Math/Matrix3x4.h>
@@ -153,9 +152,6 @@ namespace Turso3D
 		// Return the OS-level window.
 		GLFWwindow* Window() const { return window; }
 
-		// Return the default VAO.
-		VertexArrayObject& DefaultVao() { return defaultVAO; }
-
 	private:
 		// Set up the vertex buffer for quad rendering.
 		void DefineQuadVertexBuffer();
@@ -188,7 +184,8 @@ namespace Turso3D
 		// Free occlusion queries.
 		std::vector<unsigned> freeQueries;
 
-		VertexArrayObject defaultVAO;
+		// Default VAO
+		unsigned defaultVAO;
 
 		// The window position before going full screen.
 		IntVector2 lastWindowPos;

@@ -1,7 +1,6 @@
 #pragma once
 
 #include <RmlUi/Core/RenderInterface.h>
-#include <Turso3D/Graphics/VertexArrayObject.h>
 #include <Turso3D/Math/IntVector2.h>
 #include <Turso3D/fwd.h>
 #include <vector>
@@ -59,7 +58,6 @@ private:
 	// Cached graphics subsystem
 	Turso3D::Graphics* graphics;
 
-	Turso3D::VertexArrayObject vao;
 	ShaderProgramGroup programs[2];
 
 	// Color/Mask buffers.

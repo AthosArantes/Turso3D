@@ -247,7 +247,9 @@ namespace Turso3D
 		glDepthMask(GL_TRUE);
 		glFrontFace(GL_CW); // Use Direct3D convention, ie. clockwise vertices define a front face
 
-		defaultVAO.Define();
+		// Define default VAO
+		glGenVertexArrays(1, &defaultVAO);
+		glBindVertexArray(defaultVAO);
 
 		// Use texcoords 3-5 for instancing if supported
 		glVertexAttribDivisor(ATTR_TEXCOORD3, 1);
@@ -694,10 +696,12 @@ namespace Turso3D
 			-1.0f, -1.0f, 0.0f, 0.0f, 1.0f
 		};
 
-		std::vector<VertexElement> vertexDeclaration;
-		vertexDeclaration.push_back(VertexElement(ELEM_VECTOR3, SEM_POSITION));
-		vertexDeclaration.push_back(VertexElement(ELEM_VECTOR2, SEM_TEXCOORD));
+		const VertexElement elements[] = {
+			VertexElement(ELEM_VECTOR3, SEM_POSITION),
+			VertexElement(ELEM_VECTOR2, SEM_TEXCOORD)
+		};
+
 		quadVertexBuffer = std::make_unique<VertexBuffer>();
-		quadVertexBuffer->Define(USAGE_DEFAULT, 6, vertexDeclaration, quadVertexData);
+		quadVertexBuffer->Define(USAGE_DEFAULT, 6, elements, 2, quadVertexData);
 	}
 }

@@ -16,12 +16,6 @@ namespace Turso3D
 
 		// Define buffer.
 		// Return true on success.
-		bool Define(ResourceUsage usage, size_t numVertices, const std::vector<VertexElement>& elements, const void* data = nullptr)
-		{
-			return Define(usage, numVertices, elements.data(), elements.size(), data);
-		}
-		// Define buffer.
-		// Return true on success.
 		bool Define(ResourceUsage usage, size_t numVertices, const VertexElement* elements, size_t numElements, const void* data = nullptr);
 		// Redefine buffer data either completely or partially.
 		// Return true on success.
@@ -51,8 +45,6 @@ namespace Turso3D
 
 		// Calculate a vertex attribute mask from elements.
 		static unsigned CalculateAttributeMask(const std::vector<VertexElement>& elements);
-
-		static void Unbind();
 
 	private:
 		// Create the GPU-side vertex buffer. Return true on success.

@@ -27,8 +27,11 @@
 #include <algorithm>
 #include <cstring>
 
-namespace Turso3D
+namespace
 {
+	using namespace Turso3D;
+
+	constexpr size_t INITIAL_INSTANCE_CAPACITY = 2000;
 	constexpr size_t DRAWABLES_PER_BATCH_TASK = 128;
 	constexpr size_t NUM_BOX_INDICES = 36;
 	constexpr float OCCLUSION_MARGIN = 0.1f;
@@ -37,8 +40,10 @@ namespace Turso3D
 	{
 		return lhs->Distance() < rhs->Distance();
 	}
+}
 
-	// ==========================================================================================
+namespace Turso3D
+{
 	// Task for collecting octants.
 	struct CollectOctantsTask : public MemberFunctionTask<Renderer>
 	{
@@ -164,9 +169,7 @@ namespace Turso3D
 		assert(graphics->IsInitialized());
 
 		instanceVertexBuffer = std::make_unique<VertexBuffer>();
-		instanceVertexElements.push_back(VertexElement(ELEM_VECTOR4, SEM_TEXCOORD, 3));
-		instanceVertexElements.push_back(VertexElement(ELEM_VECTOR4, SEM_TEXCOORD, 4));
-		instanceVertexElements.push_back(VertexElement(ELEM_VECTOR4, SEM_TEXCOORD, 5));
+		instanceTransforms.reserve(INITIAL_INSTANCE_CAPACITY);
 
 		clusterTexture = std::make_unique<Texture>();
 		clusterTexture->Define(TARGET_3D, IntVector3 {NUM_CLUSTER_X, NUM_CLUSTER_Y, NUM_CLUSTER_Z}, FORMAT_RGBA32_UINT_PACK32);
@@ -744,7 +747,12 @@ namespace Turso3D
 	{
 		if (transforms.size()) {
 			if (instanceVertexBuffer->NumVertices() < transforms.size()) {
-				instanceVertexBuffer->Define(USAGE_DYNAMIC, transforms.size(), instanceVertexElements, &transforms[0]);
+				const VertexElement elements[] = {
+					VertexElement {ELEM_VECTOR4, SEM_TEXCOORD, 3},
+					VertexElement {ELEM_VECTOR4, SEM_TEXCOORD, 4},
+					VertexElement {ELEM_VECTOR4, SEM_TEXCOORD, 5}
+				};
+				instanceVertexBuffer->Define(USAGE_DYNAMIC, transforms.size(), elements, 3, &transforms[0]);
 			} else {
 				instanceVertexBuffer->SetData(0, transforms.size(), &transforms[0]);
 			}
@@ -1045,7 +1053,7 @@ namespace Turso3D
 
 	void Renderer::DefineBoundingBoxGeometry()
 	{
-		float boxVertexData[] = {
+		const float boxVertexData[] = {
 			-1.0f, 1.0f, -1.0f,
 			-1.0f, -1.0f, -1.0f,
 			1.0f, 1.0f, -1.0f,
@@ -1056,10 +1064,12 @@ namespace Turso3D
 			-1.0f, -1.0f, 1.0f
 		};
 
-		std::vector<VertexElement> vertexDeclaration;
-		vertexDeclaration.push_back(VertexElement(ELEM_VECTOR3, SEM_POSITION));
+		const VertexElement elements[] = {
+			VertexElement {ELEM_VECTOR3, SEM_POSITION}
+		};
+
 		boundingBoxVertexBuffer = std::make_unique<VertexBuffer>();
-		boundingBoxVertexBuffer->Define(USAGE_DEFAULT, 8, vertexDeclaration, boxVertexData);
+		boundingBoxVertexBuffer->Define(USAGE_DEFAULT, 8, elements, 1, boxVertexData);
 
 		unsigned short boxIndexData[] = {
 			0, 2, 1,

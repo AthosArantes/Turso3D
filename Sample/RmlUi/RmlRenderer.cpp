@@ -63,22 +63,6 @@ RmlRenderer::RmlRenderer(Graphics* graphics) :
 		programs[i].transformIndex = programs[i].program->Uniform(uniformTransformHash);
 	}
 
-	vao.Define();
-
-	glEnableVertexAttribArray(ATTR_POSITION);
-	glVertexAttribFormat(ATTR_POSITION, 2, GL_FLOAT, GL_FALSE, offsetof(Rml::Vertex, position));
-	glVertexAttribBinding(ATTR_POSITION, 0);
-
-	glEnableVertexAttribArray(ATTR_VERTEXCOLOR);
-	glVertexAttribFormat(ATTR_VERTEXCOLOR, 4, GL_UNSIGNED_BYTE, GL_TRUE, offsetof(Rml::Vertex, colour));
-	glVertexAttribBinding(ATTR_VERTEXCOLOR, 0);
-
-	glEnableVertexAttribArray(ATTR_TEXCOORD);
-	glVertexAttribFormat(ATTR_TEXCOORD, 2, GL_FLOAT, GL_FALSE, offsetof(Rml::Vertex, tex_coord));
-	glVertexAttribBinding(ATTR_TEXCOORD, 0);
-
-	graphics->DefaultVao().Bind();
-
 	maxDiscardedGeometryMem = 8 * 1000 * 1000; // 8 MB
 	discardedGeometryMem = 0;
 }
@@ -138,14 +122,14 @@ void RmlRenderer::RenderCompiledGeometry(Rml::CompiledGeometryHandle handle, con
 	glUniform2f(program_group.translateIndex, translation.x, translation.y);
 	glUniformMatrix4fv(program_group.transformIndex, 1, GL_FALSE, transform.data());
 
-	glBindVertexBuffer(0, cg->vbo.GLBuffer(), 0, sizeof(Rml::Vertex));
+	cg->vbo.Bind(program_group.program->Attributes());
 	cg->ibo.Bind();
 
 	if (cg->texture) {
 		cg->texture->Bind(0);
 	}
 
-	glDrawElements(GL_TRIANGLES, cg->ibo.NumIndices(), GL_UNSIGNED_INT, nullptr);
+	graphics->DrawIndexed(PT_TRIANGLE_LIST, 0, cg->ibo.NumIndices());
 }
 
 void RmlRenderer::ReleaseCompiledGeometry(Rml::CompiledGeometryHandle handle)
@@ -339,8 +323,6 @@ void RmlRenderer::BeginRender()
 	glEnable(GL_STENCIL_TEST);
 	glStencilFunc(GL_ALWAYS, 0, GLuint(-1));
 	glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
-
-	vao.Bind();
 }
 
 void RmlRenderer::EndRender()
@@ -355,6 +337,5 @@ void RmlRenderer::EndRender()
 		}
 	}
 
-	graphics->DefaultVao().Bind();
 	graphics->SetRenderState(BLEND_REPLACE, CULL_BACK, CMP_ALWAYS, true, false);
 }

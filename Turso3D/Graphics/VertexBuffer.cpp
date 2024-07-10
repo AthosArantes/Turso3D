@@ -218,12 +218,4 @@ namespace Turso3D
 		}
 		return attributes;
 	}
-
-	void VertexBuffer::Unbind()
-	{
-		glBindBuffer(GL_ARRAY_BUFFER, 0);
-		boundVertexBuffer = nullptr;
-		boundVertexAttribSource = nullptr;
-		boundAttributes = 0;
-	}
 }

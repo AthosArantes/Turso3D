@@ -113,11 +113,4 @@ namespace Turso3D
 	{
 		return boundIndexSize;
 	}
-
-	void IndexBuffer::Unbind()
-	{
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-		boundIndexBuffer = nullptr;
-		boundIndexSize = 0;
-	}
 }

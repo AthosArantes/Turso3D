@@ -390,7 +390,5 @@ namespace Turso3D
 		std::unique_ptr<RenderBuffer> staticObjectShadowBuffer;
 		// Cached static object shadow framebuffer.
 		std::unique_ptr<FrameBuffer> staticObjectShadowFbo;
-		// Vertex elements for the instancing buffer.
-		std::vector<VertexElement> instanceVertexElements;
 	};
 }

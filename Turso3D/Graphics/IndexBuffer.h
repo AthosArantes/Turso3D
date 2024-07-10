@@ -39,8 +39,6 @@ namespace Turso3D
 		// Return the index size of the currently bound buffer, or 0 if no buffer bound.
 		static size_t BoundIndexSize();
 
-		static void Unbind();
-
 	private:
 		// Create the GPU-side index buffer.
 		// Return true on success.
