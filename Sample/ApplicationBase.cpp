@@ -25,19 +25,17 @@ ApplicationBase::ApplicationBase() :
 {
 	// Initialize subsystems that don't depend on the application window / OpenGL context
 	workQueue = std::make_unique<WorkQueue>();
-
-	// Initialize graphics
-	graphics = std::make_unique<Graphics>();
 }
 
 ApplicationBase::~ApplicationBase()
 {
+	Graphics::ShutDown();
 }
 
 bool ApplicationBase::Initialize()
 {
-	if (graphics->Initialize("Turso3D renderer test", 1600, 900)) {
-		GLFWwindow* window = graphics->Window();
+	if (Graphics::Initialize("Turso3D renderer test", 1600, 900)) {
+		GLFWwindow* window = static_cast<GLFWwindow*>(Graphics::Window());
 		glfwSetWindowUserPointer(window, this);
 
 		// Setup glfw callbacks
@@ -67,11 +65,10 @@ bool ApplicationBase::Initialize()
 		});
 
 		// Initialize renderer/debug renderer.
-		renderer = std::make_unique<Renderer>(workQueue.get(), graphics.get());
-		debugRenderer = std::make_unique<DebugRenderer>(graphics.get());
+		renderer = std::make_unique<Renderer>(workQueue.get());
+		debugRenderer = std::make_unique<DebugRenderer>();
 
 	} else {
-		graphics.reset();
 		return false;
 	}
 	return true;
@@ -79,7 +76,7 @@ bool ApplicationBase::Initialize()
 
 void ApplicationBase::Run()
 {
-	GLFWwindow* window = graphics->Window();
+	GLFWwindow* window = static_cast<GLFWwindow*>(Graphics::Window());
 
 	// Main loop
 	while (!glfwWindowShouldClose(window)) {
@@ -121,7 +118,7 @@ void ApplicationBase::ApplyFrameLimit()
 	}
 
 	// Skip frame limiter if in fullscreen mode, vsync is on and the refresh rate matches the frame limit value.
-	if (graphics->VSync() && graphics->FullscreenRefreshRate() == frameLimit) {
+	if (Graphics::VSync() && Graphics::FullscreenRefreshRate() == frameLimit) {
 		return;
 	}
 

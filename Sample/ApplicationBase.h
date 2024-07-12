@@ -56,9 +56,7 @@ private:
 	void UpdateKeys();
 
 protected:
-	// Cached graphics subsystem.
 	std::unique_ptr<Turso3D::WorkQueue> workQueue;
-	std::unique_ptr<Turso3D::Graphics> graphics;
 	std::unique_ptr<Turso3D::Renderer> renderer;
 	std::unique_ptr<Turso3D::DebugRenderer> debugRenderer;
 

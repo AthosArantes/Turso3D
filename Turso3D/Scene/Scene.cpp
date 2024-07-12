@@ -5,8 +5,8 @@
 
 namespace Turso3D
 {
-	Scene::Scene(WorkQueue* workQueue, Graphics* graphics) :
-		octree(workQueue, graphics)
+	Scene::Scene(WorkQueue* workQueue) :
+		octree(workQueue)
 	{
 		root.SetScene(this);
 	}

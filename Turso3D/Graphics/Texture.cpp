@@ -8,8 +8,10 @@
 #include <gli/load.hpp>
 #include <gli/generate_mipmaps.hpp>
 
-namespace Turso3D
+namespace
 {
+	using namespace Turso3D;
+
 	static const unsigned glWrapModes[] = {
 		GL_REPEAT,
 		GL_MIRRORED_REPEAT,
@@ -114,19 +116,19 @@ namespace Turso3D
 		return format;
 	}
 
+	static gli::gl GLIProfile {gli::gl::PROFILE_GL33};
+}
+
+// ==========================================================================================
+
+namespace Turso3D
+{
 	struct Texture::LoadBuffer
 	{
 		gli::texture texture;
 		IntVector3 size;
 		std::vector<ImageLevel> imageData;
 	};
-
-	// ==========================================================================================
-	static size_t ActiveTextureUnit = 0xffffffff;
-	static unsigned ActiveTargets[MAX_TEXTURE_UNITS];
-	static Texture* BoundTextures[MAX_TEXTURE_UNITS];
-
-	static gli::gl GLIProfile {gli::gl::PROFILE_GL33};
 
 	// ==========================================================================================
 	Texture::Texture() :
@@ -359,7 +361,7 @@ namespace Turso3D
 			LOG_ERROR("Failed to create opengl texture");
 			return false;
 		}
-		ForceBind();
+		Graphics::BindTexture(0, this, true);
 
 		if (multisample == 1) {
 			glTexParameteri(target, GL_TEXTURE_BASE_LEVEL, 0);
@@ -508,7 +510,7 @@ namespace Turso3D
 		this->maxLod = maxLod;
 		this->borderColor = borderColor;
 
-		ForceBind();
+		Graphics::BindTexture(0, this, true);
 
 		switch (filter) {
 			case FILTER_POINT:
@@ -609,7 +611,7 @@ namespace Turso3D
 			return false;
 		}
 
-		ForceBind();
+		Graphics::BindTexture(0, this, true);
 
 		gli::gl::format glFormat = GLIProfile.translate(static_cast<gli::format>(format), gli::swizzles {0, 0, 0, 0});
 		bool compressed = IsCompressed(format);
@@ -654,63 +656,17 @@ namespace Turso3D
 		return true;
 	}
 
-	void Texture::Bind(size_t unit)
-	{
-		if (unit >= MAX_TEXTURE_UNITS || !texture || BoundTextures[unit] == this) {
-			return;
-		}
-
-		if (ActiveTextureUnit != unit) {
-			glActiveTexture(GL_TEXTURE0 + (GLenum)unit);
-			ActiveTextureUnit = unit;
-		}
-
-		if (ActiveTargets[unit] && ActiveTargets[unit] != target) {
-			glBindTexture(ActiveTargets[unit], 0);
-		}
-
-		glBindTexture(target, texture);
-		ActiveTargets[unit] = target;
-		BoundTextures[unit] = this;
-	}
-
 	// ==========================================================================================
-	void Texture::ForceBind()
-	{
-		BoundTextures[0] = nullptr;
-		Bind(0);
-	}
-
 	void Texture::Release()
 	{
 		if (texture) {
+			Graphics::RemoveStateObject(this);
 			glDeleteTextures(1, &texture);
 			texture = 0;
-
-			for (size_t i = 0; i < MAX_TEXTURE_UNITS; ++i) {
-				if (BoundTextures[i] == this) {
-					BoundTextures[i] = nullptr;
-				}
-			}
 		}
 	}
 
 	// ==========================================================================================
-	void Texture::Unbind(size_t unit)
-	{
-		if (BoundTextures[unit]) {
-			if (ActiveTextureUnit != unit) {
-				glActiveTexture(GL_TEXTURE0 + (GLenum)unit);
-				ActiveTextureUnit = unit;
-			}
-			if (ActiveTargets[unit]) {
-				glBindTexture(ActiveTargets[unit], 0);
-				ActiveTargets[unit] = 0;
-			}
-			BoundTextures[unit] = nullptr;
-		}
-	}
-
 	unsigned Texture::GetGLInternalFormat(ImageFormat format)
 	{
 		gli::gl::format glFormat = GLIProfile.translate(static_cast<gli::format>(format), gli::swizzles {});

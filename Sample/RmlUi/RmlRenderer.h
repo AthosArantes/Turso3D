@@ -27,7 +27,7 @@ class RmlRenderer : public Rml::RenderInterface
 public:
 	// Constructor
 	// Graphics subsystem must have been initialized.
-	RmlRenderer(Turso3D::Graphics* graphics);
+	RmlRenderer();
 	// Destructor
 	~RmlRenderer();
 
@@ -55,9 +55,6 @@ public:
 	Turso3D::Texture* GetMaskTexture() { return buffer[1].get(); }
 
 private:
-	// Cached graphics subsystem
-	Turso3D::Graphics* graphics;
-
 	ShaderProgramGroup programs[2];
 
 	// Color/Mask buffers.

@@ -8,8 +8,7 @@
 
 using namespace Turso3D;
 
-BloomRenderer::BloomRenderer() :
-	graphics(nullptr)
+BloomRenderer::BloomRenderer()
 {
 	blurRenderer = std::make_unique<BlurRenderer>();
 	buffer = std::make_unique<Texture>();
@@ -20,15 +19,13 @@ BloomRenderer::~BloomRenderer()
 {
 }
 
-void BloomRenderer::Initialize(Graphics* graphics_)
+void BloomRenderer::Initialize()
 {
-	graphics = graphics_;
-
-	blurRenderer->Initialize(graphics);
+	blurRenderer->Initialize();
 
 	constexpr StringHash intensityHash {"intensity"};
 
-	bloomProgram = graphics->CreateProgram("PostProcess/BloomCompose.glsl", "", "");
+	bloomProgram = Graphics::CreateProgram("PostProcess/BloomCompose.glsl", "", "");
 	uIntensity = bloomProgram->Uniform(intensityHash);
 }
 
@@ -45,21 +42,21 @@ void BloomRenderer::UpdateBuffers(const IntVector2& size, ImageFormat format)
 
 void BloomRenderer::Render(Texture* hdrColor, float intensity)
 {
-	graphics->SetRenderState(BLEND_REPLACE, CULL_BACK, CMP_ALWAYS, true, false);
+	Graphics::SetRenderState(BLEND_REPLACE, CULL_BACK, CMP_ALWAYS, true, false);
 	blurRenderer->Downsample(hdrColor);
 
-	graphics->SetRenderState(BLEND_ADD, CULL_BACK, CMP_ALWAYS, true, false);
+	Graphics::SetRenderState(BLEND_ADD, CULL_BACK, CMP_ALWAYS, true, false);
 	blurRenderer->Upsample();
 
 	// Compose
-	fbo->Bind();
+	Graphics::BindFramebuffer(fbo.get(), nullptr);
 
-	bloomProgram->Bind();
-	graphics->SetUniform(uIntensity, intensity);
-	hdrColor->Bind(0);
-	blurRenderer->GetTexture()->Bind(1);
+	Graphics::BindProgram(bloomProgram.get());
+	Graphics::SetUniform(uIntensity, intensity);
+	Graphics::BindTexture(0, hdrColor);
+	Graphics::BindTexture(1, blurRenderer->GetTexture());
 
-	graphics->SetViewport(IntRect {IntVector2::ZERO(), buffer->Size2D()});
-	graphics->SetRenderState(BLEND_REPLACE, CULL_BACK, CMP_ALWAYS, true, false);
-	graphics->DrawQuad();
+	Graphics::SetViewport(IntRect {IntVector2::ZERO(), buffer->Size2D()});
+	Graphics::SetRenderState(BLEND_REPLACE, CULL_BACK, CMP_ALWAYS, true, false);
+	Graphics::DrawQuad();
 }

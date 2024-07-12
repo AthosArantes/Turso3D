@@ -23,10 +23,10 @@ namespace
 		TEXTURED_PROGRAM
 	};
 
-	static VertexElement VertexElementArray[] = {
-		VertexElement {ELEM_VECTOR2, SEM_POSITION},
-		VertexElement {ELEM_UBYTE4, SEM_COLOR},
-		VertexElement {ELEM_VECTOR2, SEM_TEXCOORD}
+	static const VertexElement VertexElementArray[] = {
+		{ELEM_VECTOR2, ATTR_POSITION},
+		{ELEM_UBYTE4, ATTR_VERTEXCOLOR, true},
+		{ELEM_VECTOR2, ATTR_TEXCOORD}
 	};
 }
 
@@ -39,8 +39,7 @@ struct RmlRenderer::CompiledGeometry
 };
 
 // ==========================================================================================
-RmlRenderer::RmlRenderer(Graphics* graphics) :
-	graphics(graphics)
+RmlRenderer::RmlRenderer()
 {
 	for (int i = 0; i < 2; ++i) {
 		buffer[i] = std::make_unique<Texture>();
@@ -58,7 +57,7 @@ RmlRenderer::RmlRenderer(Graphics* graphics) :
 	constexpr StringHash uniformTransformHash {"transform"};
 
 	for (unsigned i = 0; i < 2; ++i) {
-		programs[i].program = graphics->CreateProgram("RmlUi.glsl", defines[i], defines[i]);
+		programs[i].program = Graphics::CreateProgram("RmlUi.glsl", defines[i], defines[i]);
 		programs[i].translateIndex = programs[i].program->Uniform(uniformTranslateHash);
 		programs[i].transformIndex = programs[i].program->Uniform(uniformTransformHash);
 	}
@@ -94,7 +93,7 @@ Rml::CompiledGeometryHandle RmlRenderer::CompileGeometry(Rml::Vertex* vertices, 
 			cg->texture = reinterpret_cast<Texture*>(texture);
 
 			// Update the current discarded mem
-			discardedGeometryMem -= cg->vbo.VertexSize() * num_vertices;
+			discardedGeometryMem -= (size_t)cg->vbo.VertexSize() * num_vertices;
 			discardedGeometryMem -= cg->ibo.IndexSize() * num_indices;
 
 			it->release();
@@ -106,8 +105,8 @@ Rml::CompiledGeometryHandle RmlRenderer::CompileGeometry(Rml::Vertex* vertices, 
 	}
 
 	std::unique_ptr<CompiledGeometry>& cg = geometries.emplace_back(std::make_unique<CompiledGeometry>());
-	cg->vbo.Define(USAGE_DEFAULT, num_vertices, VertexElementArray, std::size(VertexElementArray), vertices);
-	cg->ibo.Define(USAGE_DEFAULT, num_indices, sizeof(unsigned), indices);
+	cg->vbo.Define(USAGE_DYNAMIC, num_vertices, VertexElementArray, std::size(VertexElementArray), vertices);
+	cg->ibo.Define(USAGE_DYNAMIC, num_indices, sizeof(unsigned), indices);
 	cg->texture = reinterpret_cast<Texture*>(texture);
 
 	return reinterpret_cast<Rml::CompiledGeometryHandle>(cg.get());
@@ -118,18 +117,18 @@ void RmlRenderer::RenderCompiledGeometry(Rml::CompiledGeometryHandle handle, con
 	CompiledGeometry* cg = reinterpret_cast<CompiledGeometry*>(handle);
 
 	ShaderProgramGroup& program_group = programs[(cg->texture != nullptr) ? TEXTURED_PROGRAM : COLOR_PROGRAM];
-	program_group.program->Bind();
+	Graphics::BindProgram(program_group.program.get());
+
 	glUniform2f(program_group.translateIndex, translation.x, translation.y);
 	glUniformMatrix4fv(program_group.transformIndex, 1, GL_FALSE, transform.data());
 
-	cg->vbo.Bind(program_group.program->Attributes());
-	cg->ibo.Bind();
-
 	if (cg->texture) {
-		cg->texture->Bind(0);
+		Graphics::BindTexture(0, cg->texture);
 	}
 
-	graphics->DrawIndexed(PT_TRIANGLE_LIST, 0, cg->ibo.NumIndices());
+	Graphics::BindVertexBuffers(&cg->vbo);
+	Graphics::BindIndexBuffer(&cg->ibo);
+	Graphics::DrawIndexed(PT_TRIANGLE_LIST, 0, cg->ibo.NumIndices());
 }
 
 void RmlRenderer::ReleaseCompiledGeometry(Rml::CompiledGeometryHandle handle)
@@ -224,8 +223,9 @@ bool RmlRenderer::LoadTexture(Rml::TextureHandle& texture_handle, Rml::Vector2i&
 	if (tex) {
 		tex->DefineSampler(FILTER_BILINEAR, ADDRESS_CLAMP, ADDRESS_CLAMP, ADDRESS_CLAMP);
 
-		texture_dimensions.x = tex->Width();
-		texture_dimensions.y = tex->Height();
+		const IntVector3& tex_size = tex->Size();
+		texture_dimensions.x = tex_size.x;
+		texture_dimensions.y = tex_size.y;
 
 		texture_handle = reinterpret_cast<Rml::TextureHandle>(tex.get());
 		textures.emplace_back().swap(tex);
@@ -312,13 +312,13 @@ void RmlRenderer::UpdateBuffers(const IntVector2& size, int multisample_)
 
 void RmlRenderer::BeginRender()
 {
-	fbo->Bind();
+	Graphics::BindFramebuffer(fbo.get(), nullptr);
 
 	glClearStencil(0);
 	glClearColor(0, 0, 0, 0);
 	glClear(GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
-	graphics->SetRenderState(BLEND_ADDALPHA, CULL_FRONT, CMP_ALWAYS, true, false);
+	Graphics::SetRenderState(BLEND_ADDALPHA, CULL_FRONT, CMP_ALWAYS, true, false);
 
 	glEnable(GL_STENCIL_TEST);
 	glStencilFunc(GL_ALWAYS, 0, GLuint(-1));
@@ -333,9 +333,9 @@ void RmlRenderer::EndRender()
 	if (multisample > 1) {
 		IntRect rc {IntVector2::ZERO(), viewSize};
 		for (int i = 0; i < 2; ++i) {
-			graphics->Blit(dstFbo[i].get(), rc, srcFbo[i].get(), rc, true, false, FILTER_BILINEAR);
+			Graphics::Blit(dstFbo[i].get(), rc, srcFbo[i].get(), rc, true, false, FILTER_BILINEAR);
 		}
 	}
 
-	graphics->SetRenderState(BLEND_REPLACE, CULL_BACK, CMP_ALWAYS, true, false);
+	Graphics::SetRenderState(BLEND_REPLACE, CULL_BACK, CMP_ALWAYS, true, false);
 }

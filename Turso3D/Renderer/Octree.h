@@ -9,13 +9,12 @@
 
 namespace Turso3D
 {
-	constexpr size_t NUM_OCTANTS = 8;
-	constexpr float OCCLUSION_QUERY_INTERVAL = 0.133333f; // About 8 frame stagger at 60fps
-
 	class Ray;
-	class Graphics;
 	class WorkQueue;
 	struct Task;
+
+	constexpr size_t NUM_OCTANTS = 8;
+	constexpr float OCCLUSION_QUERY_INTERVAL = 0.133333f; // About 8 frame stagger at 60fps
 
 	// Octant occlusion query visibility states.
 	enum OctantVisibility
@@ -61,7 +60,7 @@ namespace Turso3D
 		~Octant();
 
 		// Initialize parent and bounds.
-		void Initialize(Graphics* graphics, Octant* parent, const BoundingBox& boundingBox, unsigned char level, unsigned char childIndex);
+		void Initialize(Octant* parent, const BoundingBox& boundingBox, unsigned char level, unsigned char childIndex);
 		// Add debug geometry to be rendered.
 		void OnRenderDebug(DebugRenderer* debug);
 		// React to occlusion query being rendered for the octant.
@@ -186,9 +185,6 @@ namespace Turso3D
 		}
 
 	private:
-		// Cached graphics subsystem.
-		Graphics* graphics;
-
 		// Combined drawable and child octant bounding box. Used for culling tests.
 		mutable BoundingBox cullingBox;
 		// Dirty flags.
@@ -230,7 +226,7 @@ namespace Turso3D
 		// Construct.
 		// The WorkQueue subsystem must have been initialized, as it will be used during update.
 		// The Graphics subsystem must also have been initialized, as it's used by octants to free occlusion queries.
-		Octree(WorkQueue* workQueue, Graphics* graphics);
+		Octree(WorkQueue* workQueue);
 		// Destruct.
 		// Delete all child octants and detach the drawables.
 		~Octree();
@@ -373,8 +369,6 @@ namespace Turso3D
 
 		// Cached WorkQueue subsystem.
 		WorkQueue* workQueue;
-		// Cached Graphics subsystem
-		Graphics* graphics;
 
 		// Current framenumber.
 		unsigned short frameNumber;

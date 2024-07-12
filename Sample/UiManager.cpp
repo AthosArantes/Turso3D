@@ -55,8 +55,7 @@ struct UiManager::Middleware
 };
 
 // ==========================================================================================
-UiManager::UiManager() :
-	graphics(nullptr)
+UiManager::UiManager()
 {
 	impl = std::make_unique<Middleware>();
 }
@@ -74,17 +73,15 @@ UiManager::~UiManager()
 	Rml::Shutdown();
 }
 
-void UiManager::Initialize(Graphics* graphics)
+void UiManager::Initialize()
 {
 	Log::Scope logScope {"UiManager::Initialize"};
 
-	this->graphics = graphics;
-
-	composeProgram = graphics->CreateProgram("PostProcess/GuiCompose.glsl", "", "");
+	composeProgram = Graphics::CreateProgram("PostProcess/GuiCompose.glsl", "", "");
 
 	impl->rmlFile = std::make_unique<RmlFile>();
 	impl->rmlSystem = std::make_unique<RmlSystem>();
-	impl->rmlRenderer = std::make_unique<RmlRenderer>(graphics);
+	impl->rmlRenderer = std::make_unique<RmlRenderer>();
 
 	Rml::SetFileInterface(impl->rmlFile.get());
 	Rml::SetSystemInterface(impl->rmlSystem.get());
@@ -100,7 +97,8 @@ void UiManager::Initialize(Graphics* graphics)
 
 	// Create stats context and its data model
 	{
-		Rml::Context* ctx = Rml::CreateContext("frame.stats", Rml::Vector2i {graphics->RenderWidth(), graphics->RenderHeight()});
+		const IntVector2& rs = Graphics::RenderSize();
+		Rml::Context* ctx = Rml::CreateContext("frame.stats", Rml::Vector2i {rs.x, rs.y});
 
 		Rml::DataModelConstructor dm = ctx->CreateDataModel("stats");
 		dm.Bind("fps", &impl->frameStats.fps);
@@ -125,32 +123,29 @@ void UiManager::UpdateBuffers(const IntVector2& size)
 
 void UiManager::Update(double dt)
 {
+	TURSO3D_GRAPHICS_MARKER("Ui");
+
 	impl->frameStats.previousFrameTime = dt;
 	impl->frameStats.fps = static_cast<int>(1.0 / dt);
 	impl->frameStatsModel.DirtyAllVariables();
 	impl->frameStatsContext->Update();
 
 	// Render
-	{
-		TURSO3D_GRAPHICS_MARKER("Ui");
-		impl->rmlRenderer->BeginRender();
-
-		impl->frameStatsContext->Render();
-
-		impl->rmlRenderer->EndRender();
-	}
+	impl->rmlRenderer->BeginRender();
+	impl->frameStatsContext->Render();
+	impl->rmlRenderer->EndRender();
 }
 
 void UiManager::Compose(Texture* background, Texture* blurredBackground)
 {
 	TURSO3D_GRAPHICS_MARKER("UI Compose");
 
-	composeProgram->Bind();
+	Graphics::BindProgram(composeProgram.get());
 
-	background->Bind(0);
-	blurredBackground->Bind(1);
-	impl->rmlRenderer->GetTexture()->Bind(2);
-	impl->rmlRenderer->GetMaskTexture()->Bind(3);
+	Graphics::BindTexture(0, background);
+	Graphics::BindTexture(1, blurredBackground);
+	Graphics::BindTexture(2, impl->rmlRenderer->GetTexture());
+	Graphics::BindTexture(3, impl->rmlRenderer->GetMaskTexture());
 
-	graphics->DrawQuad();
+	Graphics::DrawQuad();
 }

@@ -8,6 +8,12 @@ namespace Turso3D
 	// GPU buffer for vertex data.
 	class VertexBuffer
 	{
+		struct ElementInfo : VertexElement
+		{
+			// Element offset in the buffer.
+			unsigned offset;
+		};
+
 	public:
 		// Construct.
 		VertexBuffer();
@@ -20,21 +26,22 @@ namespace Turso3D
 		// Redefine buffer data either completely or partially.
 		// Return true on success.
 		bool SetData(size_t firstVertex, size_t numVertices, const void* data, bool discard = false);
-		// Bind to use with the specified vertex attributes.
-		// No-op if already bound.
-		// Used also when defining or setting data.
-		void Bind(unsigned attributeMask);
 
 		// Return number of vertices.
 		size_t NumVertices() const { return numVertices; }
 		// Return number of vertex elements.
 		size_t NumElements() const { return elements.size(); }
-		// Return vertex elements.
-		const std::vector<VertexElement>& Elements() const { return elements; }
+		// Return a hash of the combination of all vertex elements.
+		size_t ElementsHash() const { return elementsHash; }
+
+		// Return vertex element.
+		const VertexElement& GetElement(size_t index) const { return elements[index]; }
+		// Return offset in buffer of the element.
+		unsigned GetElementOffset(size_t index) const { return elements[index].offset; }
+
 		// Return size of vertex in bytes.
-		size_t VertexSize() const { return vertexSize; }
-		// Return vertex attribute mask.
-		unsigned Attributes() const { return attributes; }
+		unsigned VertexSize() const { return vertexSize; }
+
 		// Return resource usage type.
 		ResourceUsage Usage() const { return usage; }
 		// Return whether is dynamic.
@@ -43,11 +50,12 @@ namespace Turso3D
 		// Return the OpenGL object identifier.
 		unsigned GLBuffer() const { return buffer; }
 
-		// Calculate a vertex attribute mask from elements.
-		static unsigned CalculateAttributeMask(const std::vector<VertexElement>& elements);
+		// Calculate a hash for all vertex elements.
+		static size_t CalculateElementsHash(const VertexElement* elements, size_t numElements);
 
 	private:
-		// Create the GPU-side vertex buffer. Return true on success.
+		// Create the GPU-side vertex buffer.
+		// Return true on success.
 		bool Create(const void* data);
 		// Release the vertex buffer and CPU shadow data.
 		void Release();
@@ -55,15 +63,17 @@ namespace Turso3D
 	private:
 		// OpenGL object identifier.
 		unsigned buffer;
+
 		// Number of vertices.
 		size_t numVertices;
 		// Size of vertex in bytes.
-		size_t vertexSize;
-		// Vertex attribute bitmask.
-		unsigned attributes;
+		unsigned vertexSize;
+
 		// Resource usage type.
 		ResourceUsage usage;
 		// Vertex elements.
-		std::vector<VertexElement> elements;
+		std::vector<ElementInfo> elements;
+		// Vertex elements hash.
+		size_t elementsHash;
 	};
 }

@@ -19,10 +19,7 @@ namespace Turso3D
 
 		// Return dimensions.
 		const IntVector2& Size() const { return size; }
-		// Return width.
-		int Width() const { return size.x; }
-		// Return height.
-		int Height() const { return size.y; }
+		// Return the buffer format.
 		ImageFormat Format() const { return format; }
 		// Return multisampling level, or 1 if not multisampled.
 		int Multisample() const { return multisample; }

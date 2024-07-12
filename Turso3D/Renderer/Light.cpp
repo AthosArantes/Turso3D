@@ -231,7 +231,8 @@ namespace Turso3D
 		}
 
 		// Calculate shadow mapping constants common to all lights
-		shadowParameters = Vector4(0.5f / (float)shadowMap->Width(), 0.5f / (float)shadowMap->Height(), ShadowStrength(), 0.0f);
+		const IntVector2& sz = shadowMap->Size2D();
+		shadowParameters = Vector4 {0.5f / static_cast<float>(sz.x), 0.5f / static_cast<float>(sz.y), ShadowStrength(), 0.0f};
 	}
 
 	bool LightDrawable::SetupShadowView(size_t viewIndex, Camera* mainCamera, const BoundingBox* geometryBounds)
@@ -359,10 +360,19 @@ namespace Turso3D
 
 		// Setup shadow matrices now as camera positions have been finalized
 		if (lightType != LIGHT_POINT) {
-			float width = (float)shadowMap->Width();
-			float height = (float)shadowMap->Height();
-			Vector3 viewOffset {(float)view.viewport.left / width, (float)view.viewport.top / height, 0.0f};
-			Vector3 viewScale {0.5f * (float)view.viewport.Width() / width, 0.5f * (float)view.viewport.Height() / height, 1.0f};
+			const IntVector2& sz = shadowMap->Size2D();
+			Vector2 textureSize {static_cast<float>(sz.x), static_cast<float>(sz.y)};
+
+			Vector3 viewOffset {
+				static_cast<float>(view.viewport.left) / textureSize.x,
+				static_cast<float>(view.viewport.top) / textureSize.y,
+				0.0f
+			};
+			Vector3 viewScale {
+				0.5f * static_cast<float>(view.viewport.Width()) / textureSize.x,
+				0.5f * static_cast<float>(view.viewport.Height()) / textureSize.y,
+				1.0f
+			};
 
 			viewOffset.x += viewScale.x;
 			viewOffset.y += viewScale.y;
@@ -378,8 +388,10 @@ namespace Turso3D
 			view.shadowMatrix = texAdjust * shadowCamera->ProjectionMatrix() * shadowCamera->ViewMatrix();
 		} else {
 			if (!viewIndex) {
+				const IntVector2& sz = shadowMap->Size2D();
+				Vector2 textureSize {static_cast<float>(sz.x), static_cast<float>(sz.y)};
+
 				Vector3 worldPosition = WorldPosition();
-				Vector2 textureSize {(float)shadowMap->Width(), (float)shadowMap->Height()};
 				float nearClip = Range() * 0.01f;
 				float farClip = Range();
 				float q = farClip / (farClip - nearClip);

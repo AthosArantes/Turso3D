@@ -32,18 +32,8 @@ namespace Turso3D
 		// Define MRT textures to render to.
 		void Define(Texture* const* colorTextures, size_t countColorTextures, Texture* depthStencilTexture);
 
-		// Bind as draw framebuffer.
-		// No-op if already bound.
-		// Used also when defining.
-		void Bind();
-
 		// Return the OpenGL object identifier.
 		unsigned GLBuffer() const { return buffer; }
-
-		// Bind separate framebuffers for drawing and reading.
-		static void Bind(FrameBuffer* draw, FrameBuffer* read);
-		// Unbind the current draw and read framebuffers and return to backbuffer rendering.
-		static void Unbind();
 
 	private:
 		// Create a framebuffer object.

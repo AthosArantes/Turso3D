@@ -15,7 +15,6 @@ namespace Turso3D
 	class Drawable;
 	class FrameBuffer;
 	class GeometryDrawable;
-	class Graphics;
 	class LightDrawable;
 	class LightEnvironment;
 	class Material;
@@ -198,7 +197,7 @@ namespace Turso3D
 	public:
 		// Construct.
 		// WorkQueue and Graphics subsystems must have been initialized.
-		Renderer(WorkQueue* workQueue, Graphics* graphics);
+		Renderer(WorkQueue* workQueue);
 		// Destruct.
 		~Renderer();
 
@@ -270,8 +269,6 @@ namespace Turso3D
 	private:
 		// Cached work queue subsystem.
 		WorkQueue* workQueue;
-		// Cached graphics subsystem.
-		Graphics* graphics;
 
 		// Current scene.
 		Scene* scene;

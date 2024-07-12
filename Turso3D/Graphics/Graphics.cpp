@@ -82,6 +82,95 @@ namespace
 		GL_BACK
 	};
 
+	static const unsigned glVertexElementSizes[] = {
+		1,
+		1,
+		2,
+		3,
+		4,
+		4
+	};
+
+	static const unsigned glVertexElementTypes[] = {
+		GL_INT,
+		GL_FLOAT,
+		GL_FLOAT,
+		GL_FLOAT,
+		GL_FLOAT,
+		GL_UNSIGNED_BYTE,
+	};
+
+	// Store Vertex Array Object state
+	struct VAO
+	{
+		// A combined hash of the vertex and instance elements.
+		size_t hash;
+		// Opengl object.
+		unsigned vao;
+
+		// Vertex buffer for binding point 0.
+		VertexBuffer* vertexBuffer;
+		// Index buffer
+		IndexBuffer* indexBuffer;
+
+		// Vertex buffer for binding point 1.
+		VertexBuffer* instanceBuffer;
+		// Instance buffer start offset.
+		size_t instanceStart;
+	};
+
+	struct GraphicsState
+	{
+		// OS-level rendering window.
+		GLFWwindow* window;
+		// OpenGL context.
+		void* context;
+
+		// Vertical sync flag.
+		bool vsync;
+		// The window position before going full screen.
+		IntVector2 lastWindowPos;
+		// The window size before going full screen.
+		IntVector2 lastWindowSize;
+
+		FrameBuffer* boundDrawBuffer;
+		FrameBuffer* boundReadBuffer;
+		ShaderProgram* boundProgram;
+		UniformBuffer* boundUniformBuffers[MAX_CONSTANT_BUFFER_SLOTS];
+
+		unsigned activeTargets[MAX_TEXTURE_UNITS];
+		Texture* boundTextures[MAX_TEXTURE_UNITS];
+		size_t activeTextureUnit;
+
+		// Last blend mode.
+		BlendMode lastBlendMode;
+		// Last cull mode.
+		CullMode lastCullMode;
+		// Last depth test.
+		CompareMode lastDepthTest;
+		// Last color write.
+		bool lastColorWrite;
+		// Last depth write.
+		bool lastDepthWrite;
+		// Last depth bias enabled.
+		bool lastDepthBias;
+
+		// Pending occlusion queries.
+		std::vector<std::pair<unsigned, void*>> pendingQueries;
+		// Free occlusion queries.
+		std::vector<unsigned> freeQueries;
+
+		// Quad vertex buffer.
+		VertexBuffer quadVertexBuffer;
+
+		// Default VAO.
+		unsigned defaultVAO;
+		// Currently bound VAO, nullptr if using the default.
+		VAO* boundVAO;
+		// Cache map for VAOs.
+		std::vector<VAO> vaoCache;
+	};
+
 #ifdef _DEBUG
 	const char* GLSeverity(GLenum severity)
 	{
@@ -101,13 +190,16 @@ namespace
 		}
 	}
 #endif
+
+	static GraphicsState State;
+	static bool StateInitialized = false;
 }
 
 // ==========================================================================================
 
-#ifdef _DEBUG
 namespace Turso3D
 {
+#ifdef _DEBUG
 	GraphicsMarker::GraphicsMarker(const char* name)
 	{
 		glPushDebugGroup(GL_DEBUG_SOURCE_APPLICATION, 0, -1, name);
@@ -117,49 +209,18 @@ namespace Turso3D
 	{
 		glPopDebugGroup();
 	}
-}
 #endif
 
-// ==========================================================================================
-
-namespace Turso3D
-{
-	Graphics::Graphics() :
-		window(nullptr),
-		context(nullptr),
-		lastBlendMode(MAX_BLEND_MODES),
-		lastCullMode(MAX_CULL_MODES),
-		lastDepthTest(MAX_COMPARE_MODES),
-		lastColorWrite(true),
-		lastDepthWrite(true),
-		lastDepthBias(false),
-		vsync(false),
-		instancingEnabled(false)
-	{
-	}
-
-	Graphics::~Graphics()
-	{
-		if (context) {
-			context = nullptr;
-		}
-
-		if (window) {
-			glfwDestroyWindow(window);
-			window = nullptr;
-		}
-
-		glfwTerminate();
-	}
-
+	// ==========================================================================================
 	bool Graphics::Initialize(const char* windowTitle, int width, int height)
 	{
-		if (context) {
+		if (StateInitialized) {
 			return true;
 		}
 
 		if (!glfwInit()) {
-			throw std::exception("Failed to initialize GLFW.");
+			LOG_ERROR("Failed to initialize GLFW");
+			return false;
 		}
 
 #ifdef _DEBUG
@@ -173,17 +234,17 @@ namespace Turso3D
 		glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
 		glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-		lastWindowPos = IntVector2::ZERO();
-		lastWindowSize = IntVector2 {width, height};
+		State.lastWindowPos = IntVector2::ZERO();
+		State.lastWindowSize = IntVector2 {width, height};
 
-		window = glfwCreateWindow(width, height, windowTitle, nullptr, nullptr);
-		if (!window) {
+		State.window = glfwCreateWindow(width, height, windowTitle, nullptr, nullptr);
+		if (!State.window) {
 			throw std::exception("Failed to create GLFW window.");
 		}
 
-		glfwMakeContextCurrent(window);
-		context = glfwGetCurrentContext();
-		if (!context) {
+		glfwMakeContextCurrent(State.window);
+		State.context = glfwGetCurrentContext();
+		if (!State.context) {
 			LOG_ERROR("Could not create OpenGL context");
 			return false;
 		}
@@ -247,74 +308,142 @@ namespace Turso3D
 		glDepthMask(GL_TRUE);
 		glFrontFace(GL_CW); // Use Direct3D convention, ie. clockwise vertices define a front face
 
-		// Define default VAO
-		glGenVertexArrays(1, &defaultVAO);
-		glBindVertexArray(defaultVAO);
+		// Vertex array objects
+		{
+			// Define default VAO
+			glGenVertexArrays(1, &State.defaultVAO);
+			glBindVertexArray(State.defaultVAO);
 
-		// Use texcoords 3-5 for instancing if supported
-		glVertexAttribDivisor(ATTR_TEXCOORD3, 1);
-		glVertexAttribDivisor(ATTR_TEXCOORD4, 1);
-		glVertexAttribDivisor(ATTR_TEXCOORD5, 1);
+			unsigned max_attribs;
+			glGetIntegerv(GL_MAX_VERTEX_ATTRIBS, (GLint*)&max_attribs);
+			for (unsigned i = 0; i < max_attribs; ++i) {
+				glEnableVertexAttribArray(i);
+			}
 
-		DefineQuadVertexBuffer();
-		SetVSync(vsync);
+			State.vaoCache.reserve(16);
+		}
 
+		// Define quad vertex buffer
+		{
+			const float quadVertexData[] = {
+				// Position         // UV
+				-1.0f, 1.0f, 0.0f,  0.0f, 0.0f,
+				1.0f, 1.0f, 0.0f,   1.0f, 0.0f,
+				-1.0f, -1.0f, 0.0f, 0.0f, 1.0f,
+				1.0f, 1.0f, 0.0f,   1.0f, 0.0f,
+				1.0f, -1.0f, 0.0f,  1.0f, 1.0f,
+				-1.0f, -1.0f, 0.0f, 0.0f, 1.0f
+			};
+
+			const VertexElement elements[] = {
+				{ELEM_VECTOR3, ATTR_POSITION, false},
+				{ELEM_VECTOR2, ATTR_TEXCOORD, false}
+			};
+
+			State.quadVertexBuffer.Define(USAGE_DEFAULT, 6, elements, 2, quadVertexData);
+		}
+		SetVSync(false);
+
+		StateInitialized = true;
 		return true;
+	}
+
+	void Graphics::ShutDown()
+	{
+		glBindVertexArray(0);
+		glDeleteVertexArrays(1, &State.defaultVAO);
+		for (size_t i = 0; i < State.vaoCache.size(); ++i) {
+			glDeleteVertexArrays(1, &State.vaoCache[i].vao);
+		}
+		State.vaoCache.clear();
+
+		if (State.context) {
+			State.context = nullptr;
+		}
+
+		if (State.window) {
+			glfwDestroyWindow(State.window);
+			State.window = nullptr;
+		}
+
+		glfwTerminate();
+		StateInitialized = false;
+	}
+
+	bool Graphics::IsInitialized()
+	{
+		return StateInitialized;
+	}
+
+	void* Graphics::Window()
+	{
+		return State.window;
 	}
 
 	void Graphics::Resize(int width, int height)
 	{
-		glfwSetWindowSize(window, width, height);
+		glfwSetWindowSize(State.window, width, height);
+	}
+
+	IntVector2 Graphics::Size()
+	{
+		IntVector2 size;
+		glfwGetWindowSize(State.window, &size.x, &size.y);
+		return size;
+	}
+
+	IntVector2 Graphics::RenderSize()
+	{
+		IntVector2 size;
+		glfwGetFramebufferSize(State.window, &size.x, &size.y);
+		return size;
 	}
 
 	void Graphics::SetFullscreen(bool enable)
 	{
-		GLFWmonitor* monitor = glfwGetWindowMonitor(window);
+		GLFWmonitor* monitor = glfwGetWindowMonitor(State.window);
 		if (enable) {
 			if (monitor) {
 				return; // Already fullscreen mode
 			}
 			monitor = glfwGetPrimaryMonitor();
 
-			glfwGetWindowPos(window, &lastWindowPos.x, &lastWindowPos.y);
-			glfwGetWindowSize(window, &lastWindowSize.x, &lastWindowSize.y);
+			glfwGetWindowPos(State.window, &State.lastWindowPos.x, &State.lastWindowPos.y);
+			glfwGetWindowSize(State.window, &State.lastWindowSize.x, &State.lastWindowSize.y);
 
 			const GLFWvidmode* mode = glfwGetVideoMode(monitor);
-			glfwSetWindowMonitor(window, monitor, 0, 0, mode->width, mode->height, mode->refreshRate);
+			glfwSetWindowMonitor(State.window, monitor, 0, 0, mode->width, mode->height, mode->refreshRate);
 
 		} else {
 			if (!monitor) {
 				return; // Already windowed mode
 			}
-			glfwSetWindowMonitor(window, nullptr, lastWindowPos.x, lastWindowPos.y, lastWindowSize.x, lastWindowSize.y, GLFW_DONT_CARE);
+			glfwSetWindowMonitor(State.window, nullptr, State.lastWindowPos.x, State.lastWindowPos.y, State.lastWindowSize.x, State.lastWindowSize.y, GLFW_DONT_CARE);
 		}
+	}
+
+	bool Graphics::IsFullscreen()
+	{
+		GLFWmonitor* monitor = glfwGetWindowMonitor(State.window);
+		return (monitor != nullptr);
 	}
 
 	void Graphics::SetVSync(bool enable)
 	{
 		if (IsInitialized()) {
 			glfwSwapInterval(enable ? 1 : 0);
-			vsync = enable;
+			State.vsync = enable;
 		}
 	}
 
-	void Graphics::Present()
+	bool Graphics::VSync()
 	{
-		glfwSwapBuffers(window);
+		return State.vsync;
 	}
 
 	void Graphics::SetViewport(const IntRect& viewRect)
 	{
 		glViewport(viewRect.left, viewRect.top, viewRect.right - viewRect.left, viewRect.bottom - viewRect.top);
-	}
-
-	ShaderProgram* Graphics::SetProgram(const std::string& shaderName, const std::string& vsDefines, const std::string& fsDefines)
-	{
-		std::shared_ptr<ShaderProgram> program = CreateProgram(shaderName, vsDefines, fsDefines);
-		if (program && program->Bind()) {
-			return program.get();
-		}
-		return nullptr;
 	}
 
 	std::shared_ptr<ShaderProgram> Graphics::CreateProgram(const std::string& shaderName, const std::string& vsDefines, const std::string& fsDefines)
@@ -364,60 +493,60 @@ namespace Turso3D
 
 	void Graphics::SetRenderState(BlendMode blendMode, CullMode cullMode, CompareMode depthTest, bool colorWrite, bool depthWrite)
 	{
-		if (blendMode != lastBlendMode) {
+		if (blendMode != State.lastBlendMode) {
 			if (blendMode == BLEND_REPLACE) {
 				glDisable(GL_BLEND);
 			} else {
-				if (lastBlendMode == BLEND_REPLACE) {
+				if (State.lastBlendMode == BLEND_REPLACE) {
 					glEnable(GL_BLEND);
 				}
 				glBlendFunc(glSrcBlend[blendMode], glDestBlend[blendMode]);
 				glBlendEquation(glBlendOp[blendMode]);
 			}
-			lastBlendMode = blendMode;
+			State.lastBlendMode = blendMode;
 		}
 
-		if (cullMode != lastCullMode) {
+		if (cullMode != State.lastCullMode) {
 			if (cullMode == CULL_NONE) {
 				glDisable(GL_CULL_FACE);
 			} else {
-				if (lastCullMode == CULL_NONE) {
+				if (State.lastCullMode == CULL_NONE) {
 					glEnable(GL_CULL_FACE);
 				}
 				glCullFace(glCullMode[cullMode]);
 			}
-			lastCullMode = cullMode;
+			State.lastCullMode = cullMode;
 		}
 
-		if (depthTest != lastDepthTest) {
+		if (depthTest != State.lastDepthTest) {
 			glDepthFunc(glCompareFuncs[depthTest]);
-			lastDepthTest = depthTest;
+			State.lastDepthTest = depthTest;
 		}
 
-		if (colorWrite != lastColorWrite) {
+		if (colorWrite != State.lastColorWrite) {
 			GLboolean newColorWrite = colorWrite ? GL_TRUE : GL_FALSE;
 			glColorMask(newColorWrite, newColorWrite, newColorWrite, newColorWrite);
-			lastColorWrite = colorWrite;
+			State.lastColorWrite = colorWrite;
 		}
 
-		if (depthWrite != lastDepthWrite) {
+		if (depthWrite != State.lastDepthWrite) {
 			GLboolean newDepthWrite = depthWrite ? GL_TRUE : GL_FALSE;
 			glDepthMask(newDepthWrite);
-			lastDepthWrite = depthWrite;
+			State.lastDepthWrite = depthWrite;
 		}
 	}
 
 	void Graphics::SetDepthBias(float constantBias, float slopeScaleBias)
 	{
 		if (constantBias <= 0.0f && slopeScaleBias <= 0.0f) {
-			if (lastDepthBias) {
+			if (State.lastDepthBias) {
 				glDisable(GL_POLYGON_OFFSET_FILL);
-				lastDepthBias = false;
+				State.lastDepthBias = false;
 			}
 		} else {
-			if (!lastDepthBias) {
+			if (!State.lastDepthBias) {
 				glEnable(GL_POLYGON_OFFSET_FILL);
-				lastDepthBias = true;
+				State.lastDepthBias = true;
 			}
 			glPolygonOffset(slopeScaleBias, constantBias);
 		}
@@ -427,14 +556,14 @@ namespace Turso3D
 	void Graphics::SetScissor(const IntRect& scissor)
 	{
 		if (scissor == IntRect::ZERO) {
-			if (lastScissor) {
+			if (State.lastScissor) {
 				glDisable(GL_SCISSOR_TEST);
-				lastScissor = false;
+				State.lastScissor = false;
 			}
 		} else {
-			if (!lastScissor) {
+			if (!State.lastScissor) {
 				glEnable(GL_SCISSOR_TEST);
-				lastScissor = true;
+				State.lastScissor = true;
 			}
 			glScissor(scissor.left, scissor.top, scissor.Width(), scissor.Height());
 		}
@@ -446,11 +575,11 @@ namespace Turso3D
 		if (clearColor) {
 			glClearColor(backgroundColor.r, backgroundColor.g, backgroundColor.b, backgroundColor.a);
 			glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
-			lastColorWrite = true;
+			State.lastColorWrite = true;
 		}
 		if (clearDepth) {
 			glDepthMask(GL_TRUE);
-			lastDepthWrite = true;
+			State.lastDepthWrite = true;
 		}
 
 		GLenum glClearBits = 0;
@@ -473,7 +602,7 @@ namespace Turso3D
 
 	void Graphics::Blit(FrameBuffer* dest, const IntRect& destRect, FrameBuffer* src, const IntRect& srcRect, bool blitColor, bool blitDepth, TextureFilterMode filter)
 	{
-		FrameBuffer::Bind(dest, src);
+		BindFramebuffer(dest, src);
 
 		GLenum glBlitBits = 0;
 		if (blitColor) {
@@ -486,98 +615,265 @@ namespace Turso3D
 		glBlitFramebuffer(srcRect.left, srcRect.top, srcRect.right, srcRect.bottom, destRect.left, destRect.top, destRect.right, destRect.bottom, glBlitBits, filter == FILTER_POINT ? GL_NEAREST : GL_LINEAR);
 	}
 
-	void Graphics::Draw(PrimitiveType type, size_t drawStart, size_t drawCount)
+	void Graphics::BindVertexBuffers(VertexBuffer* buffer, VertexBuffer* instanceBuffer, size_t instanceStart)
 	{
-		if (instancingEnabled) {
-			glDisableVertexAttribArray(ATTR_TEXCOORD3);
-			glDisableVertexAttribArray(ATTR_TEXCOORD4);
-			glDisableVertexAttribArray(ATTR_TEXCOORD5);
-			instancingEnabled = false;
+		if (!buffer) {
+			if (State.boundVAO) {
+				glBindVertexArray(State.defaultVAO);
+				State.boundVAO = nullptr;
+			}
+			return;
 		}
 
-		glDrawArrays(glPrimitiveTypes[type], (GLsizei)drawStart, (GLsizei)drawCount);
+		size_t hash = buffer->ElementsHash();
+		if (instanceBuffer) {
+			assert(instanceBuffer->ElementsHash());
+			hash = (hash << 24 | hash >> 40 & 0xFFFFFFFFFFu) ^ instanceBuffer->ElementsHash();
+		}
+
+		VAO* vao = State.boundVAO;
+		if (!vao || vao->hash != hash) {
+			auto it = std::find_if(State.vaoCache.begin(), State.vaoCache.end(), [hash](const VAO& v)
+			{
+				return v.hash == hash;
+			});
+
+			if (it == State.vaoCache.end()) {
+				VAO& v = State.vaoCache.emplace_back();
+				vao = &v;
+
+				vao->hash = hash;
+
+				glGenVertexArrays(1, &vao->vao);
+				if (!vao->vao) {
+					LOG_ERROR("Failed to create VAO.");
+					return;
+				}
+
+				glBindVertexArray(vao->vao);
+				State.boundVAO = vao;
+
+				for (size_t i = 0; i < buffer->NumElements(); ++i) {
+					const VertexElement& e = buffer->GetElement(i);
+					unsigned offset = buffer->GetElementOffset(i);
+					glEnableVertexAttribArray(e.index);
+					glVertexAttribFormat(e.index, glVertexElementSizes[e.type], glVertexElementTypes[e.type], (GLboolean)e.normalized, offset);
+					glVertexAttribBinding(e.index, 0);
+				}
+
+				if (instanceBuffer) {
+					for (size_t i = 0; i < instanceBuffer->NumElements(); ++i) {
+						const VertexElement& e = instanceBuffer->GetElement(i);
+						unsigned offset = instanceBuffer->GetElementOffset(i);
+						glEnableVertexAttribArray(e.index);
+						glVertexAttribFormat(e.index, glVertexElementSizes[e.type], glVertexElementTypes[e.type], (GLboolean)e.normalized, offset);
+						glVertexAttribBinding(e.index, 1);
+					}
+					glVertexBindingDivisor(1, 1);
+				}
+			} else {
+				vao = &*it;
+				glBindVertexArray(vao->vao);
+				State.boundVAO = vao;
+			}
+		}
+
+		if (buffer != vao->vertexBuffer) {
+			glBindVertexBuffer(0, buffer->GLBuffer(), 0, buffer->VertexSize());
+			vao->vertexBuffer = buffer;
+		}
+
+		if (instanceBuffer && (instanceBuffer != vao->instanceBuffer || instanceStart != vao->instanceStart)) {
+			glBindVertexBuffer(1, instanceBuffer->GLBuffer(), instanceStart * instanceBuffer->VertexSize(), instanceBuffer->VertexSize());
+			vao->instanceBuffer = instanceBuffer;
+			vao->instanceStart = instanceStart;
+		}
+	}
+
+	void Graphics::BindIndexBuffer(IndexBuffer* buffer)
+	{
+		if (State.boundVAO) {
+			if (buffer != State.boundVAO->indexBuffer) {
+				glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffer->GLBuffer());
+				State.boundVAO->indexBuffer = buffer;
+			}
+		} else {
+			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffer->GLBuffer());
+		}
+	}
+
+	void Graphics::BindFramebuffer(FrameBuffer* draw, FrameBuffer* read)
+	{
+		if (draw != State.boundDrawBuffer) {
+			glBindFramebuffer(GL_DRAW_FRAMEBUFFER, draw ? draw->GLBuffer() : 0);
+			State.boundDrawBuffer = draw;
+		}
+		if (read != State.boundReadBuffer) {
+			glBindFramebuffer(GL_READ_FRAMEBUFFER, read ? read->GLBuffer() : 0);
+			State.boundReadBuffer = read;
+		}
+	}
+
+	void Graphics::UnbindFramebuffer(FrameBuffer* buffer)
+	{
+		if (State.boundDrawBuffer == buffer) {
+			glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+			State.boundDrawBuffer = nullptr;
+		}
+		if (State.boundReadBuffer == buffer) {
+			glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
+			State.boundReadBuffer = nullptr;
+		}
+	}
+
+	void Graphics::BindProgram(ShaderProgram* program)
+	{
+		if (program != State.boundProgram) {
+			if (program) {
+				glUseProgram(program->GLProgram());
+			}
+			State.boundProgram = program;
+		}
+	}
+
+	void Graphics::BindUniformBuffer(size_t index, UniformBuffer* buffer)
+	{
+		if (buffer != State.boundUniformBuffers[index]) {
+			glBindBufferRange(GL_UNIFORM_BUFFER, (GLuint)index, buffer ? buffer->GLBuffer() : 0, 0, buffer ? buffer->Size() : 0);
+			State.boundUniformBuffers[index] = buffer;
+		}
+	}
+
+	void Graphics::BindTexture(size_t unit, Texture* texture, bool force)
+	{
+		assert(unit < MAX_TEXTURE_UNITS);
+
+		if (!force && State.boundTextures[unit] == texture) {
+			return;
+		}
+
+		if (State.activeTextureUnit != unit) {
+			glActiveTexture(GL_TEXTURE0 + (GLenum)unit);
+			State.activeTextureUnit = unit;
+		}
+
+		unsigned& activeTarget = State.activeTargets[unit];
+		if (texture) {
+			unsigned target = texture->GLTarget();
+			assert(target);
+
+			if (activeTarget && activeTarget != target) {
+				glBindTexture(activeTarget, 0);
+			}
+
+			glBindTexture(target, texture->GLTexture());
+			activeTarget = target;
+
+		} else if (activeTarget) {
+			glBindTexture(activeTarget, 0);
+			activeTarget = 0;
+		}
+
+		State.boundTextures[unit] = texture;
+	}
+
+	void Graphics::RemoveStateObject(VertexBuffer* buffer)
+	{
+		if (buffer) {
+			for (size_t i = 0; i < State.vaoCache.size(); ++i) {
+				VAO& vao = State.vaoCache[i];
+				if (vao.vertexBuffer == buffer) {
+					vao.vertexBuffer = nullptr;
+				}
+				if (vao.instanceBuffer == buffer) {
+					vao.instanceBuffer = nullptr;
+				}
+			}
+		}
+	}
+
+	void Graphics::RemoveStateObject(IndexBuffer* buffer)
+	{
+		if (buffer) {
+			for (size_t i = 0; i < State.vaoCache.size(); ++i) {
+				VAO& vao = State.vaoCache[i];
+				if (vao.indexBuffer == buffer) {
+					vao.indexBuffer = nullptr;
+				}
+			}
+		}
+	}
+
+	void Graphics::RemoveStateObject(UniformBuffer* buffer)
+	{
+		if (buffer) {
+			for (size_t i = 0; i < MAX_CONSTANT_BUFFER_SLOTS; ++i) {
+				if (State.boundUniformBuffers[i] == buffer) {
+					State.boundUniformBuffers[i] = nullptr;
+				}
+			}
+		}
+	}
+
+	void Graphics::RemoveStateObject(Texture* texture)
+	{
+		if (texture) {
+			for (size_t i = 0; i < MAX_TEXTURE_UNITS; ++i) {
+				if (State.boundTextures[i] == texture) {
+					State.boundTextures[i] = nullptr;
+				}
+			}
+		}
+	}
+
+	void Graphics::Draw(PrimitiveType type, size_t drawStart, size_t drawCount)
+	{
+		glDrawArrays(glPrimitiveTypes[type], (GLint)drawStart, (GLsizei)drawCount);
 	}
 
 	void Graphics::DrawIndexed(PrimitiveType type, size_t drawStart, size_t drawCount)
 	{
-		if (instancingEnabled) {
-			glDisableVertexAttribArray(ATTR_TEXCOORD3);
-			glDisableVertexAttribArray(ATTR_TEXCOORD4);
-			glDisableVertexAttribArray(ATTR_TEXCOORD5);
-			instancingEnabled = false;
-		}
-
-		unsigned indexSize = (unsigned)IndexBuffer::BoundIndexSize();
-		if (indexSize) {
-			glDrawElements(glPrimitiveTypes[type], (GLsizei)drawCount, indexSize == sizeof(unsigned short) ? GL_UNSIGNED_SHORT : GL_UNSIGNED_INT, (const void*)(drawStart * indexSize));
-		}
+		size_t index_size = State.boundVAO->indexBuffer->IndexSize();
+		GLenum index_type = (index_size == sizeof(unsigned short)) ? GL_UNSIGNED_SHORT : GL_UNSIGNED_INT;
+		glDrawElements(glPrimitiveTypes[type], (GLsizei)drawCount, index_type, (const void*)(drawStart * index_size));
 	}
 
-	void Graphics::DrawInstanced(PrimitiveType type, size_t drawStart, size_t drawCount, VertexBuffer* instanceVertexBuffer, size_t instanceStart, size_t instanceCount)
+	void Graphics::DrawInstanced(PrimitiveType type, size_t drawStart, size_t drawCount, size_t instanceCount)
 	{
-		if (!instanceVertexBuffer) {
-			return;
-		}
-
-		if (!instancingEnabled) {
-			glEnableVertexAttribArray(ATTR_TEXCOORD3);
-			glEnableVertexAttribArray(ATTR_TEXCOORD4);
-			glEnableVertexAttribArray(ATTR_TEXCOORD5);
-			instancingEnabled = true;
-		}
-
-		unsigned instanceVertexSize = (unsigned)instanceVertexBuffer->VertexSize();
-
-		instanceVertexBuffer->Bind(0);
-		glVertexAttribPointer(ATTR_TEXCOORD3, 4, GL_FLOAT, GL_FALSE, instanceVertexSize, (const void*)(instanceStart * instanceVertexSize));
-		glVertexAttribPointer(ATTR_TEXCOORD4, 4, GL_FLOAT, GL_FALSE, instanceVertexSize, (const void*)(instanceStart * instanceVertexSize + sizeof(Vector4)));
-		glVertexAttribPointer(ATTR_TEXCOORD5, 4, GL_FLOAT, GL_FALSE, instanceVertexSize, (const void*)(instanceStart * instanceVertexSize + 2 * sizeof(Vector4)));
 		glDrawArraysInstanced(glPrimitiveTypes[type], (GLint)drawStart, (GLsizei)drawCount, (GLsizei)instanceCount);
 	}
 
-	void Graphics::DrawIndexedInstanced(PrimitiveType type, size_t drawStart, size_t drawCount, VertexBuffer* instanceVertexBuffer, size_t instanceStart, size_t instanceCount)
+	void Graphics::DrawIndexedInstanced(PrimitiveType type, size_t drawStart, size_t drawCount, size_t instanceCount)
 	{
-		unsigned indexSize = (unsigned)IndexBuffer::BoundIndexSize();
-
-		if (!instanceVertexBuffer || !indexSize) {
-			return;
-		}
-
-		if (!instancingEnabled) {
-			glEnableVertexAttribArray(ATTR_TEXCOORD3);
-			glEnableVertexAttribArray(ATTR_TEXCOORD4);
-			glEnableVertexAttribArray(ATTR_TEXCOORD5);
-			instancingEnabled = true;
-		}
-
-		unsigned instanceVertexSize = (unsigned)instanceVertexBuffer->VertexSize();
-
-		instanceVertexBuffer->Bind(0);
-		glVertexAttribPointer(ATTR_TEXCOORD3, 4, GL_FLOAT, GL_FALSE, instanceVertexSize, (const void*)(instanceStart * instanceVertexSize));
-		glVertexAttribPointer(ATTR_TEXCOORD4, 4, GL_FLOAT, GL_FALSE, instanceVertexSize, (const void*)(instanceStart * instanceVertexSize + sizeof(Vector4)));
-		glVertexAttribPointer(ATTR_TEXCOORD5, 4, GL_FLOAT, GL_FALSE, instanceVertexSize, (const void*)(instanceStart * instanceVertexSize + 2 * sizeof(Vector4)));
-		glDrawElementsInstanced(glPrimitiveTypes[type], (GLsizei)drawCount, indexSize == sizeof(unsigned short) ? GL_UNSIGNED_SHORT : GL_UNSIGNED_INT, (const void*)(drawStart * indexSize), (GLsizei)instanceCount);
+		size_t index_size = State.boundVAO->indexBuffer->IndexSize();
+		GLenum index_type = (index_size == sizeof(unsigned short)) ? GL_UNSIGNED_SHORT : GL_UNSIGNED_INT;
+		glDrawElementsInstanced(glPrimitiveTypes[type], (GLsizei)drawCount, index_type, (const void*)(drawStart * index_size), (GLsizei)instanceCount);
 	}
 
 	void Graphics::DrawQuad()
 	{
-		quadVertexBuffer->Bind(MASK_POSITION | MASK_TEXCOORD);
+		BindVertexBuffers(&State.quadVertexBuffer);
 		Draw(PT_TRIANGLE_LIST, 0, 6);
+	}
+
+	void Graphics::Present()
+	{
+		glfwSwapBuffers(State.window);
 	}
 
 	unsigned Graphics::BeginOcclusionQuery(void* object)
 	{
 		GLuint queryId;
 
-		if (freeQueries.size()) {
-			queryId = freeQueries.back();
-			freeQueries.pop_back();
+		if (State.freeQueries.size()) {
+			queryId = State.freeQueries.back();
+			State.freeQueries.pop_back();
 		} else {
 			glGenQueries(1, &queryId);
 		}
 
 		glBeginQuery(GL_ANY_SAMPLES_PASSED, queryId);
-		pendingQueries.push_back(std::make_pair(queryId, object));
+		State.pendingQueries.push_back(std::make_pair(queryId, object));
 
 		return queryId;
 	}
@@ -593,9 +889,9 @@ namespace Turso3D
 			return;
 		}
 
-		for (auto it = pendingQueries.begin(); it != pendingQueries.end(); ++it) {
+		for (auto it = State.pendingQueries.begin(); it != State.pendingQueries.end(); ++it) {
 			if (it->first == queryId) {
-				pendingQueries.erase(it);
+				State.pendingQueries.erase(it);
 				break;
 			}
 		}
@@ -607,14 +903,14 @@ namespace Turso3D
 	{
 		GLuint available = 0;
 
-		if (!vsync && isHighFrameRate) {
+		if (!State.vsync && isHighFrameRate) {
 			// Vsync off and high framerate: check for query result availability to avoid stalling.
 			// To save API calls, go through queries in reverse order
 			// and assume that if a later query has its result available, then all earlier queries will have too
 			GLuint available = 0;
 
-			for (size_t i = pendingQueries.size() - 1; i < pendingQueries.size(); --i) {
-				GLuint queryId = pendingQueries[i].first;
+			for (size_t i = State.pendingQueries.size() - 1; i < State.pendingQueries.size(); --i) {
+				GLuint queryId = State.pendingQueries[i].first;
 
 				if (!available) {
 					glGetQueryObjectuiv(queryId, GL_QUERY_RESULT_AVAILABLE, &available);
@@ -626,17 +922,17 @@ namespace Turso3D
 
 					OcclusionQueryResult newResult;
 					newResult.id = queryId;
-					newResult.object = pendingQueries[i].second;
+					newResult.object = State.pendingQueries[i].second;
 					newResult.visible = passed > 0;
 					result.push_back(newResult);
 
-					freeQueries.push_back(queryId);
-					pendingQueries.erase(pendingQueries.begin() + i);
+					State.freeQueries.push_back(queryId);
+					State.pendingQueries.erase(State.pendingQueries.begin() + i);
 				}
 			}
 		} else {
 			// Vsync on or low frame rate: check all query results, potentially stalling, to avoid stutter and large false occlusion errors
-			for (auto it = pendingQueries.begin(); it != pendingQueries.end(); ++it) {
+			for (auto it = State.pendingQueries.begin(); it != State.pendingQueries.end(); ++it) {
 				GLuint queryId = it->first;
 				GLuint passed = 0;
 				glGetQueryObjectuiv(queryId, GL_QUERY_RESULT, &passed);
@@ -647,61 +943,25 @@ namespace Turso3D
 				newResult.visible = passed > 0;
 				result.push_back(newResult);
 
-				freeQueries.push_back(queryId);
+				State.freeQueries.push_back(queryId);
 			}
 
-			pendingQueries.clear();
+			State.pendingQueries.clear();
 		}
 	}
 
-	IntVector2 Graphics::Size() const
+	size_t Graphics::PendingOcclusionQueries()
 	{
-		IntVector2 size;
-		glfwGetWindowSize(window, &size.x, &size.y);
-		return size;
+		return State.pendingQueries.size();
 	}
 
-	IntVector2 Graphics::RenderSize() const
+	int Graphics::FullscreenRefreshRate()
 	{
-		IntVector2 size;
-		glfwGetFramebufferSize(window, &size.x, &size.y);
-		return size;
-	}
-
-	bool Graphics::IsFullscreen() const
-	{
-		GLFWmonitor* monitor = glfwGetWindowMonitor(window);
-		return (monitor != nullptr);
-	}
-
-	int Graphics::FullscreenRefreshRate() const
-	{
-		GLFWmonitor* monitor = glfwGetWindowMonitor(window);
+		GLFWmonitor* monitor = glfwGetWindowMonitor(State.window);
 		if (monitor) {
 			const GLFWvidmode* mode = glfwGetVideoMode(monitor);
 			return mode->refreshRate;
 		}
 		return 0;
-	}
-
-	void Graphics::DefineQuadVertexBuffer()
-	{
-		float quadVertexData[] = {
-			// Position         // UV
-			-1.0f, 1.0f, 0.0f,  0.0f, 0.0f,
-			1.0f, 1.0f, 0.0f,   1.0f, 0.0f,
-			-1.0f, -1.0f, 0.0f, 0.0f, 1.0f,
-			1.0f, 1.0f, 0.0f,   1.0f, 0.0f,
-			1.0f, -1.0f, 0.0f,  1.0f, 1.0f,
-			-1.0f, -1.0f, 0.0f, 0.0f, 1.0f
-		};
-
-		const VertexElement elements[] = {
-			VertexElement(ELEM_VECTOR3, SEM_POSITION),
-			VertexElement(ELEM_VECTOR2, SEM_TEXCOORD)
-		};
-
-		quadVertexBuffer = std::make_unique<VertexBuffer>();
-		quadVertexBuffer->Define(USAGE_DEFAULT, 6, elements, 2, quadVertexData);
 	}
 }

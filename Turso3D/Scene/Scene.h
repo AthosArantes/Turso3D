@@ -6,14 +6,13 @@
 
 namespace Turso3D
 {
-	class Graphics;
 	class WorkQueue;
 
 	class Scene
 	{
 	public:
 		// WorkQueue and Graphics subsystems must have been initialized, as it's required by Octree.
-		Scene(WorkQueue* workQueue, Graphics* graphics);
+		Scene(WorkQueue* workQueue);
 
 		// Destroy child nodes recursively, leaving the scene empty.
 		void Clear();

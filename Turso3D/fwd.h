@@ -15,14 +15,12 @@ namespace Turso3D
 	// Graphics
 
 	class FrameBuffer;
-	class Graphics;
 	class IndexBuffer;
 	class RenderBuffer;
 	class Shader;
 	class ShaderProgram;
 	class Texture;
 	class UniformBuffer;
-	class VertexArrayObject;
 	class VertexBuffer;
 
 	// Math

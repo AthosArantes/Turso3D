@@ -5,16 +5,12 @@
 
 namespace Turso3D
 {
-	// Maximum simultaneous vertex buffers.
-	constexpr size_t MAX_VERTEX_STREAMS = 4;
 	// Maximum number of material textures
 	constexpr size_t MAX_MATERIAL_TEXTURE_UNITS = 8;
 	// Maximum number of textures in use at once.
 	constexpr size_t MAX_TEXTURE_UNITS = 16;
 	// Maximum number of constant buffer slots in use at once.
 	constexpr size_t MAX_CONSTANT_BUFFER_SLOTS = 8;
-	// Maximum number of color rendertargets in use at once.
-	constexpr size_t MAX_RENDERTARGETS = 4;
 	// Number of cube map faces.
 	constexpr unsigned MAX_CUBE_FACES = 6;
 
@@ -22,7 +18,7 @@ namespace Turso3D
 
 	enum ImageFormat
 	{
-		FORMAT_NONE = 0,
+		FORMAT_NONE,
 
 		FORMAT_RG4_UNORM_PACK8,
 		FORMAT_RGBA4_UNORM_PACK16,
@@ -519,14 +515,14 @@ namespace Turso3D
 	// Primitive types.
 	enum PrimitiveType
 	{
-		PT_LINE_LIST = 0,
+		PT_LINE_LIST,
 		PT_TRIANGLE_LIST
 	};
 
 	// Element types for vertex elements.
 	enum ElementType
 	{
-		ELEM_INT = 0,
+		ELEM_INT,
 		ELEM_FLOAT,
 		ELEM_VECTOR2,
 		ELEM_VECTOR3,
@@ -536,9 +532,9 @@ namespace Turso3D
 	};
 
 	// Vertex element sizes by element type.
-	constexpr size_t ElementTypeSize(ElementType value)
+	constexpr unsigned ElementTypeSize(ElementType value)
 	{
-		constexpr const size_t data[] = {
+		constexpr const unsigned data[] = {
 			sizeof(int),
 			sizeof(float),
 			sizeof(Vector2),
@@ -550,93 +546,29 @@ namespace Turso3D
 		return data[value];
 	}
 
-	// Element semantics for vertex elements.
-	enum ElementSemantic
+	// Built-in vertex attribute indices.
+	enum VertexAttributeIndex
 	{
-		SEM_POSITION = 0,
-		SEM_NORMAL,
-		SEM_TANGENT,
-		SEM_COLOR,
-		SEM_TEXCOORD,
-		SEM_BLENDWEIGHTS,
-		SEM_BLENDINDICES,
-		MAX_ELEMENT_SEMANTICS
-	};
-
-	constexpr const char* ElementSemanticName(ElementSemantic value)
-	{
-		constexpr const char* data[] = {
-			"POSITION",
-			"NORMAL",
-			"TANGENT",
-			"TEXCOORD",
-			"COLOR",
-			"BLENDWEIGHT",
-			"BLENDINDICES",
-			nullptr
-		};
-		return data[value];
-	}
-
-	// Vertex attribute indices.
-	enum VertexAttribute
-	{
-		ATTR_POSITION = 0,
+		ATTR_POSITION,
 		ATTR_NORMAL,
 		ATTR_TANGENT,
 		ATTR_VERTEXCOLOR,
 		ATTR_TEXCOORD,
-		ATTR_TEXCOORD1,
 		ATTR_TEXCOORD2,
-		ATTR_TEXCOORD3,
-		ATTR_TEXCOORD4,
-		ATTR_TEXCOORD5,
 		ATTR_BLENDWEIGHTS,
 		ATTR_BLENDINDICES,
+		ATTR_WORLDINSTANCE_M0,
+		ATTR_WORLDINSTANCE_M1,
+		ATTR_WORLDINSTANCE_M2,
+		ATTR_INSTANCE_DATA0,
+		ATTR_INSTANCE_DATA1,
 		MAX_VERTEX_ATTRIBUTES
-	};
-
-	constexpr const char* VertexAttributeName(VertexAttribute value)
-	{
-		constexpr const char* data[] = {
-			"position",
-			"normal",
-			"tangent",
-			"color",
-			"texCoord",
-			"texCoord1",
-			"texCoord2",
-			"texCoord3",
-			"texCoord4",
-			"texCoord5",
-			"blendWeights",
-			"blendIndices",
-			nullptr
-		};
-		return data[value];
-	}
-
-	// Vertex attribute bitmasks.
-	enum AttributeMask
-	{
-		MASK_POSITION = 1 << ATTR_POSITION,
-		MASK_NORMAL = 1 << ATTR_NORMAL,
-		MASK_TANGENT = 1 << ATTR_TANGENT,
-		MASK_VERTEXCOLOR = 1 << ATTR_VERTEXCOLOR,
-		MASK_TEXCOORD = 1 << ATTR_TEXCOORD,
-		MASK_TEXCOORD1 = 1 << ATTR_TEXCOORD1,
-		MASK_TEXCOORD2 = 1 << ATTR_TEXCOORD2,
-		MASK_TEXCOORD3 = 1 << ATTR_TEXCOORD3,
-		MASK_TEXCOORD4 = 1 << ATTR_TEXCOORD4,
-		MASK_TEXCOORD5 = 1 << ATTR_TEXCOORD5,
-		MASK_BLENDWEIGHTS = 1 << ATTR_BLENDWEIGHTS,
-		MASK_BLENDINDICES = 1 << ATTR_BLENDINDICES
 	};
 
 	// Predefined blend modes.
 	enum BlendMode
 	{
-		BLEND_REPLACE = 0,
+		BLEND_REPLACE,
 		BLEND_ADD,
 		BLEND_MULTIPLY,
 		BLEND_ALPHA,
@@ -668,7 +600,7 @@ namespace Turso3D
 	// Triangle culling modes.
 	enum CullMode
 	{
-		CULL_NONE = 0,
+		CULL_NONE,
 		CULL_FRONT,
 		CULL_BACK,
 		MAX_CULL_MODES
@@ -689,7 +621,7 @@ namespace Turso3D
 	// Depth or stencil compare modes.
 	enum CompareMode
 	{
-		CMP_NEVER = 0,
+		CMP_NEVER,
 		CMP_LESS,
 		CMP_EQUAL,
 		CMP_LESS_EQUAL,
@@ -749,14 +681,14 @@ namespace Turso3D
 	// Resource usage modes for buffers.
 	enum ResourceUsage
 	{
-		USAGE_DEFAULT = 0,
+		USAGE_DEFAULT,
 		USAGE_DYNAMIC
 	};
 
 	// Texture filtering modes.
 	enum TextureFilterMode
 	{
-		FILTER_POINT = 0,
+		FILTER_POINT,
 		FILTER_BILINEAR,
 		FILTER_TRILINEAR,
 		FILTER_ANISOTROPIC,
@@ -769,7 +701,7 @@ namespace Turso3D
 	// Texture addressing modes.
 	enum TextureAddressMode
 	{
-		ADDRESS_WRAP = 0,
+		ADDRESS_WRAP,
 		ADDRESS_MIRROR,
 		ADDRESS_CLAMP,
 		ADDRESS_BORDER,
@@ -788,7 +720,7 @@ namespace Turso3D
 	{
 		constexpr const char* data[] = {
 			"worldMatrix",
-			"modelLightMask",
+			"lightMask",
 			nullptr
 		};
 		return data[value];
@@ -797,7 +729,7 @@ namespace Turso3D
 	// Uniform buffer binding points.
 	enum UniformBufferBindings
 	{
-		UB_PERVIEWDATA = 0,
+		UB_PERVIEWDATA,
 		UB_LIGHTDATA,
 		UB_OBJECTDATA,
 		UB_MATERIALDATA,
@@ -825,31 +757,30 @@ namespace Turso3D
 	// Description of an element in a vertex declaration.
 	struct VertexElement
 	{
-		// Default-construct.
 		VertexElement() :
 			type(ELEM_VECTOR3),
-			semantic(SEM_POSITION),
-			index(0),
-			offset(0)
+			index(ATTR_POSITION),
+			normalized(false)
 		{
 		}
-
-		// Construct with type, semantic, index and whether is per-instance data.
-		VertexElement(ElementType type, ElementSemantic semantic, unsigned char index = 0) :
+		VertexElement(ElementType type, unsigned index) :
 			type(type),
-			semantic(semantic),
 			index(index),
-			offset(0)
+			normalized(false)
+		{
+		}
+		VertexElement(ElementType type, unsigned index, bool normalized) :
+			type(type),
+			index(index),
+			normalized(normalized)
 		{
 		}
 
 		// Data type of element.
 		ElementType type;
-		// Semantic of element.
-		ElementSemantic semantic;
-		// Semantic index of element, for example multi-texcoords.
-		unsigned char index;
-		// Offset of element from vertex start. Filled by VertexBuffer.
-		size_t offset;
+		// Attribute index.
+		unsigned index;
+		// Determines if the attribute is normalized.
+		bool normalized;
 	};
 }

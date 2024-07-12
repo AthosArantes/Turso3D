@@ -134,7 +134,9 @@ namespace Turso3D
 	}
 
 	// ==========================================================================================
-	ShadowMap::ShadowMap()
+	ShadowMap::ShadowMap() :
+		freeQueueIdx(0),
+		freeCasterListIdx(0)
 	{
 		// Construct texture but do not define its size yet
 		texture = std::make_unique<Texture>();
@@ -145,7 +147,9 @@ namespace Turso3D
 	{
 		freeQueueIdx = 0;
 		freeCasterListIdx = 0;
-		allocator.Reset(texture->Width(), texture->Height(), 0, 0, false);
+
+		const IntVector3& tex_size = texture->Size();
+		allocator.Reset(tex_size.x, tex_size.y, 0, 0, false);
 		shadowViews.clear();
 		instanceTransforms.clear();
 
@@ -158,15 +162,14 @@ namespace Turso3D
 	}
 
 	// ==========================================================================================
-	Renderer::Renderer(WorkQueue* workQueue, Graphics* graphics) :
+	Renderer::Renderer(WorkQueue* workQueue) :
 		workQueue(workQueue),
-		graphics(graphics),
 		frameNumber(0),
 		clusterFrustumsDirty(true),
 		depthBiasMul(1.0f),
 		slopeScaleBiasMul(1.0f)
 	{
-		assert(graphics->IsInitialized());
+		assert(Graphics::IsInitialized());
 
 		instanceVertexBuffer = std::make_unique<VertexBuffer>();
 		instanceTransforms.reserve(INITIAL_INSTANCE_CAPACITY);
@@ -372,8 +375,8 @@ namespace Turso3D
 		}
 
 		// Unbind shadow textures before rendering to
-		Texture::Unbind(TU_DIRLIGHTSHADOW);
-		Texture::Unbind(TU_SHADOWATLAS);
+		Graphics::BindTexture(TU_DIRLIGHTSHADOW, nullptr);
+		Graphics::BindTexture(TU_SHADOWATLAS, nullptr);
 
 		for (size_t i = 0; i < NUM_SHADOW_MAPS; ++i) {
 			ShadowMap& shadowMap = shadowMaps[i];
@@ -383,7 +386,7 @@ namespace Turso3D
 
 			UpdateInstanceTransforms(shadowMap.instanceTransforms);
 
-			shadowMap.fbo->Bind();
+			Graphics::BindFramebuffer(shadowMap.fbo.get(), nullptr);
 
 			// First render static objects for those shadowmaps that need to store static objects. Do all of them to avoid FBO changes
 			for (size_t j = 0; j < shadowMap.shadowViews.size(); ++j) {
@@ -391,12 +394,12 @@ namespace Turso3D
 				LightDrawable* light = view->light;
 
 				if (view->renderMode == RENDER_STATIC_LIGHT_STORE_STATIC) {
-					graphics->Clear(false, true, view->viewport);
+					Graphics::Clear(false, true, view->viewport);
 
 					BatchQueue& batchQueue = shadowMap.shadowBatches[view->staticQueueIdx];
 					if (batchQueue.HasBatches()) {
-						graphics->SetViewport(view->viewport);
-						graphics->SetDepthBias(light->DepthBias() * depthBiasMul, light->SlopeScaleBias() * slopeScaleBiasMul);
+						Graphics::SetViewport(view->viewport);
+						Graphics::SetDepthBias(light->DepthBias() * depthBiasMul, light->SlopeScaleBias() * slopeScaleBiasMul);
 						RenderBatches(view->shadowCamera.get(), batchQueue);
 					}
 				}
@@ -407,21 +410,21 @@ namespace Turso3D
 				ShadowView* view = shadowMap.shadowViews[j];
 
 				if (view->renderMode == RENDER_STATIC_LIGHT_STORE_STATIC) {
-					graphics->Blit(staticObjectShadowFbo.get(), view->viewport, shadowMap.fbo.get(), view->viewport, false, true, FILTER_POINT);
+					Graphics::Blit(staticObjectShadowFbo.get(), view->viewport, shadowMap.fbo.get(), view->viewport, false, true, FILTER_POINT);
 				}
 			}
 
 			// Rebind shadowmap
-			shadowMap.fbo->Bind();
+			Graphics::BindFramebuffer(shadowMap.fbo.get(), nullptr);
 
 			// First do all the clears or static shadowmap -> shadowmap blits
 			for (size_t j = 0; j < shadowMap.shadowViews.size(); ++j) {
 				ShadowView* view = shadowMap.shadowViews[j];
 
 				if (view->renderMode == RENDER_DYNAMIC_LIGHT) {
-					graphics->Clear(false, true, view->viewport);
+					Graphics::Clear(false, true, view->viewport);
 				} else if (view->renderMode == RENDER_STATIC_LIGHT_RESTORE_STATIC) {
-					graphics->Blit(shadowMap.fbo.get(), view->viewport, staticObjectShadowFbo.get(), view->viewport, false, true, FILTER_POINT);
+					Graphics::Blit(shadowMap.fbo.get(), view->viewport, staticObjectShadowFbo.get(), view->viewport, false, true, FILTER_POINT);
 				}
 			}
 
@@ -433,15 +436,15 @@ namespace Turso3D
 				if (view->renderMode != RENDER_STATIC_LIGHT_CACHED) {
 					BatchQueue& batchQueue = shadowMap.shadowBatches[view->dynamicQueueIdx];
 					if (batchQueue.HasBatches()) {
-						graphics->SetViewport(view->viewport);
-						graphics->SetDepthBias(light->DepthBias() * depthBiasMul, light->SlopeScaleBias() * slopeScaleBiasMul);
+						Graphics::SetViewport(view->viewport);
+						Graphics::SetDepthBias(light->DepthBias() * depthBiasMul, light->SlopeScaleBias() * slopeScaleBiasMul);
 						RenderBatches(view->shadowCamera.get(), batchQueue);
 					}
 				}
 			}
 		}
 
-		graphics->SetDepthBias(0.0f, 0.0f);
+		Graphics::SetDepthBias(0.0f, 0.0f);
 	}
 
 	void Renderer::RenderOpaque(bool clear)
@@ -451,26 +454,26 @@ namespace Turso3D
 		UpdateLightData();
 
 		if (shadowMaps) {
-			shadowMaps[0].texture->Bind(TU_DIRLIGHTSHADOW);
-			shadowMaps[1].texture->Bind(TU_SHADOWATLAS);
-			faceSelectionTexture->Bind(TU_FACESELECTION);
+			Graphics::BindTexture(TU_DIRLIGHTSHADOW, shadowMaps[0].texture.get());
+			Graphics::BindTexture(TU_SHADOWATLAS, shadowMaps[1].texture.get());
+			Graphics::BindTexture(TU_FACESELECTION, faceSelectionTexture.get());
 		}
 
-		clusterTexture->Bind(TU_LIGHTCLUSTERDATA);
-		lightDataBuffer->Bind(UB_LIGHTDATA);
+		Graphics::BindTexture(TU_LIGHTCLUSTERDATA, clusterTexture.get());
+		Graphics::BindUniformBuffer(UB_LIGHTDATA, lightDataBuffer.get());
 
 		if (clear) {
-			graphics->Clear(true, true, IntRect::ZERO(), lightEnvironment->FogColor());
+			Graphics::Clear(true, true, IntRect::ZERO(), lightEnvironment->FogColor());
 		}
 
 		if (Texture* tex = lightEnvironment->GetIEMTexture(); tex) {
-			tex->Bind(TU_IBL_IEM);
+			Graphics::BindTexture(TU_IBL_IEM, tex);
 		}
 		if (Texture* tex = lightEnvironment->GetPMREMTexture(); tex) {
-			tex->Bind(TU_IBL_PMREM);
+			Graphics::BindTexture(TU_IBL_PMREM, tex);
 		}
 		if (Texture* tex = lightEnvironment->GetBRDFTexture(); tex) {
-			tex->Bind(TU_IBL_BRDFLUT);
+			Graphics::BindTexture(TU_IBL_BRDFLUT, tex);
 		}
 
 		RenderBatches(camera, opaqueBatches);
@@ -484,22 +487,22 @@ namespace Turso3D
 	void Renderer::RenderAlpha()
 	{
 		if (shadowMaps) {
-			shadowMaps[0].texture->Bind(TU_DIRLIGHTSHADOW);
-			shadowMaps[1].texture->Bind(TU_SHADOWATLAS);
-			faceSelectionTexture->Bind(TU_FACESELECTION);
+			Graphics::BindTexture(TU_DIRLIGHTSHADOW, shadowMaps[0].texture.get());
+			Graphics::BindTexture(TU_SHADOWATLAS, shadowMaps[1].texture.get());
+			Graphics::BindTexture(TU_FACESELECTION, faceSelectionTexture.get());
 		}
 
-		clusterTexture->Bind(TU_LIGHTCLUSTERDATA);
-		lightDataBuffer->Bind(UB_LIGHTDATA);
+		Graphics::BindTexture(TU_LIGHTCLUSTERDATA, clusterTexture.get());
+		Graphics::BindUniformBuffer(UB_LIGHTDATA, lightDataBuffer.get());
 
 		if (Texture* tex = lightEnvironment->GetIEMTexture(); tex) {
-			tex->Bind(TU_IBL_IEM);
+			Graphics::BindTexture(TU_IBL_IEM, tex);
 		}
 		if (Texture* tex = lightEnvironment->GetPMREMTexture(); tex) {
-			tex->Bind(TU_IBL_PMREM);
+			Graphics::BindTexture(TU_IBL_PMREM, tex);
 		}
 		if (Texture* tex = lightEnvironment->GetBRDFTexture(); tex) {
-			tex->Bind(TU_IBL_BRDFLUT);
+			Graphics::BindTexture(TU_IBL_BRDFLUT, tex);
 		}
 
 		RenderBatches(camera, alphaBatches);
@@ -748,13 +751,13 @@ namespace Turso3D
 		if (transforms.size()) {
 			if (instanceVertexBuffer->NumVertices() < transforms.size()) {
 				const VertexElement elements[] = {
-					VertexElement {ELEM_VECTOR4, SEM_TEXCOORD, 3},
-					VertexElement {ELEM_VECTOR4, SEM_TEXCOORD, 4},
-					VertexElement {ELEM_VECTOR4, SEM_TEXCOORD, 5}
+					{ELEM_VECTOR4, ATTR_WORLDINSTANCE_M0},
+					{ELEM_VECTOR4, ATTR_WORLDINSTANCE_M1},
+					{ELEM_VECTOR4, ATTR_WORLDINSTANCE_M2}
 				};
-				instanceVertexBuffer->Define(USAGE_DYNAMIC, transforms.size(), elements, 3, &transforms[0]);
+				instanceVertexBuffer->Define(USAGE_DYNAMIC, transforms.size(), elements, 3, transforms.data());
 			} else {
-				instanceVertexBuffer->SetData(0, transforms.size(), &transforms[0]);
+				instanceVertexBuffer->SetData(0, transforms.size(), transforms.data());
 			}
 		}
 	}
@@ -837,7 +840,7 @@ namespace Turso3D
 			lastCamera = camera_;
 		}
 
-		perViewDataBuffer->Bind(UB_PERVIEWDATA);
+		Graphics::BindUniformBuffer(UB_PERVIEWDATA, perViewDataBuffer.get());
 
 		const std::vector<Batch>& batches = queue.batches;
 		for (size_t i = 0; i < batches.size(); ++i) {
@@ -860,9 +863,11 @@ namespace Turso3D
 
 				program = batch.pass->GetShaderProgram(gp, lmp);
 			}
-			if (!program || !program->Bind()) {
+			if (!program) {
 				continue;
 			}
+
+			Graphics::BindProgram(program);
 
 			Material* material = batch.pass->Parent();
 			if (batch.pass != lastPass) {
@@ -870,13 +875,13 @@ namespace Turso3D
 					for (size_t i = 0; i < MAX_MATERIAL_TEXTURE_UNITS; ++i) {
 						Texture* texture = material->GetTexture(i).get();
 						if (texture) {
-							texture->Bind(i);
+							Graphics::BindTexture(i, texture);
 						}
 					}
 
 					UniformBuffer* materialUniforms = material->GetUniformBuffer();
 					if (materialUniforms) {
-						materialUniforms->Bind(UB_MATERIALDATA);
+						Graphics::BindUniformBuffer(UB_MATERIALDATA, materialUniforms);
 					}
 					lastMaterial = material;
 				}
@@ -890,27 +895,30 @@ namespace Turso3D
 					}
 				}
 
-				graphics->SetRenderState(batch.pass->GetBlendMode(), cullMode, batch.pass->GetDepthTest(), batch.pass->GetColorWrite(), batch.pass->GetDepthWrite());
+				Graphics::SetRenderState(batch.pass->GetBlendMode(), cullMode, batch.pass->GetDepthTest(), batch.pass->GetColorWrite(), batch.pass->GetDepthWrite());
 				lastPass = batch.pass;
 			}
 
 			Geometry* geometry = batch.geometry;
+
 			VertexBuffer* vb = geometry->vertexBuffer.get();
+			VertexBuffer* isb = (batch.type == BATCH_TYPE_INSTANCED) ? instanceVertexBuffer.get() : nullptr;
+			Graphics::BindVertexBuffers(vb, isb, batch.instanceStart);
+
 			IndexBuffer* ib = geometry->indexBuffer.get();
-			vb->Bind(program->Attributes());
 			if (ib) {
-				ib->Bind();
+				Graphics::BindIndexBuffer(ib);
 			}
 
 			if (batch.lightMask) {
 				program->SetUniform(U_LIGHTMASK, batch.lightMask);
 			}
 
-			if (batch.type == BATCH_TYPE_INSTANCED) {
+			if (isb) {
 				if (ib) {
-					graphics->DrawIndexedInstanced(PT_TRIANGLE_LIST, geometry->drawStart, geometry->drawCount, instanceVertexBuffer.get(), batch.instanceStart, batch.instanceCount);
+					Graphics::DrawIndexedInstanced(PT_TRIANGLE_LIST, geometry->drawStart, geometry->drawCount, batch.instanceCount);
 				} else {
-					graphics->DrawInstanced(PT_TRIANGLE_LIST, geometry->drawStart, geometry->drawCount, instanceVertexBuffer.get(), batch.instanceStart, batch.instanceCount);
+					Graphics::DrawInstanced(PT_TRIANGLE_LIST, geometry->drawStart, geometry->drawCount, batch.instanceCount);
 				}
 				i += static_cast<size_t>(batch.instanceCount) - 1;
 
@@ -922,9 +930,9 @@ namespace Turso3D
 				}
 
 				if (ib) {
-					graphics->DrawIndexed(PT_TRIANGLE_LIST, geometry->drawStart, geometry->drawCount);
+					Graphics::DrawIndexed(PT_TRIANGLE_LIST, geometry->drawStart, geometry->drawCount);
 				} else {
-					graphics->Draw(PT_TRIANGLE_LIST, geometry->drawStart, geometry->drawCount);
+					Graphics::Draw(PT_TRIANGLE_LIST, geometry->drawStart, geometry->drawCount);
 				}
 			}
 		}
@@ -935,7 +943,7 @@ namespace Turso3D
 		constexpr float target_rate = 1.0f / 60.0f;
 
 		occlusionQueryResults.clear();
-		graphics->CheckOcclusionQueryResults(occlusionQueryResults, lastFrameTime < target_rate);
+		Graphics::CheckOcclusionQueryResults(occlusionQueryResults, lastFrameTime < target_rate);
 
 		for (size_t i = 0; i < occlusionQueryResults.size(); ++i) {
 			OcclusionQueryResult& result = occlusionQueryResults[i];
@@ -950,6 +958,7 @@ namespace Turso3D
 		if (!boundingBoxShaderProgram) {
 			return;
 		}
+		Graphics::BindProgram(boundingBoxShaderProgram.get());
 
 		Matrix3x4 boxMatrix {Matrix3x4::IDENTITY()};
 		float nearClip = camera->NearClip();
@@ -960,10 +969,9 @@ namespace Turso3D
 		Vector3 cameraMove = cameraPosition - previousCameraPosition;
 		Vector3 enlargement = (OCCLUSION_MARGIN + 4.0f * cameraMove.Length()) * Vector3::ONE();
 
-		boundingBoxVertexBuffer->Bind(MASK_POSITION);
-		boundingBoxIndexBuffer->Bind();
-		boundingBoxShaderProgram->Bind();
-		graphics->SetRenderState(BLEND_REPLACE, CULL_BACK, CMP_LESS_EQUAL, false, false);
+		Graphics::BindVertexBuffers(boundingBoxVertexBuffer.get());
+		Graphics::BindIndexBuffer(boundingBoxIndexBuffer.get());
+		Graphics::SetRenderState(BLEND_REPLACE, CULL_BACK, CMP_LESS_EQUAL, false, false);
 
 		for (size_t i = 0; i < NUM_OCTANT_TASKS; ++i) {
 			std::vector<Octant*>& occlusionQueries = octantResults[i].occlusionQueries;
@@ -992,9 +1000,9 @@ namespace Turso3D
 
 				boundingBoxShaderProgram->SetUniform(U_WORLDMATRIX, boxMatrix);
 
-				unsigned queryId = graphics->BeginOcclusionQuery(octant);
-				graphics->DrawIndexed(PT_TRIANGLE_LIST, 0, NUM_BOX_INDICES);
-				graphics->EndOcclusionQuery();
+				unsigned queryId = Graphics::BeginOcclusionQuery(octant);
+				Graphics::DrawIndexed(PT_TRIANGLE_LIST, 0, NUM_BOX_INDICES);
+				Graphics::EndOcclusionQuery();
 
 				// Remember query in octant to not re-test it until result arrives
 				octant->OnOcclusionQuery(queryId);
@@ -1063,15 +1071,7 @@ namespace Turso3D
 			-1.0f, 1.0f, 1.0f,
 			-1.0f, -1.0f, 1.0f
 		};
-
-		const VertexElement elements[] = {
-			VertexElement {ELEM_VECTOR3, SEM_POSITION}
-		};
-
-		boundingBoxVertexBuffer = std::make_unique<VertexBuffer>();
-		boundingBoxVertexBuffer->Define(USAGE_DEFAULT, 8, elements, 1, boxVertexData);
-
-		unsigned short boxIndexData[] = {
+		const unsigned short boxIndexData[] = {
 			0, 2, 1,
 			2, 3, 1,
 			2, 4, 3,
@@ -1085,11 +1085,17 @@ namespace Turso3D
 			1, 3, 5,
 			1, 5, 7
 		};
+		const VertexElement elements[] = {
+			{ELEM_VECTOR3, ATTR_POSITION}
+		};
+
+		boundingBoxVertexBuffer = std::make_unique<VertexBuffer>();
+		boundingBoxVertexBuffer->Define(USAGE_DEFAULT, 8, elements, 1, boxVertexData);
 
 		boundingBoxIndexBuffer = std::make_unique<IndexBuffer>();
 		boundingBoxIndexBuffer->Define(USAGE_DEFAULT, NUM_BOX_INDICES, sizeof(unsigned short), boxIndexData);
 
-		boundingBoxShaderProgram = graphics->CreateProgram("BoundingBox.glsl", "", "");
+		boundingBoxShaderProgram = Graphics::CreateProgram("BoundingBox.glsl", "", "");
 	}
 
 	void Renderer::DefineClusterFrustums()
@@ -1352,7 +1358,7 @@ namespace Turso3D
 						Vector3 edge = geometryBox.Size() * 0.5f;
 
 						float viewCenterZ = viewZ.DotProduct(center) + viewMatrix.m23;
-						float viewEdgeZ = absViewZ.DotProduct(edge);
+						float viewEdgeZ = std::max(absViewZ.DotProduct(edge), 0.01f);
 						result.minZ = std::min(result.minZ, viewCenterZ - viewEdgeZ);
 						result.maxZ = std::max(result.maxZ, viewCenterZ + viewEdgeZ);
 

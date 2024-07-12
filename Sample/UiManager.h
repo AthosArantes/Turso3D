@@ -11,8 +11,7 @@ public:
 	UiManager();
 	~UiManager();
 
-	void Initialize(Turso3D::Graphics* graphics);
-
+	void Initialize();
 	void UpdateBuffers(const Turso3D::IntVector2& size);
 
 	// Update/Render ui system.
@@ -22,9 +21,6 @@ public:
 	void Compose(Turso3D::Texture* background, Turso3D::Texture* blurredBackground);
 
 private:
-	// Cached graphics subsystem
-	Turso3D::Graphics* graphics;
-
 	std::shared_ptr<Turso3D::ShaderProgram> composeProgram;
 
 	std::unique_ptr<Middleware> impl;

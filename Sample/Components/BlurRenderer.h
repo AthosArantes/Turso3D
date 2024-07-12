@@ -13,7 +13,7 @@ public:
 	BlurRenderer();
 	~BlurRenderer();
 
-	void Initialize(Turso3D::Graphics* graphics);
+	void Initialize();
 
 	// Perform downsample.
 	void Downsample(Turso3D::Texture* srcColor);
@@ -32,9 +32,6 @@ public:
 	Turso3D::Texture* GetTexture() const;
 
 private:
-	// Cached graphics subsystem
-	Turso3D::Graphics* graphics;
-
 	// Mip buffers.
 	std::vector<MipPass> passes;
 

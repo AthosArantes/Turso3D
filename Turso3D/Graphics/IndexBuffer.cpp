@@ -3,13 +3,9 @@
 #include <Turso3D/IO/Log.h>
 #include <glew/glew.h>
 #include <cassert>
-#include <cstring>
 
 namespace Turso3D
 {
-	static IndexBuffer* boundIndexBuffer = nullptr;
-	static size_t boundIndexSize = 0;
-
 	IndexBuffer::IndexBuffer() :
 		buffer(0),
 		numIndices(0),
@@ -55,8 +51,7 @@ namespace Turso3D
 		}
 
 		if (buffer) {
-			Bind();
-
+			Graphics::BindIndexBuffer(this);
 			if (numIndices_ == numIndices) {
 				glBufferData(GL_ELEMENT_ARRAY_BUFFER, numIndices * indexSize, data, usage == USAGE_DYNAMIC ? GL_DYNAMIC_DRAW : GL_STATIC_DRAW);
 			} else if (discard) {
@@ -70,16 +65,6 @@ namespace Turso3D
 		return true;
 	}
 
-	void IndexBuffer::Bind()
-	{
-		if (!buffer || boundIndexBuffer == this) {
-			return;
-		}
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffer);
-		boundIndexBuffer = this;
-		boundIndexSize = indexSize;
-	}
-
 	bool IndexBuffer::Create(const void* data)
 	{
 		glGenBuffers(1, &buffer);
@@ -88,10 +73,9 @@ namespace Turso3D
 			return false;
 		}
 
-		Bind();
-
+		Graphics::BindIndexBuffer(this);
 		glBufferData(GL_ELEMENT_ARRAY_BUFFER, numIndices * indexSize, data, usage == USAGE_DYNAMIC ? GL_DYNAMIC_DRAW : GL_STATIC_DRAW);
-		LOG_DEBUG("Created index buffer numIndices {} indexSize {}", (unsigned)numIndices, (unsigned)indexSize);
+		LOG_DEBUG("Created index buffer numIndices {:d} indexSize {:d}", (unsigned)numIndices, (unsigned)indexSize);
 
 		return true;
 	}
@@ -99,18 +83,9 @@ namespace Turso3D
 	void IndexBuffer::Release()
 	{
 		if (buffer) {
+			Graphics::RemoveStateObject(this);
 			glDeleteBuffers(1, &buffer);
 			buffer = 0;
-			if (boundIndexBuffer == this) {
-				boundIndexBuffer = nullptr;
-				boundIndexSize = 0;
-			}
 		}
-	}
-
-	// ==========================================================================================
-	size_t IndexBuffer::BoundIndexSize()
-	{
-		return boundIndexSize;
 	}
 }

@@ -9,15 +9,14 @@
 
 namespace Turso3D
 {
-	DebugRenderer::DebugRenderer(Graphics* graphics) :
-		graphics(graphics)
+	DebugRenderer::DebugRenderer()
 	{
-		assert(graphics->IsInitialized());
+		assert(Graphics::IsInitialized());
 
 		vertexBuffer = std::make_unique<VertexBuffer>();
 		indexBuffer = std::make_unique<IndexBuffer>();
 
-		shaderProgram = graphics->CreateProgram("DebugLines.glsl", "", "");
+		shaderProgram = Graphics::CreateProgram("DebugLines.glsl", "", "");
 	}
 
 	DebugRenderer::~DebugRenderer()
@@ -291,8 +290,8 @@ namespace Turso3D
 
 		if (vertexBuffer->NumVertices() < vertices.size()) {
 			const VertexElement elements[] = {
-				VertexElement {ELEM_VECTOR3, SEM_POSITION},
-				VertexElement {ELEM_UBYTE4, SEM_COLOR}
+				{ELEM_VECTOR3, ATTR_POSITION},
+				{ELEM_UBYTE4, ATTR_VERTEXCOLOR, true}
 			};
 			vertexBuffer->Define(USAGE_DYNAMIC, vertices.size(), elements, 2);
 		}
@@ -312,23 +311,23 @@ namespace Turso3D
 			indexBuffer->SetData(indices.size(), noDepthIndices.size(), &noDepthIndices[0]);
 		}
 
-		shaderProgram->Bind();
+		Graphics::BindProgram(shaderProgram.get());
 
 		constexpr StringHash viewProjMatrixHash {"viewProjMatrix"};
 		int location = shaderProgram->Uniform(viewProjMatrixHash);
-		graphics->SetUniform(location, projection * view);
+		Graphics::SetUniform(location, projection * view);
 
-		vertexBuffer->Bind(shaderProgram->Attributes());
-		indexBuffer->Bind();
+		Graphics::BindVertexBuffers(vertexBuffer.get());
+		Graphics::BindIndexBuffer(indexBuffer.get());
 
 		if (indices.size()) {
-			graphics->SetRenderState(BLEND_REPLACE, CULL_NONE, CMP_LESS, true, false);
-			graphics->DrawIndexed(PT_LINE_LIST, 0, indices.size());
+			Graphics::SetRenderState(BLEND_REPLACE, CULL_NONE, CMP_LESS, true, false);
+			Graphics::DrawIndexed(PT_LINE_LIST, 0, indices.size());
 		}
 
 		if (noDepthIndices.size()) {
-			graphics->SetRenderState(BLEND_REPLACE, CULL_NONE, CMP_ALWAYS, true, false);
-			graphics->DrawIndexed(PT_LINE_LIST, indices.size(), noDepthIndices.size());
+			Graphics::SetRenderState(BLEND_REPLACE, CULL_NONE, CMP_ALWAYS, true, false);
+			Graphics::DrawIndexed(PT_LINE_LIST, indices.size(), noDepthIndices.size());
 		}
 
 		vertices.clear();

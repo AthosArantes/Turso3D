@@ -72,34 +72,35 @@ bool Application::Initialize()
 	if (!ApplicationBase::Initialize()) {
 		return false;
 	}
-	graphics->SetVSync(true);
+	Graphics::SetVSync(true);
 
 	// Configure renderer
 	renderer->SetupShadowMaps(DIRECTIONAL_LIGHT_SIZE, LIGHT_ATLAS_SIZE, FORMAT_D32_SFLOAT_PACK32);
 
-	blurRenderer->Initialize(graphics.get());
-	bloomRenderer->Initialize(graphics.get());
-	aoRenderer->Initialize(graphics.get());
-	tonemapRenderer->Initialize(graphics.get());
+	blurRenderer->Initialize();
+	bloomRenderer->Initialize();
+	aoRenderer->Initialize();
+	tonemapRenderer->Initialize();
 
-	uiManager->Initialize(graphics.get());
+	uiManager->Initialize();
 
 	// Create the scene and camera.
 	// Camera is created outside scene so it's not disturbed by scene clears
 	camera = std::make_shared<Camera>();
-	scene = std::make_shared<Scene>(workQueue.get(), graphics.get());
+	scene = std::make_shared<Scene>(workQueue.get());
 
 	// Define textures
 	CreateTextures();
-	OnFramebufferSize(graphics->RenderWidth(), graphics->RenderHeight());
+	const IntVector2& rs = Graphics::RenderSize();
+	OnFramebufferSize(rs.x, rs.y);
 
 	// Create scene
 	SetupEnvironmentLighting();
 	//CreateSpheresScene();
-	//CreateThousandMushroomScene();
-	//CreateWalkingCharacter();
+	CreateThousandMushroomScene();
+	CreateWalkingCharacter();
 	//CreateHugeWalls();
-	CreateScene();
+	//CreateScene();
 
 	return true;
 }
@@ -492,7 +493,7 @@ void Application::CreateScene()
 // ==========================================================================================
 void Application::Update(double dt)
 {
-	GLFWwindow* window = graphics->Window();
+	GLFWwindow* window = static_cast<GLFWwindow*>(Graphics::Window());
 	const float dtf = static_cast<float>(dt);
 
 	// Ui
@@ -532,8 +533,8 @@ void Application::Update(double dt)
 
 	if (IsKeyPressed(GLFW_KEY_1)) useOcclusion = !useOcclusion;
 	if (IsKeyPressed(GLFW_KEY_2)) renderDebug = !renderDebug;
-	if (IsKeyPressed(GLFW_KEY_F)) graphics->SetFullscreen(!graphics->IsFullscreen());
-	if (IsKeyPressed(GLFW_KEY_V)) graphics->SetVSync(!graphics->VSync());
+	if (IsKeyPressed(GLFW_KEY_F)) Graphics::SetFullscreen(!Graphics::IsFullscreen());
+	if (IsKeyPressed(GLFW_KEY_V)) Graphics::SetVSync(!Graphics::VSync());
 
 	if (character) {
 		AnimationState* state = character->AnimationStates()[0].get();
@@ -574,11 +575,10 @@ void Application::Render(double dt)
 		TURSO3D_GRAPHICS_MARKER("Shadow Maps");
 		renderer->RenderShadowMaps();
 	}
-	graphics->SetViewport(viewRect);
+	Graphics::SetViewport(viewRect);
 
 	// The default opaque shaders can write both color (first RT) and view-space normals (second RT).
-	hdrFbo->Bind();
-
+	Graphics::BindFramebuffer(hdrFbo.get(), nullptr);
 	{
 		TURSO3D_GRAPHICS_MARKER("Opaque Geometries");
 		renderer->RenderOpaque();
@@ -590,9 +590,9 @@ void Application::Render(double dt)
 
 	// Resolve MSAA
 	if (multiSample > 1) {
-		graphics->Blit(colorFbo[0].get(), viewRect, colorFbo[1].get(), viewRect, true, false, FILTER_BILINEAR);
-		graphics->Blit(normalFbo[0].get(), viewRect, normalFbo[1].get(), viewRect, true, false, FILTER_BILINEAR);
-		graphics->Blit(depthFbo[0].get(), viewRect, depthFbo[1].get(), viewRect, false, true, FILTER_POINT);
+		Graphics::Blit(colorFbo[0].get(), viewRect, colorFbo[1].get(), viewRect, true, false, FILTER_BILINEAR);
+		Graphics::Blit(normalFbo[0].get(), viewRect, normalFbo[1].get(), viewRect, true, false, FILTER_BILINEAR);
+		Graphics::Blit(depthFbo[0].get(), viewRect, depthFbo[1].get(), viewRect, false, true, FILTER_POINT);
 	}
 
 	Texture* color = colorBuffer.get(); // Resolved HDR color texture
@@ -615,7 +615,7 @@ void Application::Render(double dt)
 	// Tonemap
 	if (tonemapRenderer) {
 		TURSO3D_GRAPHICS_MARKER("Tonemap");
-		ldrFbo->Bind();
+		Graphics::BindFramebuffer(ldrFbo.get(), nullptr);
 		tonemapRenderer->Render(color);
 	}
 
@@ -652,14 +652,14 @@ void Application::Render(double dt)
 		TURSO3D_GRAPHICS_MARKER("Scene Blur");
 		blurRenderer->Downsample(ldrBuffer.get());
 		blurRenderer->Upsample();
-		graphics->SetViewport(viewRect);
+		Graphics::SetViewport(viewRect);
 	}
 
 	// Compose UI
 	if (uiManager) {
-		FrameBuffer::Unbind();
+		Graphics::BindFramebuffer(nullptr, nullptr);
 		uiManager->Compose(ldrBuffer.get(), blurRenderer->GetTexture());
 	}
 
-	graphics->Present();
+	Graphics::Present();
 }

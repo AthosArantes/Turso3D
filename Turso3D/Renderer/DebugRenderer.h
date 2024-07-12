@@ -10,7 +10,6 @@ namespace Turso3D
 {
 	class BoundingBox;
 	class Camera;
-	class Graphics;
 	class IndexBuffer;
 	class Matrix3x4;
 	class Polyhedron;
@@ -41,7 +40,7 @@ namespace Turso3D
 	public:
 		// Construct.
 		// Graphics must have been initialized.
-		DebugRenderer(Graphics* graphics);
+		DebugRenderer();
 		// Destruct.
 		~DebugRenderer();
 
@@ -72,9 +71,6 @@ namespace Turso3D
 		bool IsInside(const BoundingBox& box) const { return frustum.IsInsideFast(box) == INSIDE; }
 
 	private:
-		// Cached graphics subsystem.
-		Graphics* graphics;
-
 		// Debug geometry vertices.
 		std::vector<DebugVertex> vertices;
 		// Indices rendered with depth test.

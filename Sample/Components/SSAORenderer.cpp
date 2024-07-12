@@ -10,8 +10,7 @@
 
 using namespace Turso3D;
 
-SSAORenderer::SSAORenderer() :
-	graphics(nullptr)
+SSAORenderer::SSAORenderer()
 {
 	ssaoUniformBuffer = std::make_unique<UniformBuffer>();
 	noiseTexture = std::make_unique<Texture>();
@@ -23,14 +22,12 @@ SSAORenderer::~SSAORenderer()
 {
 }
 
-void SSAORenderer::Initialize(Graphics* graphics_)
+void SSAORenderer::Initialize()
 {
-	graphics = graphics_;
-
 	constexpr StringHash blurInvSizeHash {"blurInvSize"};
-	ssaoProgram = graphics->CreateProgram("PostProcess/SSAO.glsl", "", "");
+	ssaoProgram = Graphics::CreateProgram("PostProcess/SSAO.glsl", "", "");
 
-	blurProgram = graphics->CreateProgram("PostProcess/SSAOBlur.glsl", "", "");
+	blurProgram = Graphics::CreateProgram("PostProcess/SSAOBlur.glsl", "", "");
 	uBlurInvSize = blurProgram->Uniform(blurInvSizeHash);
 
 	ssaoUniformBuffer->Define(USAGE_DEFAULT, sizeof(UniformDataBlock), &uniformData);
@@ -55,6 +52,8 @@ void SSAORenderer::UpdateBuffers(const IntVector2& size)
 
 void SSAORenderer::Render(Camera* camera, Texture* normal, Texture* depth, FrameBuffer* dst, const IntRect& viewRect)
 {
+	const IntVector2& result_sz = resultTexture->Size2D();
+
 	// Update uniforms
 	Vector3 near, far;
 	camera->FrustumSize(near, far);
@@ -75,7 +74,12 @@ void SSAORenderer::Render(Camera* camera, Texture* normal, Texture* depth, Frame
 	}
 
 	if (uniformDataDirty) {
-		uniformData.noiseInvSize = Vector2 {(float)resultTexture->Width() / noiseTexture->Width(), (float)resultTexture->Height() / noiseTexture->Height()};
+		const IntVector2& noise_sz = noiseTexture->Size2D();
+
+		uniformData.noiseInvSize = Vector2 {
+			static_cast<float>(result_sz.x) / static_cast<float>(noise_sz.x),
+			static_cast<float>(result_sz.y) / static_cast<float>(noise_sz.y)
+		};
 		uniformData.screenInvSize = Vector2 {1.0f / viewRect.Width(), 1.0f / viewRect.Height()};
 
 		ssaoUniformBuffer->SetData(0, sizeof(UniformDataBlock), &uniformData, false);
@@ -83,31 +87,29 @@ void SSAORenderer::Render(Camera* camera, Texture* normal, Texture* depth, Frame
 	}
 
 	// SSAO pass
-	resultFbo->Bind();
-	ssaoProgram->Bind();
-	graphics->SetViewport(IntRect {IntVector2::ZERO(), resultTexture->Size2D()});
+	Graphics::BindFramebuffer(resultFbo.get(), nullptr);
+	Graphics::BindProgram(ssaoProgram.get());
+	Graphics::SetViewport(IntRect {IntVector2::ZERO(), resultTexture->Size2D()});
 
-	depth->Bind(0);
-	normal->Bind(1);
-	noiseTexture->Bind(2);
+	Graphics::BindTexture(0, depth);
+	Graphics::BindTexture(1, normal);
+	Graphics::BindTexture(2, noiseTexture.get());
 
-	ssaoUniformBuffer->Bind(UB_CUSTOM);
+	Graphics::BindUniformBuffer(UB_CUSTOM, ssaoUniformBuffer.get());
 
-	graphics->SetRenderState(BLEND_REPLACE, CULL_BACK, CMP_ALWAYS, true, false);
-	graphics->DrawQuad();
-
-	//UniformBuffer::Unbind(UB_CUSTOM);
+	Graphics::SetRenderState(BLEND_REPLACE, CULL_BACK, CMP_ALWAYS, true, false);
+	Graphics::DrawQuad();
 
 	// Blur pass
-	dst->Bind();
-	blurProgram->Bind();
-	graphics->SetViewport(viewRect);
+	Graphics::BindFramebuffer(dst, nullptr);
+	Graphics::BindProgram(blurProgram.get());
+	Graphics::SetViewport(viewRect);
 
-	resultTexture->Bind(0);
-	graphics->SetUniform(uBlurInvSize, Vector2 {1.0f / resultTexture->Width(), 1.0f / resultTexture->Height()});
+	Graphics::BindTexture(0, resultTexture.get());
+	Graphics::SetUniform(uBlurInvSize, Vector2 {1.0f / static_cast<float>(result_sz.x), 1.0f / static_cast<float>(result_sz.y)});
 
-	graphics->SetRenderState(BLEND_SUBTRACT, CULL_BACK, CMP_ALWAYS, true, false);
-	graphics->DrawQuad();
+	Graphics::SetRenderState(BLEND_SUBTRACT, CULL_BACK, CMP_ALWAYS, true, false);
+	Graphics::DrawQuad();
 }
 
 void SSAORenderer::GenerateNoiseTexture()

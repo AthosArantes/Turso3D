@@ -4,12 +4,29 @@
 #include <glew/glew.h>
 #include <cctype>
 #include <algorithm>
+#include <utility>
 
-namespace Turso3D
+namespace
 {
-	static ShaderProgram* boundProgram = nullptr;
+	using namespace Turso3D;
 
 	constexpr size_t MAX_NAME_LENGTH = 256;
+
+	static std::pair<std::string_view, VertexAttributeIndex> AttributeIndices[] = {
+		{"position", ATTR_POSITION},
+		{"normal", ATTR_NORMAL},
+		{"tangent", ATTR_TANGENT},
+		{"color", ATTR_VERTEXCOLOR},
+		{"texCoord", ATTR_TEXCOORD}, {"texCoord1", ATTR_TEXCOORD},
+		{"texCoord2", ATTR_TEXCOORD2},
+		{"blendWeights", ATTR_BLENDWEIGHTS},
+		{"blendIndices", ATTR_BLENDINDICES},
+		{"worldInstanceM0", ATTR_WORLDINSTANCE_M0}, {"texCoord3", ATTR_WORLDINSTANCE_M0},
+		{"worldInstanceM1", ATTR_WORLDINSTANCE_M1}, {"texCoord4", ATTR_WORLDINSTANCE_M1},
+		{"worldInstanceM2", ATTR_WORLDINSTANCE_M2}, {"texCoord5", ATTR_WORLDINSTANCE_M2},
+		{"instanceData0", ATTR_INSTANCE_DATA0},
+		{"instanceData1", ATTR_INSTANCE_DATA1}
+	};
 
 	static int NumberPostfix(const std::string& string)
 	{
@@ -20,11 +37,12 @@ namespace Turso3D
 		}
 		return -1;
 	}
+}
 
-	// ==========================================================================================
+namespace Turso3D
+{
 	ShaderProgram::ShaderProgram() :
-		program(0),
-		attributes(0)
+		program(0)
 	{
 		for (size_t i = 0; i < MAX_PRESET_UNIFORMS; ++i) {
 			presetUniforms[i] = -1;
@@ -36,57 +54,44 @@ namespace Turso3D
 		Release();
 	}
 
-	bool ShaderProgram::Bind()
-	{
-		if (!program) {
-			return false;
-		}
-		if (boundProgram == this) {
-			return true;
-		}
-		glUseProgram(program);
-		boundProgram = this;
-		return true;
-	}
-
 	void ShaderProgram::SetUniform(PresetUniform uniform, float value)
 	{
-		glUniform1f(Uniform(uniform), value);
+		glUniform1f(presetUniforms[uniform], value);
 	}
 
 	void ShaderProgram::SetUniform(PresetUniform uniform, unsigned value)
 	{
-		glUniform1ui(Uniform(uniform), value);
+		glUniform1ui(presetUniforms[uniform], value);
 	}
 
 	void ShaderProgram::SetUniform(PresetUniform uniform, const Vector2& value)
 	{
-		glUniform2fv(Uniform(uniform), 1, value.Data());
+		glUniform2fv(presetUniforms[uniform], 1, value.Data());
 	}
 
 	void ShaderProgram::SetUniform(PresetUniform uniform, const Vector3& value)
 	{
-		glUniform3fv(Uniform(uniform), 1, value.Data());
+		glUniform3fv(presetUniforms[uniform], 1, value.Data());
 	}
 
 	void ShaderProgram::SetUniform(PresetUniform uniform, const Vector4& value)
 	{
-		glUniform4fv(Uniform(uniform), 1, value.Data());
+		glUniform4fv(presetUniforms[uniform], 1, value.Data());
 	}
 
 	void ShaderProgram::SetUniform(PresetUniform uniform, const Matrix3& value)
 	{
-		glUniformMatrix3fv(Uniform(uniform), 1, GL_FALSE, value.Data());
+		glUniformMatrix3fv(presetUniforms[uniform], 1, GL_FALSE, value.Data());
 	}
 
 	void ShaderProgram::SetUniform(PresetUniform uniform, const Matrix3x4& value)
 	{
-		glUniformMatrix3x4fv(Uniform(uniform), 1, GL_FALSE, value.Data());
+		glUniformMatrix3x4fv(presetUniforms[uniform], 1, GL_FALSE, value.Data());
 	}
 
 	void ShaderProgram::SetUniform(PresetUniform uniform, const Matrix4& value)
 	{
-		glUniformMatrix4fv(Uniform(uniform), 1, GL_FALSE, value.Data());
+		glUniformMatrix4fv(presetUniforms[uniform], 1, GL_FALSE, value.Data());
 	}
 
 	bool ShaderProgram::Create(unsigned vs, unsigned fs)
@@ -102,8 +107,10 @@ namespace Turso3D
 		program = glCreateProgram();
 		glAttachShader(program, vs);
 		glAttachShader(program, fs);
-		for (unsigned i = 0; i < MAX_VERTEX_ATTRIBUTES; ++i) {
-			glBindAttribLocation(program, i, VertexAttributeName((VertexAttribute)i));
+
+		// Explicitly define vertex attribute indices
+		for (int i = 0; i < std::size(AttributeIndices); ++i) {
+			glBindAttribLocation(program, static_cast<GLuint>(AttributeIndices[i].second), AttributeIndices[i].first.data());
 		}
 		glLinkProgram(program);
 
@@ -134,36 +141,16 @@ namespace Turso3D
 		}
 
 		char nameBuffer[MAX_NAME_LENGTH];
-		int numAttributes, numUniforms, nameLength, numElements, numUniformBlocks;
+		int numUniforms, nameLength, numElements, numUniformBlocks;
 		GLenum type;
 
-		attributes = 0;
-
-		glGetProgramiv(program, GL_ACTIVE_ATTRIBUTES, &numAttributes);
-		for (int i = 0; i < numAttributes; ++i) {
-			glGetActiveAttrib(program, i, (GLsizei)MAX_NAME_LENGTH, &nameLength, &numElements, &type, nameBuffer);
-			std::string name(nameBuffer, nameLength);
-
-			size_t attribIndex = UINT32_MAX;
-			for (int i = 0; i < MAX_VERTEX_ATTRIBUTES; ++i) {
-				if (name == VertexAttributeName((VertexAttribute)i)) {
-					attribIndex = i;
-					break;
-				}
-			}
-			if (attribIndex < 32) {
-				attributes |= (1 << attribIndex);
-			}
-		}
-
-		uniforms.clear();
-
-		Bind();
+		Graphics::BindProgram(this);
 		glGetProgramiv(program, GL_ACTIVE_UNIFORMS, &numUniforms);
 
 		for (size_t i = 0; i < MAX_PRESET_UNIFORMS; ++i) {
 			presetUniforms[i] = -1;
 		}
+		uniforms.clear();
 
 		for (int i = 0; i < numUniforms; ++i) {
 			glGetActiveUniform(program, i, MAX_NAME_LENGTH, &nameLength, &numElements, &type, nameBuffer);
@@ -233,11 +220,9 @@ namespace Turso3D
 	void ShaderProgram::Release()
 	{
 		if (program) {
+			Graphics::BindProgram(nullptr);
 			glDeleteProgram(program);
 			program = 0;
-			if (boundProgram == this) {
-				boundProgram = nullptr;
-			}
 		}
 	}
 }

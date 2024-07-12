@@ -8,7 +8,6 @@
 using namespace Turso3D;
 
 TonemapRenderer::TonemapRenderer() :
-	graphics(nullptr),
 	uExposure(0)
 {
 }
@@ -17,23 +16,21 @@ TonemapRenderer::~TonemapRenderer()
 {
 }
 
-void TonemapRenderer::Initialize(Graphics* graphics_)
+void TonemapRenderer::Initialize()
 {
-	graphics = graphics_;
-
 	constexpr StringHash exposureHash {"exposure"};
 
-	program = graphics->CreateProgram("PostProcess/Tonemap.glsl", "", "");
+	program = Graphics::CreateProgram("PostProcess/Tonemap.glsl", "", "");
 	uExposure = program->Uniform(exposureHash);
 }
 
 void TonemapRenderer::Render(Texture* hdrColor)
 {
-	program->Bind();
+	Graphics::BindProgram(program.get());
 
 	// TODO: exposure based on eye-adaptation formula
-	graphics->SetUniform(uExposure, 0.1f);
-	hdrColor->Bind(0);
+	Graphics::SetUniform(uExposure, 0.1f);
+	Graphics::BindTexture(0, hdrColor);
 
-	graphics->DrawQuad();
+	Graphics::DrawQuad();
 }

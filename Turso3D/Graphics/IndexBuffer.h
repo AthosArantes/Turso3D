@@ -19,10 +19,6 @@ namespace Turso3D
 		// Redefine buffer data either completely or partially.
 		// Return true on success.
 		bool SetData(size_t firstIndex, size_t numIndices, const void* data, bool discard = false);
-		// Bind to use.
-		// No-op if already bound.
-		// Used also when defining or setting data.
-		void Bind();
 
 		// Return number of indices.
 		size_t NumIndices() const { return numIndices; }
@@ -35,9 +31,6 @@ namespace Turso3D
 
 		// Return the OpenGL object identifier.
 		unsigned GLBuffer() const { return buffer; }
-
-		// Return the index size of the currently bound buffer, or 0 if no buffer bound.
-		static size_t BoundIndexSize();
 
 	private:
 		// Create the GPU-side index buffer.

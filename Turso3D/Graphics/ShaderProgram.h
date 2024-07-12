@@ -2,7 +2,6 @@
 
 #include <Turso3D/Graphics/GraphicsDefs.h>
 #include <Turso3D/Utils/StringHash.h>
-#include <vector>
 #include <unordered_map>
 #include <string>
 
@@ -27,27 +26,15 @@ namespace Turso3D
 		// Destruct.
 		~ShaderProgram();
 
-		// Bind for using. No-op if already bound.
-		// Return false if program is not successfully linked.
-		bool Bind();
-
-		// Return bitmask of used vertex attributes.
-		unsigned Attributes() const { return attributes; }
-
 		// Return uniform map.
 		const std::unordered_map<StringHash, int>& Uniforms() const { return uniforms; }
-		// Return uniform location by name or negative if not found.
-		int Uniform(const std::string& name) const { return Uniform(StringHash {name}); }
-		// Return uniform location by name or negative if not found.
-		int Uniform(const char* name) const { return Uniform(StringHash {name}); }
+
 		// Return uniform location by name hash or negative if not found.
 		int Uniform(StringHash name) const
 		{
 			auto it = uniforms.find(name);
 			return it != uniforms.end() ? it->second : -1;
 		}
-		// Return preset uniform location or negative if not found.
-		int Uniform(PresetUniform uniform) const { return presetUniforms[uniform]; }
 
 		// Set a float preset uniform.
 		void SetUniform(PresetUniform uniform, float value);
@@ -81,12 +68,9 @@ namespace Turso3D
 	private:
 		// OpenGL shader program identifier.
 		unsigned program;
-
-		// Used vertex attribute bitmask.
-		unsigned attributes;
-		// All uniform locations.
-		std::unordered_map<StringHash, int> uniforms;
 		// Preset uniform locations.
 		int presetUniforms[MAX_PRESET_UNIFORMS];
+		// All uniform locations.
+		std::unordered_map<StringHash, int> uniforms;
 	};
 }

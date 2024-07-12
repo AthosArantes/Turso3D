@@ -16,10 +16,6 @@ layout(std140) uniform PerViewData0
 	mat4x4 dirLightShadowMatrices[2];
 };
 
-#ifdef LIGHTMASK
-	uniform uint modelLightMask;
-#endif
-
 struct Light
 {
 	vec4 position;
@@ -43,6 +39,11 @@ layout(std140) uniform LightData1
 	};
 #endif
 
+// Preset uniforms
+uniform mat3x4 worldMatrix;
+uniform uint lightMask;
+
+//===============================================================================
 float GetFogFactor(float depth)
 {
 	return clamp((fogParameters.x - depth) * fogParameters.y, 0.0, 1.0);

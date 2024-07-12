@@ -21,7 +21,7 @@ public:
 	SSAORenderer();
 	~SSAORenderer();
 
-	void Initialize(Turso3D::Graphics* graphics);
+	void Initialize();
 
 	void UpdateBuffers(const Turso3D::IntVector2& size);
 	void Render(Turso3D::Camera* camera, Turso3D::Texture* normal, Turso3D::Texture* depth, Turso3D::FrameBuffer* dst, const Turso3D::IntRect& viewRect);
@@ -33,9 +33,6 @@ private:
 	void GenerateNoiseTexture();
 
 private:
-	// Cached graphics subsystem
-	Turso3D::Graphics* graphics;
-
 	std::shared_ptr<Turso3D::ShaderProgram> ssaoProgram;
 
 	UniformDataBlock uniformData;

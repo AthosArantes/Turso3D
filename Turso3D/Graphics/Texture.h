@@ -79,24 +79,12 @@ namespace Turso3D
 		// Return true on success.
 		bool SetData(const ImageLevel& data);
 
-		// Bind to texture unit.
-		// No-op if already bound.
-		void Bind(size_t unit);
-
 		// Return texture target type.
 		TextureTarget Target() const { return type; }
 		// Return dimensions in pixels.
 		const IntVector3& Size() const { return size; }
 		// Return 2D dimensions in pixels.
 		IntVector2 Size2D() const { return IntVector2 {size.x, size.y}; }
-
-		// Return width in pixels.
-		int Width() const { return size.x; }
-		// Return height in pixels.
-		int Height() const { return size.y; }
-		// Return depth in pixels.
-		// For cube maps, returns the number of faces.
-		int Depth() const { return size.z; }
 
 		// Return image format.
 		ImageFormat Format() const { return format; }
@@ -137,9 +125,6 @@ namespace Turso3D
 		// Return the OpenGL binding target of the texture.
 		unsigned GLTarget() const { return target; }
 
-		// Unbind a texture unit.
-		static void Unbind(size_t unit);
-
 		// OpenGL texture internal formats by image format.
 		static unsigned GetGLInternalFormat(ImageFormat format);
 		// Return whether a format is compressed or not.
@@ -150,8 +135,6 @@ namespace Turso3D
 		static size_t BitsPerPixel(ImageFormat format);
 
 	private:
-		// Force bind to the first texture unit. Used when editing.
-		void ForceBind();
 		// Release the texture.
 		void Release();
 

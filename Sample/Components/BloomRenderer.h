@@ -12,7 +12,7 @@ public:
 	BloomRenderer();
 	~BloomRenderer();
 
-	void Initialize(Turso3D::Graphics* graphics);
+	void Initialize();
 
 	void UpdateBuffers(const Turso3D::IntVector2& size, Turso3D::ImageFormat format);
 	void Render(Turso3D::Texture* hdrColor, float intensity = 0.05f);
@@ -21,9 +21,6 @@ public:
 	Turso3D::Texture* GetTexture() const { return buffer.get(); }
 
 private:
-	// Cached graphics subsystem.
-	Turso3D::Graphics* graphics;
-
 	std::unique_ptr<BlurRenderer> blurRenderer;
 
 	std::shared_ptr<Turso3D::ShaderProgram> bloomProgram;

@@ -19,7 +19,7 @@ namespace
 	// Bone bounding box size required to contribute to bounding box recalculation
 	constexpr float BONE_SIZE_THRESHOLD = 0.05f;
 
-	static std::map<unsigned, std::vector<std::weak_ptr<CombinedBuffer>>> CombinedBufferMap;
+	static std::map<size_t, std::vector<std::weak_ptr<CombinedBuffer>>> CombinedBufferMap;
 }
 
 namespace Turso3D
@@ -138,7 +138,8 @@ namespace Turso3D
 
 	std::shared_ptr<CombinedBuffer> CombinedBuffer::Allocate(const std::vector<VertexElement>& elements, size_t numVertices, size_t numIndices)
 	{
-		unsigned key = VertexBuffer::CalculateAttributeMask(elements);
+		size_t key = VertexBuffer::CalculateElementsHash(elements.data(), elements.size());
+
 		auto it = CombinedBufferMap.find(key);
 		if (it != CombinedBufferMap.end()) {
 			std::vector<std::weak_ptr<CombinedBuffer>>& keyBuffers = it->second;
@@ -209,43 +210,45 @@ namespace Turso3D
 
 			unsigned vertexSize = 0;
 			if (elementMask & 1) {
-				vbDesc.vertexElements.push_back(VertexElement(ELEM_VECTOR3, SEM_POSITION));
+				vbDesc.vertexElements.push_back(VertexElement {ELEM_VECTOR3, ATTR_POSITION});
 				vertexSize += sizeof(Vector3);
 			}
 			if (elementMask & 2) {
-				vbDesc.vertexElements.push_back(VertexElement(ELEM_VECTOR3, SEM_NORMAL));
+				vbDesc.vertexElements.push_back(VertexElement {ELEM_VECTOR3, ATTR_NORMAL});
 				vertexSize += sizeof(Vector3);
 			}
 			if (elementMask & 4) {
-				vbDesc.vertexElements.push_back(VertexElement(ELEM_UBYTE4, SEM_COLOR));
+				vbDesc.vertexElements.push_back(VertexElement {ELEM_UBYTE4, ATTR_VERTEXCOLOR, true});
 				vertexSize += 4;
 			}
 			if (elementMask & 8) {
-				vbDesc.vertexElements.push_back(VertexElement(ELEM_VECTOR2, SEM_TEXCOORD));
+				vbDesc.vertexElements.push_back(VertexElement {ELEM_VECTOR2, ATTR_TEXCOORD});
 				vertexSize += sizeof(Vector2);
 			}
 			if (elementMask & 16) {
-				vbDesc.vertexElements.push_back(VertexElement(ELEM_VECTOR2, SEM_TEXCOORD, 1));
+				vbDesc.vertexElements.push_back(VertexElement {ELEM_VECTOR2, ATTR_TEXCOORD2});
 				vertexSize += sizeof(Vector2);
 			}
 			if (elementMask & 32) {
-				vbDesc.vertexElements.push_back(VertexElement(ELEM_VECTOR3, SEM_TEXCOORD));
-				vertexSize += sizeof(Vector3);
+				//vbDesc.vertexElements.push_back(VertexElement {ELEM_VECTOR3, SEM_TEXCOORD});
+				//vertexSize += sizeof(Vector3);
+				assert(false);
 			}
 			if (elementMask & 64) {
-				vbDesc.vertexElements.push_back(VertexElement(ELEM_VECTOR3, SEM_TEXCOORD, 1));
-				vertexSize += sizeof(Vector3);
+				//vbDesc.vertexElements.push_back(VertexElement {ELEM_VECTOR3, SEM_TEXCOORD, 1});
+				//vertexSize += sizeof(Vector3);
+				assert(false);
 			}
 			if (elementMask & 128) {
-				vbDesc.vertexElements.push_back(VertexElement(ELEM_VECTOR4, SEM_TANGENT));
+				vbDesc.vertexElements.push_back(VertexElement {ELEM_VECTOR4, ATTR_TANGENT});
 				vertexSize += sizeof(Vector4);
 			}
 			if (elementMask & 256) {
-				vbDesc.vertexElements.push_back(VertexElement(ELEM_VECTOR4, SEM_BLENDWEIGHTS));
+				vbDesc.vertexElements.push_back(VertexElement {ELEM_VECTOR4, ATTR_BLENDWEIGHTS});
 				vertexSize += sizeof(Vector4);
 			}
 			if (elementMask & 512) {
-				vbDesc.vertexElements.push_back(VertexElement(ELEM_UBYTE4, SEM_BLENDINDICES));
+				vbDesc.vertexElements.push_back(VertexElement {ELEM_UBYTE4, ATTR_BLENDINDICES});
 				vertexSize += 4;
 			}
 
@@ -368,7 +371,7 @@ namespace Turso3D
 		bool hasWeights = false;
 		for (const LoadBuffer::VertexDesc& vb : loadBuffer->vertexBuffers) {
 			for (const VertexElement& elem : vb.vertexElements) {
-				if (elem.semantic == SEM_BLENDWEIGHTS || elem.semantic == SEM_BLENDINDICES) {
+				if (elem.index == ATTR_BLENDWEIGHTS || elem.index == ATTR_BLENDINDICES) {
 					hasWeights = true;
 					break;
 				}

@@ -8,9 +8,6 @@
 
 namespace Turso3D
 {
-	static FrameBuffer* boundDrawBuffer = nullptr;
-	static FrameBuffer* boundReadBuffer = nullptr;
-
 	FrameBuffer::FrameBuffer() :
 		buffer(0)
 	{
@@ -27,10 +24,9 @@ namespace Turso3D
 			Create();
 		}
 
-		Bind();
+		Graphics::BindFramebuffer(this, nullptr);
 
 		IntVector2 size = IntVector2::ZERO();
-
 		if (colorBuffer) {
 			size = colorBuffer->Size();
 			glDrawBuffer(GL_COLOR_ATTACHMENT0);
@@ -63,10 +59,9 @@ namespace Turso3D
 			Create();
 		}
 
-		Bind();
+		Graphics::BindFramebuffer(this, nullptr);
 
 		IntVector2 size = IntVector2::ZERO();
-
 		std::vector<GLenum> drawBufferIds;
 		for (size_t i = 0; i < countBuffers; ++i) {
 			if (colorBuffer[i]) {
@@ -111,10 +106,9 @@ namespace Turso3D
 			Create();
 		}
 
-		Bind();
+		Graphics::BindFramebuffer(this, nullptr);
 
 		IntVector2 size = IntVector2::ZERO();
-
 		if (colorTexture && colorTexture->Target() == TARGET_2D) {
 			size = colorTexture->Size2D();
 			glDrawBuffer(GL_COLOR_ATTACHMENT0);
@@ -147,10 +141,9 @@ namespace Turso3D
 			Create();
 		}
 
-		Bind();
+		Graphics::BindFramebuffer(this, nullptr);
 
 		IntVector2 size = IntVector2::ZERO();
-
 		if (colorTexture && colorTexture->Target() == TARGET_CUBE) {
 			size = colorTexture->Size2D();
 			glDrawBuffer(GL_COLOR_ATTACHMENT0);
@@ -183,10 +176,9 @@ namespace Turso3D
 			Create();
 		}
 
-		Bind();
+		Graphics::BindFramebuffer(this, nullptr);
 
 		IntVector2 size = IntVector2::ZERO();
-
 		std::vector<GLenum> drawBufferIds;
 		for (size_t i = 0; i < countColorTextures; ++i) {
 			if (colorTextures[i] && colorTextures[i]->Target() == TARGET_2D) {
@@ -225,40 +217,6 @@ namespace Turso3D
 		LOG_DEBUG("Defined MRT framebuffer object: {:d} [{:d} x {:d}]", countColorTextures, size.x, size.y);
 	}
 
-	void FrameBuffer::Bind()
-	{
-		if (!buffer || boundDrawBuffer == this) {
-			return;
-		}
-		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, buffer);
-		boundDrawBuffer = this;
-	}
-
-	void FrameBuffer::Bind(FrameBuffer* draw, FrameBuffer* read)
-	{
-		if (boundDrawBuffer != draw) {
-			glBindFramebuffer(GL_DRAW_FRAMEBUFFER, draw ? draw->buffer : 0);
-			boundDrawBuffer = draw;
-		}
-
-		if (boundReadBuffer != read) {
-			glBindFramebuffer(GL_READ_FRAMEBUFFER, read ? read->buffer : 0);
-			boundReadBuffer = read;
-		}
-	}
-
-	void FrameBuffer::Unbind()
-	{
-		if (boundDrawBuffer) {
-			glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
-			boundDrawBuffer = nullptr;
-		}
-		if (boundReadBuffer) {
-			glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
-			boundReadBuffer = nullptr;
-		}
-	}
-
 	bool FrameBuffer::Create()
 	{
 		glGenFramebuffers(1, &buffer);
@@ -272,9 +230,7 @@ namespace Turso3D
 	void FrameBuffer::Release()
 	{
 		if (buffer) {
-			if (boundDrawBuffer == this || boundReadBuffer == this) {
-				FrameBuffer::Unbind();
-			}
+			Graphics::UnbindFramebuffer(this);
 			glDeleteFramebuffers(1, &buffer);
 			buffer = 0;
 		}

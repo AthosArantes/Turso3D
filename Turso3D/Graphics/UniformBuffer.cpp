@@ -7,8 +7,6 @@
 
 namespace Turso3D
 {
-	static UniformBuffer* boundUniformBuffers[MAX_CONSTANT_BUFFER_SLOTS];
-
 	UniformBuffer::UniformBuffer() :
 		buffer(0),
 		size(0),
@@ -66,23 +64,6 @@ namespace Turso3D
 		return true;
 	}
 
-	void UniformBuffer::Bind(size_t index)
-	{
-		if (!buffer || boundUniformBuffers[index] == this) {
-			return;
-		}
-		glBindBufferRange(GL_UNIFORM_BUFFER, (GLuint)index, buffer, 0, size);
-		boundUniformBuffers[index] = this;
-	}
-
-	void UniformBuffer::Unbind(size_t index)
-	{
-		if (boundUniformBuffers[index]) {
-			glBindBufferRange(GL_UNIFORM_BUFFER, (GLuint)index, 0, 0, 0);
-			boundUniformBuffers[index] = nullptr;
-		}
-	}
-
 	bool UniformBuffer::Create(const void* data)
 	{
 		glGenBuffers(1, &buffer);
@@ -99,13 +80,9 @@ namespace Turso3D
 	void UniformBuffer::Release()
 	{
 		if (buffer) {
+			Graphics::RemoveStateObject(this);
 			glDeleteBuffers(1, &buffer);
 			buffer = 0;
-			for (size_t i = 0; i < MAX_CONSTANT_BUFFER_SLOTS; ++i) {
-				if (boundUniformBuffers[i] == this) {
-					boundUniformBuffers[i] = nullptr;
-				}
-			}
 		}
 	}
 }

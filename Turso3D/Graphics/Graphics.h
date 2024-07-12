@@ -8,8 +8,6 @@
 #include <string>
 #include <memory>
 
-struct GLFWwindow;
-
 namespace Turso3D
 {
 	class FrameBuffer;
@@ -40,34 +38,41 @@ namespace Turso3D
 #endif
 
 	// Graphics rendering context and application window.
-	class Graphics
+	namespace Graphics
 	{
-	public:
-		// Construct.
-		Graphics();
-		// Destruct. Closes the application window.
-		~Graphics();
-
 		// Create window and rendering context.
 		// Return true on success.
 		bool Initialize(const char* windowTitle, int width, int height);
+		// Delete window and rendering context.
+		void ShutDown();
 
+		// Return whether is initialized.
+		bool IsInitialized();
+
+		// Return the OS-level window.
+		void* Window();
 		// Set new window size.
 		void Resize(int width, int height);
+		// Return current window size.
+		IntVector2 Size();
+		// Return window render size, which can be different if the OS is doing resolution scaling.
+		IntVector2 RenderSize();
 		// Set fullscreen mode.
 		void SetFullscreen(bool enable);
+		// Return whether is fullscreen.
+		bool IsFullscreen();
 		// Set vertical sync on/off.
 		void SetVSync(bool enable);
-		// Present the contents of the backbuffer.
-		void Present();
+		// Return whether is using vertical sync.
+		bool VSync();
+
+		// Return the fullscreen refresh rate.
+		// Return 0 if windowed mode.
+		int FullscreenRefreshRate();
 
 		// Set the viewport rectangle.
 		void SetViewport(const IntRect& viewRect);
 
-		// Bind a shader program for use.
-		// Return pointer on success or null otherwise.
-		// Low performance, provided for convenience.
-		ShaderProgram* SetProgram(const std::string& shaderName, const std::string& vsDefines, const std::string& fsDefines);
 		// Create a shader program, but do not bind immediately.
 		// Return pointer on success or null otherwise.
 		std::shared_ptr<ShaderProgram> CreateProgram(const std::string& shaderName, const std::string& vsDefines, const std::string& fsDefines);
@@ -98,17 +103,50 @@ namespace Turso3D
 		// The destination framebuffer will be left bound for rendering.
 		void Blit(FrameBuffer* dest, const IntRect& destRect, FrameBuffer* src, const IntRect& srcRect, bool blitColor, bool blitDepth, TextureFilterMode filter);
 
+		// Bind the proper VAO using the vertex/instance buffer elements.
+		// If buffer is nullptr the default VAO is bound.
+		void BindVertexBuffers(VertexBuffer* buffer, VertexBuffer* instanceBuffer = nullptr, size_t instanceStart = 0);
+		// Bind the index buffer.
+		void BindIndexBuffer(IndexBuffer* buffer);
+
+		// Bind separate framebuffers for drawing and reading.
+		void BindFramebuffer(FrameBuffer* draw, FrameBuffer* read);
+		// Unbind the specified framebuffer if it's bound, and return to backbuffer rendering.
+		void UnbindFramebuffer(FrameBuffer* buffer);
+
+		// Bind the shader program.
+		void BindProgram(ShaderProgram* program);
+		// Bind the uniform buffer.
+		// If buffer is nullptr, the buffer slot is unbound.
+		void BindUniformBuffer(size_t index, UniformBuffer* buffer = nullptr);
+		// Bind to texture unit.
+		// No-op if already bound (unless force is true).
+		// If texture is nullptr, the texture unit is unbound.
+		void BindTexture(size_t unit, Texture* texture = nullptr, bool force = false);
+
+		// Remove the vertex buffer from the current state, allowing a rebind.
+		void RemoveStateObject(VertexBuffer* buffer);
+		// Remove the index buffer from the current state, allowing a rebind.
+		void RemoveStateObject(IndexBuffer* buffer);
+		// Remove the uniform buffer from the current state, allowing a rebind.
+		void RemoveStateObject(UniformBuffer* buffer);
+		// Remove the texture from the current state, allowing a rebind.
+		void RemoveStateObject(Texture* texture);
+
 		// Draw non-indexed geometry with the currently bound vertex buffer.
 		void Draw(PrimitiveType type, size_t drawStart, size_t drawCount);
 		// Draw indexed geometry with the currently bound vertex and index buffer.
 		void DrawIndexed(PrimitiveType type, size_t drawStart, size_t drawCount);
-		// Draw instanced non-indexed geometry with the currently bound vertex and index buffer, and the specified instance data vertex buffer.
-		void DrawInstanced(PrimitiveType type, size_t drawStart, size_t drawCount, VertexBuffer* instanceVertexBuffer, size_t instanceStart, size_t instanceCount);
-		// Draw instanced indexed geometry with the currently bound vertex and index buffer, and the specified instance data vertex buffer.
-		void DrawIndexedInstanced(PrimitiveType type, size_t drawStart, size_t drawCount, VertexBuffer* instanceVertexBuffer, size_t instanceStart, size_t instanceCount);
+		// Draw instanced non-indexed geometry with the currently bound vertex and index buffer.
+		void DrawInstanced(PrimitiveType type, size_t drawStart, size_t drawCount, size_t instanceCount);
+		// Draw instanced indexed geometry with the currently bound vertex and index buffer.
+		void DrawIndexedInstanced(PrimitiveType type, size_t drawStart, size_t drawCount, size_t instanceCount);
 		// Draw a quad with current renderstate.
 		// The quad vertex buffer is left bound.
 		void DrawQuad();
+
+		// Present the contents of the backbuffer.
+		void Present();
 
 		// Begin an occlusion query and associate an object with it for checking results.
 		// Return the query ID.
@@ -122,75 +160,7 @@ namespace Turso3D
 		// Should be called on the next frame after rendering queries, ie. after Present().
 		void CheckOcclusionQueryResults(std::vector<OcclusionQueryResult>& result, bool isHighFrameRate);
 		// Return number of pending occlusion queries.
-		size_t PendingOcclusionQueries() const { return pendingQueries.size(); }
-
-		// Return whether is initialized.
-		bool IsInitialized() const { return context != nullptr; }
-
-		// Return current window size.
-		IntVector2 Size() const;
-		// Return current window width.
-		int Width() const { return Size().x; }
-		// Return current window height.
-		int Height() const { return Size().y; }
-
-		// Return window render size, which can be different if the OS is doing resolution scaling.
-		IntVector2 RenderSize() const;
-		// Return window render width.
-		int RenderWidth() const { return RenderSize().x; }
-		// Return window render height.
-		int RenderHeight() const { return RenderSize().y; }
-
-		// Return whether is fullscreen.
-		bool IsFullscreen() const;
-		// Return whether is using vertical sync.
-		bool VSync() const { return vsync; }
-		// Return the fullscreen refresh rate.
-		// Return 0 if windowed mode.
-		int FullscreenRefreshRate() const;
-
-		// Return the OS-level window.
-		GLFWwindow* Window() const { return window; }
-
-	private:
-		// Set up the vertex buffer for quad rendering.
-		void DefineQuadVertexBuffer();
-
-	private:
-		// OS-level rendering window.
-		GLFWwindow* window;
-		// OpenGL context.
-		void* context;
-		// Quad vertex buffer.
-		std::unique_ptr<VertexBuffer> quadVertexBuffer;
-		// Last blend mode.
-		BlendMode lastBlendMode;
-		// Last cull mode.
-		CullMode lastCullMode;
-		// Last depth test.
-		CompareMode lastDepthTest;
-		// Last color write.
-		bool lastColorWrite;
-		// Last depth write.
-		bool lastDepthWrite;
-		// Last depth bias enabled.
-		bool lastDepthBias;
-		// Vertical sync flag.
-		bool vsync;
-		// Whether instance vertex elements are enabled.
-		bool instancingEnabled;
-		// Pending occlusion queries.
-		std::vector<std::pair<unsigned, void*>> pendingQueries;
-		// Free occlusion queries.
-		std::vector<unsigned> freeQueries;
-
-		// Default VAO
-		unsigned defaultVAO;
-
-		// The window position before going full screen.
-		IntVector2 lastWindowPos;
-		// The window size before going full screen.
-		IntVector2 lastWindowSize;
+		size_t PendingOcclusionQueries();
 	};
 }
 

@@ -15,8 +15,7 @@ struct BlurRenderer::MipPass
 };
 
 // ==========================================================================================
-BlurRenderer::BlurRenderer() :
-	graphics(nullptr)
+BlurRenderer::BlurRenderer()
 {
 }
 
@@ -24,21 +23,19 @@ BlurRenderer::~BlurRenderer()
 {
 }
 
-void BlurRenderer::Initialize(Graphics* graphics_)
+void BlurRenderer::Initialize()
 {
-	graphics = graphics_;
-
 	constexpr StringHash invSrcSizeHash {"invSrcSize"};
 	constexpr StringHash filterRadiusHash {"filterRadius"};
 	constexpr StringHash aspectRatioHash {"aspectRatio"};
 
 	constexpr const char* downsampleDefines[] = {"FIRST_PASS", ""};
 	for (int i = 0; i < 2; ++i) {
-		downsampleProgram[i] = graphics->CreateProgram("PostProcess/BlurDownsample.glsl", downsampleDefines[i], downsampleDefines[i]);
+		downsampleProgram[i] = Graphics::CreateProgram("PostProcess/BlurDownsample.glsl", downsampleDefines[i], downsampleDefines[i]);
 		uInvSrcSize[i] = downsampleProgram[i]->Uniform(invSrcSizeHash);
 	}
 
-	upsampleProgram = graphics->CreateProgram("PostProcess/BlurUpsample.glsl", "", "");
+	upsampleProgram = Graphics::CreateProgram("PostProcess/BlurUpsample.glsl", "", "");
 	uFilterRadius = upsampleProgram->Uniform(filterRadiusHash);
 	uAspectRatio = upsampleProgram->Uniform(aspectRatioHash);
 }
@@ -48,41 +45,42 @@ void BlurRenderer::Downsample(Texture* srcColor)
 	for (size_t i = 0; i < passes.size(); ++i) {
 		// Bind the program
 		int p = int(bool(i));
-		downsampleProgram[p]->Bind();
+		Graphics::BindProgram(downsampleProgram[p].get());
 
 		// Bind the draw buffer
 		MipPass& mip = passes[i];
-		mip.fbo->Bind();
+		Graphics::BindFramebuffer(mip.fbo.get(), nullptr);
 
 		// Bind the texture to be sampled
 		Texture* src = (i == 0) ? srcColor : passes[i - 1].buffer.get();
-		src->Bind(0);
+		Graphics::BindTexture(0, src);
 
-		graphics->SetViewport(IntRect {IntVector2::ZERO(), mip.buffer->Size2D()});
-		graphics->SetUniform(uInvSrcSize[p], Vector2 {1.0f / src->Width(), 1.0f / src->Height()});
-		graphics->DrawQuad();
+		const IntVector2& src_size = src->Size2D();
+		Graphics::SetViewport(IntRect {IntVector2::ZERO(), mip.buffer->Size2D()});
+		Graphics::SetUniform(uInvSrcSize[p], Vector2 {1.0f / static_cast<float>(src_size.x), 1.0f / static_cast<float>(src_size.y)});
+		Graphics::DrawQuad();
 	}
 }
 
 void BlurRenderer::Upsample(float filterRadius)
 {
-	upsampleProgram->Bind();
-	graphics->SetUniform(uAspectRatio, aspectRatio);
-	graphics->SetUniform(uFilterRadius, filterRadius);
+	Graphics::BindProgram(upsampleProgram.get());
+	Graphics::SetUniform(uAspectRatio, aspectRatio);
+	Graphics::SetUniform(uFilterRadius, filterRadius);
 
 	for (size_t i = 0; i < passes.size() - 1; ++i) {
 		size_t ri = passes.size() - (1 + i);
 
 		// Bind the draw buffer
 		MipPass& prev_mip = passes[ri - 1];
-		prev_mip.fbo->Bind();
+		Graphics::BindFramebuffer(prev_mip.fbo.get(), nullptr);
 
 		// Bind the mip texture to be sampled.
 		MipPass& mip = passes[ri];
-		mip.buffer->Bind(0);
+		Graphics::BindTexture(0, mip.buffer.get());
 
-		graphics->SetViewport(IntRect {IntVector2::ZERO(), prev_mip.buffer->Size2D()});
-		graphics->DrawQuad();
+		Graphics::SetViewport(IntRect {IntVector2::ZERO(), prev_mip.buffer->Size2D()});
+		Graphics::DrawQuad();
 	}
 }
 

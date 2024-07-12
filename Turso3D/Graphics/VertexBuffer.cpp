@@ -3,52 +3,15 @@
 #include <Turso3D/IO/Log.h>
 #include <glew/glew.h>
 #include <cassert>
-#include <cstring>
 
 namespace Turso3D
 {
-	static unsigned boundAttributes = 0;
-	static VertexBuffer* boundVertexBuffer = nullptr;
-	static VertexBuffer* boundVertexAttribSource = nullptr;
-
-	static const unsigned baseAttributeIndex[] =
-	{
-		0,
-		1,
-		2,
-		3,
-		4,
-		10,
-		11
-	};
-
-	static const unsigned elementGLSizes[] =
-	{
-		1,
-		1,
-		2,
-		3,
-		4,
-		4
-	};
-
-	static const unsigned elementGLTypes[] =
-	{
-		GL_INT,
-		GL_FLOAT,
-		GL_FLOAT,
-		GL_FLOAT,
-		GL_FLOAT,
-		GL_UNSIGNED_BYTE,
-	};
-
-	// ==========================================================================================
 	VertexBuffer::VertexBuffer() :
 		buffer(0),
 		numVertices(0),
 		vertexSize(0),
-		attributes(0),
-		usage(USAGE_DEFAULT)
+		usage(USAGE_DEFAULT),
+		elementsHash(0)
 	{
 	}
 
@@ -72,13 +35,15 @@ namespace Turso3D
 		// Determine offset of elements and the vertex size
 		vertexSize = 0;
 		elements.resize(numElements);
-		for (size_t i = 0; i < elements.size(); ++i) {
-			elements[i] = elements_[i];
+		for (size_t i = 0; i < numElements; ++i) {
+			elements[i].type = elements_[i].type;
+			elements[i].index = elements_[i].index;
+			elements[i].normalized = elements_[i].normalized;
 			elements[i].offset = vertexSize;
 			vertexSize += ElementTypeSize(elements[i].type);
 		}
 
-		attributes = CalculateAttributeMask(elements);
+		elementsHash = CalculateElementsHash(elements_, numElements);
 
 		return Create(data);
 	}
@@ -95,7 +60,7 @@ namespace Turso3D
 		}
 
 		if (buffer) {
-			Bind(0);
+			glBindBuffer(GL_ARRAY_BUFFER, buffer);
 			if (numVertices_ == numVertices) {
 				glBufferData(GL_ARRAY_BUFFER, numVertices * vertexSize, data, usage == USAGE_DYNAMIC ? GL_DYNAMIC_DRAW : GL_STATIC_DRAW);
 			} else if (discard) {
@@ -109,71 +74,6 @@ namespace Turso3D
 		return true;
 	}
 
-	void VertexBuffer::Bind(unsigned attributeMask)
-	{
-		if (!buffer) {
-			return;
-		}
-
-		// Special case attributeMask 0 used when binding for setting buffer content only or for instancing
-		if (!attributeMask) {
-			if (boundVertexBuffer != this) {
-				glBindBuffer(GL_ARRAY_BUFFER, buffer);
-				boundVertexBuffer = this;
-			}
-			return;
-		}
-
-		// Do not attempt to bind elements the current vertex buffer doesn't have
-		attributeMask &= attributes;
-
-		// If attributes already bound from this buffer, no-op
-		if (attributeMask == boundAttributes && boundVertexAttribSource == this) {
-			return;
-		}
-
-		if (boundVertexBuffer != this) {
-			glBindBuffer(GL_ARRAY_BUFFER, buffer);
-			boundVertexBuffer = this;
-		}
-
-		unsigned usedAttributes = 0;
-
-		for (size_t i = 0; i < elements.size(); ++i) {
-			const VertexElement& element = elements[i];
-
-			unsigned attributeIdx = baseAttributeIndex[element.semantic] + element.index;
-			unsigned attributeBit = 1 << attributeIdx;
-			if (!(attributeMask & attributeBit)) {
-				continue;
-			}
-
-			if (!(boundAttributes & attributeBit)) {
-				glEnableVertexAttribArray(attributeIdx);
-			}
-
-			glVertexAttribPointer(attributeIdx, elementGLSizes[element.type], elementGLTypes[element.type], element.semantic == SEM_COLOR ? GL_TRUE : GL_FALSE,
-				(GLsizei)vertexSize, reinterpret_cast<void*>(element.offset));
-
-			usedAttributes |= attributeBit;
-		}
-
-		unsigned disableAttributes = boundAttributes & (~usedAttributes);
-		unsigned disableIdx = 0;
-
-		while (disableAttributes) {
-			if (disableAttributes & 1) {
-				glDisableVertexAttribArray(disableIdx);
-			}
-			disableAttributes >>= 1;
-			++disableIdx;
-		}
-
-		boundAttributes = usedAttributes;
-		boundVertexBuffer = this;
-		boundVertexAttribSource = this;
-	}
-
 	bool VertexBuffer::Create(const void* data)
 	{
 		glGenBuffers(1, &buffer);
@@ -182,40 +82,29 @@ namespace Turso3D
 			return false;
 		}
 
-		Bind(0);
-
+		glBindBuffer(GL_ARRAY_BUFFER, buffer);
 		glBufferData(GL_ARRAY_BUFFER, numVertices * vertexSize, data, usage == USAGE_DYNAMIC ? GL_DYNAMIC_DRAW : GL_STATIC_DRAW);
-		LOG_DEBUG("Created vertex buffer numVertices: {} vertexSize: {}", (unsigned)numVertices, (unsigned)vertexSize);
+		LOG_DEBUG("Created vertex buffer numVertices: {:d} vertexSize: {:d}", (unsigned)numVertices, vertexSize);
 
-		if (boundVertexAttribSource == this) {
-			boundVertexAttribSource = nullptr;
-		}
 		return true;
 	}
 
 	void VertexBuffer::Release()
 	{
 		if (buffer) {
+			Graphics::RemoveStateObject(this);
 			glDeleteBuffers(1, &buffer);
 			buffer = 0;
-			if (boundVertexBuffer == this) {
-				boundVertexBuffer = nullptr;
-			}
-			if (boundVertexAttribSource == this) {
-				boundVertexAttribSource = nullptr;
-			}
 		}
 	}
 
 	// ==========================================================================================
-	unsigned VertexBuffer::CalculateAttributeMask(const std::vector<VertexElement>& elements)
+	size_t VertexBuffer::CalculateElementsHash(const VertexElement* elements, size_t numElements)
 	{
-		unsigned attributes = 0;
-		for (size_t i = 0; i < elements.size(); ++i) {
-			unsigned attributeIdx = baseAttributeIndex[elements[i].semantic] + elements[i].index;
-			unsigned attributeBit = 1 << attributeIdx;
-			attributes |= attributeBit;
+		size_t hash = 0;
+		for (size_t i = 0; i < numElements; ++i) {
+			hash ^= std::hash<size_t> {}((i << 24) | ((size_t)elements[i].normalized << 16) | ((size_t)elements[i].index << 8) | (size_t)elements[i].type);
 		}
-		return attributes;
+		return hash;
 	}
 }

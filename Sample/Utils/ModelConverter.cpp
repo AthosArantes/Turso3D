@@ -66,7 +66,7 @@ namespace Turso3DUtils
 		bool blendIndicesFound = false;
 		const VertexBufferDesc& vbDesc = vbDescs[geomDesc.vbRef];
 		for (size_t i = 0; i < vbDesc.vertexElements.size(); ++i) {
-			if (vbDesc.vertexElements[i].semantic == SEM_BLENDINDICES) {
+			if (vbDesc.vertexElements[i].index == ATTR_BLENDINDICES) {
 				blendIndicesFound = true;
 				break;
 			} else {
@@ -136,43 +136,45 @@ namespace Turso3DUtils
 
 			unsigned vertexSize = 0;
 			if (elementMask & 1) {
-				vbDesc.vertexElements.push_back(VertexElement(ELEM_VECTOR3, SEM_POSITION));
+				vbDesc.vertexElements.push_back(VertexElement {ELEM_VECTOR3, ATTR_POSITION});
 				vertexSize += sizeof(Vector3);
 			}
 			if (elementMask & 2) {
-				vbDesc.vertexElements.push_back(VertexElement(ELEM_VECTOR3, SEM_NORMAL));
+				vbDesc.vertexElements.push_back(VertexElement {ELEM_VECTOR3, ATTR_NORMAL});
 				vertexSize += sizeof(Vector3);
 			}
 			if (elementMask & 4) {
-				vbDesc.vertexElements.push_back(VertexElement(ELEM_UBYTE4, SEM_COLOR));
+				vbDesc.vertexElements.push_back(VertexElement {ELEM_UBYTE4, ATTR_VERTEXCOLOR, true});
 				vertexSize += 4;
 			}
 			if (elementMask & 8) {
-				vbDesc.vertexElements.push_back(VertexElement(ELEM_VECTOR2, SEM_TEXCOORD));
+				vbDesc.vertexElements.push_back(VertexElement {ELEM_VECTOR2, ATTR_TEXCOORD});
 				vertexSize += sizeof(Vector2);
 			}
 			if (elementMask & 16) {
-				vbDesc.vertexElements.push_back(VertexElement(ELEM_VECTOR2, SEM_TEXCOORD, 1));
+				vbDesc.vertexElements.push_back(VertexElement {ELEM_VECTOR2, ATTR_TEXCOORD2});
 				vertexSize += sizeof(Vector2);
 			}
 			if (elementMask & 32) {
-				vbDesc.vertexElements.push_back(VertexElement(ELEM_VECTOR3, SEM_TEXCOORD));
-				vertexSize += sizeof(Vector3);
+				//vbDesc.vertexElements.push_back(VertexElement {ELEM_VECTOR3, ATTR_TEXCOORD});
+				//vertexSize += sizeof(Vector3);
+				assert(false);
 			}
 			if (elementMask & 64) {
-				vbDesc.vertexElements.push_back(VertexElement(ELEM_VECTOR3, SEM_TEXCOORD, 1));
-				vertexSize += sizeof(Vector3);
+				//vbDesc.vertexElements.push_back(VertexElement {ELEM_VECTOR3, ATTR_TEXCOORD});
+				//vertexSize += sizeof(Vector3);
+				assert(false);
 			}
 			if (elementMask & 128) {
-				vbDesc.vertexElements.push_back(VertexElement(ELEM_VECTOR4, SEM_TANGENT));
+				vbDesc.vertexElements.push_back(VertexElement {ELEM_VECTOR4, ATTR_TANGENT});
 				vertexSize += sizeof(Vector4);
 			}
 			if (elementMask & 256) {
-				vbDesc.vertexElements.push_back(VertexElement(ELEM_VECTOR4, SEM_BLENDWEIGHTS));
+				vbDesc.vertexElements.push_back(VertexElement {ELEM_VECTOR4, ATTR_BLENDWEIGHTS});
 				vertexSize += sizeof(Vector4);
 			}
 			if (elementMask & 512) {
-				vbDesc.vertexElements.push_back(VertexElement(ELEM_UBYTE4, SEM_BLENDINDICES));
+				vbDesc.vertexElements.push_back(VertexElement {ELEM_UBYTE4, ATTR_BLENDINDICES});
 				vertexSize += 4;
 			}
 

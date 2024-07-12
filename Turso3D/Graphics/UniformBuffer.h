@@ -21,9 +21,6 @@ namespace Turso3D
 		// Redefine buffer data either completely or partially.
 		// Return true on success.
 		bool SetData(size_t offset, size_t numBytes, const void* data, bool discard = false);
-		// Bind to use at a specific shader slot.
-		// No-op if already bound.
-		void Bind(size_t index);
 
 		// Return size of buffer in bytes.
 		size_t Size() const { return size; }
@@ -34,9 +31,6 @@ namespace Turso3D
 
 		// Return the OpenGL object identifier.
 		unsigned GLBuffer() const { return buffer; }
-
-		// Unbind a slot.
-		static void Unbind(size_t index);
 
 	private:
 		// Create the GPU-side index buffer. Return true on success.

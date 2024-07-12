@@ -20,8 +20,6 @@
 	}
 
 #else
-	uniform mat3x4 worldMatrix;
-
 	mat3x4 GetWorldMatrix()
 	{
 		return worldMatrix;

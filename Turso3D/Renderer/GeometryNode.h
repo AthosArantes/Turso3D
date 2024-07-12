@@ -33,6 +33,7 @@ namespace Turso3D
 		// Draw range count.
 		// Specifies number of indices if index buffer defined, number of vertices otherwise.
 		size_t drawCount;
+
 		// LOD transition distance.
 		float lodDistance;
 	};

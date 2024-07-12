@@ -58,7 +58,6 @@ namespace Turso3D
 
 	// ==========================================================================================
 	Octant::Octant() :
-		graphics(nullptr),
 		parent(nullptr),
 		visibility(VIS_VISIBLE_UNKNOWN),
 		occlusionQueryId(0),
@@ -73,20 +72,17 @@ namespace Turso3D
 	Octant::~Octant()
 	{
 		if (occlusionQueryId) {
-			if (graphics) {
-				graphics->FreeOcclusionQuery(occlusionQueryId);
-			}
+			Graphics::FreeOcclusionQuery(occlusionQueryId);
 		}
 	}
 
-	void Octant::Initialize(Graphics* graphics_, Octant* parent_, const BoundingBox& boundingBox, unsigned char level_, unsigned char childIndex_)
+	void Octant::Initialize(Octant* parent_, const BoundingBox& boundingBox, unsigned char level_, unsigned char childIndex_)
 	{
 		BoundingBox worldBoundingBox = boundingBox;
 		center = worldBoundingBox.Center();
 		halfSize = worldBoundingBox.HalfSize();
 		fittingBox = BoundingBox(worldBoundingBox.min - halfSize, worldBoundingBox.max + halfSize);
 
-		graphics = graphics_;
 		parent = parent_;
 		level = level_;
 		childIndex = childIndex_;
@@ -173,13 +169,12 @@ namespace Turso3D
 	}
 
 	// ==========================================================================================
-	Octree::Octree(WorkQueue* workQueue, Graphics* graphics) :
+	Octree::Octree(WorkQueue* workQueue) :
 		threadedUpdate(false),
 		workQueue(workQueue),
-		graphics(graphics),
 		frameNumber(0)
 	{
-		root.Initialize(graphics, nullptr, BoundingBox(-DEFAULT_OCTREE_SIZE, DEFAULT_OCTREE_SIZE), DEFAULT_OCTREE_LEVELS, 0);
+		root.Initialize(nullptr, BoundingBox(-DEFAULT_OCTREE_SIZE, DEFAULT_OCTREE_SIZE), DEFAULT_OCTREE_LEVELS, 0);
 
 		// Have at least 1 task for reinsert processing
 		reinsertTasks.push_back(std::make_unique<ReinsertDrawablesTask>(this, &Octree::CheckReinsertWork));
@@ -271,7 +266,7 @@ namespace Turso3D
 		DeleteChildOctants(&root, false);
 
 		allocator.Reset();
-		root.Initialize(graphics, nullptr, boundingBox, (unsigned char)Clamp(numLevels, 1, MAX_OCTREE_LEVELS), 0);
+		root.Initialize(nullptr, boundingBox, (unsigned char)Clamp(numLevels, 1, MAX_OCTREE_LEVELS), 0);
 	}
 
 	void Octree::OnRenderDebug(DebugRenderer* debug)
@@ -479,7 +474,7 @@ namespace Turso3D
 		}
 
 		Octant* child = allocator.Allocate();
-		child->Initialize(graphics, octant, BoundingBox(newMin, newMax), octant->level - 1, index);
+		child->Initialize(octant, BoundingBox(newMin, newMax), octant->level - 1, index);
 		octant->children[index] = child;
 		++octant->numChildren;
 

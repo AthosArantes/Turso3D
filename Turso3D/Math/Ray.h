@@ -14,11 +14,6 @@ namespace Turso3D
 	class Ray
 	{
 	public:
-		// Ray origin.
-		Vector3 origin;
-		// Ray direction.
-		Vector3 direction;
-
 		// Construct undefined ray.
 		Ray()
 		{
@@ -110,5 +105,11 @@ namespace Turso3D
 		// Return transformed by a 3x4 matrix.
 		// This may result in a non-normalized direction.
 		Ray Transformed(const Matrix3x4& transform) const;
+
+	public:
+		// Ray origin.
+		Vector3 origin;
+		// Ray direction.
+		Vector3 direction;
 	};
 }

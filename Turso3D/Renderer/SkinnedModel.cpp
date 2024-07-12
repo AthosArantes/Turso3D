@@ -1,5 +1,6 @@
 #include <Turso3D/Core/Allocator.h>
 #include <Turso3D/Graphics/UniformBuffer.h>
+#include <Turso3D/Graphics/Graphics.h>
 #include <Turso3D/IO/Log.h>
 #include <Turso3D/Renderer/Camera.h>
 #include <Turso3D/Renderer/DebugRenderer.h>
@@ -98,7 +99,8 @@ namespace Turso3D
 			skinMatrixBuffer->SetData(0, bones.size() * sizeof(Matrix3x4), skinMatrices.get());
 			skinFlags &= ~FLAG_SKINNING_BUFFER_DIRTY;
 		}
-		skinMatrixBuffer->Bind(UB_OBJECTDATA);
+
+		Graphics::BindUniformBuffer(UB_OBJECTDATA, skinMatrixBuffer.get());
 	}
 
 	void SkinnedModelDrawable::OnRaycast(std::vector<RaycastResult>& dest, const Ray& ray, float maxDistance_)
