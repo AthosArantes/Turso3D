@@ -67,7 +67,7 @@ vec3 CalcLight(const uint index, const in vec4 worldPos, const in vec3 normal, c
 	Light light = lights[index];
 
 #ifdef LIGHTMASK
-	if ((light.viewMask & modelLightMask) == 0u) {
+	if ((light.viewMask & lightMask) == 0u) {
 		return vec3(0.0);
 	}
 #endif
