@@ -2,6 +2,7 @@
 #include <Turso3D/Core/Allocator.h>
 #include <Turso3D/IO/Log.h>
 #include <Turso3D/Renderer/Camera.h>
+#include <Turso3D/Renderer/DebugRenderer.h>
 #include <Turso3D/Renderer/Model.h>
 #include <Turso3D/Renderer/Octree.h>
 #include <Turso3D/Resource/ResourceCache.h>
@@ -118,6 +119,24 @@ namespace Turso3D
 
 			if (res.distance < maxDistance_) {
 				dest.push_back(res);
+			}
+		}
+	}
+
+	void StaticModelDrawable::OnRenderDebug(DebugRenderer* renderer)
+	{
+		renderer->AddBoundingBox(WorldBoundingBox(), Color::GREEN(), false);
+
+		const HullGroup& hull = model->GetHullGroup();
+		const Matrix3x4& transform = WorldTransform();
+
+		for (size_t i = 0; i < hull.GetCountMeshes(); ++i) {
+			const Vector3* vertices = hull.GetVertices(i);
+			const unsigned* indices = hull.GetIndices(i);
+			for (size_t j = 0; j < hull.GetIndexCount(i); j += 3) {
+				renderer->AddLine(transform * vertices[indices[j]], transform * vertices[indices[j + 1]], Color::MAGENTA());
+				renderer->AddLine(transform * vertices[indices[j + 1]], transform * vertices[indices[j + 2]], Color::MAGENTA());
+				renderer->AddLine(transform * vertices[indices[j + 2]], transform * vertices[indices[j]], Color::MAGENTA());
 			}
 		}
 	}

@@ -24,6 +24,8 @@ namespace Turso3D
 		bool OnPrepareRender(unsigned short frameNumber, Camera* camera) override;
 		// Perform ray test on self and add possible hit to the result vector.
 		void OnRaycast(std::vector<RaycastResult>& dest, const Ray& ray, float maxDistance) override;
+		// Add debug geometry to be rendered.
+		void OnRenderDebug(DebugRenderer* debug) override;
 
 	protected:
 		// Current model resource.
