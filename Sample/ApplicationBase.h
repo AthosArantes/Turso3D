@@ -47,6 +47,7 @@ protected:
 	virtual void OnKey(int key, int scancode, int action, int mods);
 	virtual void OnMouseButton(int button, int action, int mods);
 	virtual void OnMouseMove(double xpos, double ypos);
+	virtual void OnMouseScroll(double xoffset, double yoffset);
 	virtual void OnMouseEnterLeave(bool entered);
 	virtual void OnFramebufferSize(int width, int height);
 	virtual void OnWindowFocusChanged(int focused);

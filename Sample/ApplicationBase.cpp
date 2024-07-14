@@ -51,6 +51,10 @@ bool ApplicationBase::Initialize()
 		{
 			GetAppFromWindow(window)->OnMouseMove(xpos, ypos);
 		});
+		glfwSetScrollCallback(window, [](GLFWwindow* window, double xoffset, double yoffset) -> void
+		{
+			GetAppFromWindow(window)->OnMouseScroll(xoffset, yoffset);
+		});
 		glfwSetCursorEnterCallback(window, [](GLFWwindow* window, int entered) -> void
 		{
 			GetAppFromWindow(window)->OnMouseEnterLeave(entered);
@@ -248,6 +252,10 @@ void ApplicationBase::OnMouseButton(int button, int action, int mods)
 }
 
 void ApplicationBase::OnMouseMove(double xpos, double ypos)
+{
+}
+
+void ApplicationBase::OnMouseScroll(double xoffset, double yoffset)
 {
 }
 

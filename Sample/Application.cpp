@@ -256,7 +256,7 @@ void Application::SetupEnvironmentLighting()
 	light->SetLightType(LIGHT_DIRECTIONAL);
 	light->SetCastShadows(true);
 
-	Vector3 color = 1000.0f * Vector3 {1.0f, 1.0f, 0.6f};
+	Vector3 color = 2000.0f * Vector3 {1.0f, 1.0f, 0.6f};
 	light->SetColor(Color(color.x, color.y, color.z, 1.0f));
 	light->SetDirection(Vector3 {0.45f, -0.45f, 0.30f});
 	//light->SetRange(600.0f);
@@ -271,7 +271,7 @@ void Application::SetupEnvironmentLighting()
 	light->SetLightType(LIGHT_DIRECTIONAL);
 	light->SetCastShadows(true);
 
-	Vector3 color = 100.0f * Vector3(0.4f, 0.4f, 1.0f);
+	Vector3 color = 10.0f * Vector3(0.5f, 0.5f, 1.0f);
 	light->SetColor(Color(color.x, color.y, color.z, 1.0f));
 	light->SetDirection(Vector3(0.15f, -0.15f, 0.30f));
 	//light->SetRange(600.0f);
@@ -426,10 +426,10 @@ void Application::CreateWalkingCharacter()
 		light->SetStatic(true);
 		light->SetLightType(LIGHT_SPOT);
 		light->SetCastShadows(true);
-		light->SetColor(Color::WHITE() * 100.0f);
-		light->SetRange(30.0f);
+		light->SetColor(Color::WHITE() * 300.0f);
+		light->SetRange(50.0f);
 		light->SetFov(90.0f);
-		light->SetShadowMapSize(512);
+		light->SetShadowMapSize(1024);
 	}
 
 	// Uncomment this line and the character will no longer be lit by the point lights.
