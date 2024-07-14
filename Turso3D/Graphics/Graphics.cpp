@@ -109,14 +109,12 @@ namespace
 		unsigned vao;
 
 		// Vertex buffer for binding point 0.
-		VertexBuffer* vertexBuffer;
+		VertexBuffer* vertexBuffer[MAX_VERTEX_BINDING_POINTS];
+		// Vertex buffer offset.
+		size_t vertexStart[MAX_VERTEX_BINDING_POINTS];
+
 		// Index buffer
 		IndexBuffer* indexBuffer;
-
-		// Vertex buffer for binding point 1.
-		VertexBuffer* instanceBuffer;
-		// Instance buffer start offset.
-		size_t instanceStart;
 	};
 
 	struct GraphicsState
@@ -334,12 +332,10 @@ namespace Turso3D
 				1.0f, -1.0f, 0.0f,  1.0f, 1.0f,
 				-1.0f, -1.0f, 0.0f, 0.0f, 1.0f
 			};
-
 			const VertexElement elements[] = {
-				{ELEM_VECTOR3, ATTR_POSITION, false},
-				{ELEM_VECTOR2, ATTR_TEXCOORD, false}
+				{ELEM_VECTOR3, ATTR_POSITION},
+				{ELEM_VECTOR2, ATTR_TEXCOORD}
 			};
-
 			State.quadVertexBuffer.Define(USAGE_DEFAULT, 6, elements, 2, quadVertexData);
 		}
 		SetVSync(false);
@@ -615,20 +611,14 @@ namespace Turso3D
 		glBlitFramebuffer(srcRect.left, srcRect.top, srcRect.right, srcRect.bottom, destRect.left, destRect.top, destRect.right, destRect.bottom, glBlitBits, filter == FILTER_POINT ? GL_NEAREST : GL_LINEAR);
 	}
 
-	void Graphics::BindVertexBuffers(VertexBuffer* buffer, VertexBuffer* instanceBuffer, size_t instanceStart)
+	void Graphics::BindVertexBuffers(VertexBuffer* const* buffers, const size_t* offsets, const unsigned* divisors, size_t numBuffers)
 	{
-		if (!buffer) {
-			if (State.boundVAO) {
-				glBindVertexArray(State.defaultVAO);
-				State.boundVAO = nullptr;
-			}
-			return;
-		}
+		assert(buffers && numBuffers && numBuffers <= MAX_VERTEX_BINDING_POINTS);
 
-		size_t hash = buffer->ElementsHash();
-		if (instanceBuffer) {
-			assert(instanceBuffer->ElementsHash());
-			hash = (hash << 24 | hash >> 40 & 0xFFFFFFFFFFu) ^ instanceBuffer->ElementsHash();
+		size_t hash = 0;
+		for (size_t i = 0; i < numBuffers; ++i) {
+			assert(buffers[i]);
+			hash = (hash << 24 | hash >> 40 & 0xFFFFFFFFFFu) ^ buffers[i]->ElementsHash();
 		}
 
 		VAO* vao = State.boundVAO;
@@ -641,7 +631,6 @@ namespace Turso3D
 			if (it == State.vaoCache.end()) {
 				VAO& v = State.vaoCache.emplace_back();
 				vao = &v;
-
 				vao->hash = hash;
 
 				glGenVertexArrays(1, &vao->vao);
@@ -653,23 +642,26 @@ namespace Turso3D
 				glBindVertexArray(vao->vao);
 				State.boundVAO = vao;
 
-				for (size_t i = 0; i < buffer->NumElements(); ++i) {
-					const VertexElement& e = buffer->GetElement(i);
-					unsigned offset = buffer->GetElementOffset(i);
-					glEnableVertexAttribArray(e.index);
-					glVertexAttribFormat(e.index, glVertexElementSizes[e.type], glVertexElementTypes[e.type], (GLboolean)e.normalized, offset);
-					glVertexAttribBinding(e.index, 0);
-				}
+				for (unsigned i = 0; i < MAX_VERTEX_BINDING_POINTS; ++i) {
+					if (i < numBuffers) {
+						VertexBuffer* buffer = buffers[i];
+						for (size_t e = 0; e < buffer->NumElements(); ++e) {
+							const VertexElement& element = buffer->GetElement(e);
 
-				if (instanceBuffer) {
-					for (size_t i = 0; i < instanceBuffer->NumElements(); ++i) {
-						const VertexElement& e = instanceBuffer->GetElement(i);
-						unsigned offset = instanceBuffer->GetElementOffset(i);
-						glEnableVertexAttribArray(e.index);
-						glVertexAttribFormat(e.index, glVertexElementSizes[e.type], glVertexElementTypes[e.type], (GLboolean)e.normalized, offset);
-						glVertexAttribBinding(e.index, 1);
+							glEnableVertexAttribArray(element.index);
+							glVertexAttribFormat(
+								element.index,
+								glVertexElementSizes[element.type],
+								glVertexElementTypes[element.type],
+								(GLboolean)element.normalized,
+								buffer->GetElementOffset(e)
+							);
+							glVertexAttribBinding(element.index, i);
+						}
+						glVertexBindingDivisor(i, divisors[i]);
 					}
-					glVertexBindingDivisor(1, 1);
+					vao->vertexBuffer[i] = nullptr;
+					vao->vertexStart[i] = 0;
 				}
 			} else {
 				vao = &*it;
@@ -678,15 +670,31 @@ namespace Turso3D
 			}
 		}
 
-		if (buffer != vao->vertexBuffer) {
-			glBindVertexBuffer(0, buffer->GLBuffer(), 0, buffer->VertexSize());
-			vao->vertexBuffer = buffer;
-		}
+		for (unsigned i = 0; i < numBuffers; ++i) {
+			VertexBuffer* buffer = buffers[i];
+			size_t offset = offsets[i];
 
-		if (instanceBuffer && (instanceBuffer != vao->instanceBuffer || instanceStart != vao->instanceStart)) {
-			glBindVertexBuffer(1, instanceBuffer->GLBuffer(), instanceStart * instanceBuffer->VertexSize(), instanceBuffer->VertexSize());
-			vao->instanceBuffer = instanceBuffer;
-			vao->instanceStart = instanceStart;
+			if (buffer != vao->vertexBuffer[i] || offset != vao->vertexStart[i]) {
+				glBindVertexBuffer(i, buffer->GLBuffer(), offset * buffer->VertexSize(), buffer->VertexSize());
+				vao->vertexBuffer[i] = buffer;
+				vao->vertexStart[i] = offset;
+			}
+		}
+	}
+
+	void Graphics::BindVertexBuffers(VertexBuffer* buffer)
+	{
+		assert(buffer);
+		const size_t offset = 0;
+		const unsigned divisor = 0;
+		BindVertexBuffers(&buffer, &offset, &divisor, 1);
+	}
+
+	void Graphics::UnbindVertexBuffers()
+	{
+		if (State.boundVAO) {
+			glBindVertexArray(State.defaultVAO);
+			State.boundVAO = nullptr;
 		}
 	}
 
@@ -779,14 +787,15 @@ namespace Turso3D
 
 	void Graphics::RemoveStateObject(VertexBuffer* buffer)
 	{
-		if (buffer) {
-			for (size_t i = 0; i < State.vaoCache.size(); ++i) {
-				VAO& vao = State.vaoCache[i];
-				if (vao.vertexBuffer == buffer) {
-					vao.vertexBuffer = nullptr;
-				}
-				if (vao.instanceBuffer == buffer) {
-					vao.instanceBuffer = nullptr;
+		if (!buffer) {
+			return;
+		}
+		for (size_t i = 0; i < State.vaoCache.size(); ++i) {
+			VAO& vao = State.vaoCache[i];
+			for (size_t j = 0; j < MAX_VERTEX_BINDING_POINTS; ++j) {
+				if (vao.vertexBuffer[j] == buffer) {
+					vao.vertexBuffer[j] = nullptr;
+					vao.vertexStart[j] = 0;
 				}
 			}
 		}
@@ -794,34 +803,37 @@ namespace Turso3D
 
 	void Graphics::RemoveStateObject(IndexBuffer* buffer)
 	{
-		if (buffer) {
-			for (size_t i = 0; i < State.vaoCache.size(); ++i) {
-				VAO& vao = State.vaoCache[i];
-				if (vao.indexBuffer == buffer) {
-					vao.indexBuffer = nullptr;
-				}
+		if (!buffer) {
+			return;
+		}
+		for (size_t i = 0; i < State.vaoCache.size(); ++i) {
+			VAO& vao = State.vaoCache[i];
+			if (vao.indexBuffer == buffer) {
+				vao.indexBuffer = nullptr;
 			}
 		}
 	}
 
 	void Graphics::RemoveStateObject(UniformBuffer* buffer)
 	{
-		if (buffer) {
-			for (size_t i = 0; i < MAX_CONSTANT_BUFFER_SLOTS; ++i) {
-				if (State.boundUniformBuffers[i] == buffer) {
-					State.boundUniformBuffers[i] = nullptr;
-				}
+		if (!buffer) {
+			return;
+		}
+		for (size_t i = 0; i < MAX_CONSTANT_BUFFER_SLOTS; ++i) {
+			if (State.boundUniformBuffers[i] == buffer) {
+				State.boundUniformBuffers[i] = nullptr;
 			}
 		}
 	}
 
 	void Graphics::RemoveStateObject(Texture* texture)
 	{
-		if (texture) {
-			for (size_t i = 0; i < MAX_TEXTURE_UNITS; ++i) {
-				if (State.boundTextures[i] == texture) {
-					State.boundTextures[i] = nullptr;
-				}
+		if (!texture) {
+			return;
+		}
+		for (size_t i = 0; i < MAX_TEXTURE_UNITS; ++i) {
+			if (State.boundTextures[i] == texture) {
+				State.boundTextures[i] = nullptr;
 			}
 		}
 	}

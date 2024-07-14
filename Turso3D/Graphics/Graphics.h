@@ -103,9 +103,14 @@ namespace Turso3D
 		// The destination framebuffer will be left bound for rendering.
 		void Blit(FrameBuffer* dest, const IntRect& destRect, FrameBuffer* src, const IntRect& srcRect, bool blitColor, bool blitDepth, TextureFilterMode filter);
 
-		// Bind the proper VAO using the vertex/instance buffer elements.
-		// If buffer is nullptr the default VAO is bound.
-		void BindVertexBuffers(VertexBuffer* buffer, VertexBuffer* instanceBuffer = nullptr, size_t instanceStart = 0);
+		// Bind the vertex buffers, array index is used as binding index.
+		// offsets is the starting vertex position for each vertex buffer.
+		// numBuffers must not exceed max vertex binding points.
+		void BindVertexBuffers(VertexBuffer* const* buffers, const size_t* offsets, const unsigned* divisors, size_t numBuffers);
+		// Bind a single vertex buffer.
+		void BindVertexBuffers(VertexBuffer* buffer);
+		// Unbind vertex buffers.
+		void UnbindVertexBuffers();
 		// Bind the index buffer.
 		void BindIndexBuffer(IndexBuffer* buffer);
 

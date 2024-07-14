@@ -5,7 +5,9 @@
 
 namespace Turso3D
 {
-	// Maximum number of material textures
+	// Maximum number of vertex buffer bindings.
+	constexpr size_t MAX_VERTEX_BINDING_POINTS = 8;
+	// Maximum number of material textures.
 	constexpr size_t MAX_MATERIAL_TEXTURE_UNITS = 8;
 	// Maximum number of textures in use at once.
 	constexpr size_t MAX_TEXTURE_UNITS = 16;

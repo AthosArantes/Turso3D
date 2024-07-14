@@ -900,10 +900,22 @@ namespace Turso3D
 			}
 
 			Geometry* geometry = batch.geometry;
+			bool instanced = (batch.type == BATCH_TYPE_INSTANCED);
 
-			VertexBuffer* vb = geometry->vertexBuffer.get();
-			VertexBuffer* isb = (batch.type == BATCH_TYPE_INSTANCED) ? instanceVertexBuffer.get() : nullptr;
-			Graphics::BindVertexBuffers(vb, isb, batch.instanceStart);
+			// Bind vertex buffers
+			VertexBuffer* buffers[] = {
+				geometry->vertexBuffer.get(),
+				instanceVertexBuffer.get()
+			};
+			const size_t bufferStart[] = {
+				0,
+				batch.instanceStart
+			};
+			const unsigned divisors[] = {
+				0,
+				1
+			};
+			Graphics::BindVertexBuffers(buffers, bufferStart, divisors, instanced ? 2 : 1);
 
 			IndexBuffer* ib = geometry->indexBuffer.get();
 			if (ib) {
@@ -914,7 +926,7 @@ namespace Turso3D
 				program->SetUniform(U_LIGHTMASK, batch.lightMask);
 			}
 
-			if (isb) {
+			if (instanced) {
 				if (ib) {
 					Graphics::DrawIndexedInstanced(PT_TRIANGLE_LIST, geometry->drawStart, geometry->drawCount, batch.instanceCount);
 				} else {
