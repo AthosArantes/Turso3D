@@ -28,6 +28,26 @@ namespace Turso3D
 		bool visible;
 	};
 
+	struct VertexBufferBinding
+	{
+		VertexBufferBinding(VertexBuffer* buffer, size_t start = 0, unsigned divisor = 0, bool enabled = true) :
+			buffer(buffer),
+			start(start),
+			divisor(divisor),
+			enabled(enabled)
+		{
+		}
+
+		// The vertex buffer object.
+		VertexBuffer* buffer;
+		// The starting vertex position in the buffer.
+		size_t start;
+		// The buffer divisor.
+		unsigned divisor;
+		// Sets whether this buffer is used.
+		bool enabled;
+	};
+
 #ifdef _DEBUG
 	class GraphicsMarker
 	{
@@ -103,10 +123,9 @@ namespace Turso3D
 		// The destination framebuffer will be left bound for rendering.
 		void Blit(FrameBuffer* dest, const IntRect& destRect, FrameBuffer* src, const IntRect& srcRect, bool blitColor, bool blitDepth, TextureFilterMode filter);
 
-		// Bind the vertex buffers, array index is used as binding index.
-		// offsets is the starting vertex position for each vertex buffer.
-		// numBuffers must not exceed max vertex binding points.
-		void BindVertexBuffers(VertexBuffer* const* buffers, const size_t* offsets, const unsigned* divisors, size_t numBuffers);
+		// Bind the vertex buffers.
+		// numBindings must not exceed max vertex binding points.
+		void BindVertexBuffers(const VertexBufferBinding* bindings, size_t numBindings);
 		// Bind a single vertex buffer.
 		void BindVertexBuffers(VertexBuffer* buffer);
 		// Unbind vertex buffers.
@@ -142,7 +161,7 @@ namespace Turso3D
 		void Draw(PrimitiveType type, size_t drawStart, size_t drawCount);
 		// Draw indexed geometry with the currently bound vertex and index buffer.
 		void DrawIndexed(PrimitiveType type, size_t drawStart, size_t drawCount);
-		// Draw instanced non-indexed geometry with the currently bound vertex and index buffer.
+		// Draw instanced non-indexed geometry with the currently bound vertex.
 		void DrawInstanced(PrimitiveType type, size_t drawStart, size_t drawCount, size_t instanceCount);
 		// Draw instanced indexed geometry with the currently bound vertex and index buffer.
 		void DrawIndexedInstanced(PrimitiveType type, size_t drawStart, size_t drawCount, size_t instanceCount);

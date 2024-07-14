@@ -611,14 +611,17 @@ namespace Turso3D
 		glBlitFramebuffer(srcRect.left, srcRect.top, srcRect.right, srcRect.bottom, destRect.left, destRect.top, destRect.right, destRect.bottom, glBlitBits, filter == FILTER_POINT ? GL_NEAREST : GL_LINEAR);
 	}
 
-	void Graphics::BindVertexBuffers(VertexBuffer* const* buffers, const size_t* offsets, const unsigned* divisors, size_t numBuffers)
+	void Graphics::BindVertexBuffers(const VertexBufferBinding* bindings, size_t numBindings)
 	{
-		assert(buffers && numBuffers && numBuffers <= MAX_VERTEX_BINDING_POINTS);
+		assert(bindings && numBindings && numBindings <= MAX_VERTEX_BINDING_POINTS);
 
 		size_t hash = 0;
-		for (size_t i = 0; i < numBuffers; ++i) {
-			assert(buffers[i]);
-			hash = (hash << 24 | hash >> 40 & 0xFFFFFFFFFFu) ^ buffers[i]->ElementsHash();
+		for (size_t i = 0; i < numBindings; ++i) {
+			const VertexBufferBinding& binding = bindings[i];
+			if (binding.enabled) {
+				assert(binding.buffer);
+				hash = (hash << 24 | hash >> 40 & 0xFFFFFFFFFFu) ^ binding.buffer->ElementsHash();
+			}
 		}
 
 		VAO* vao = State.boundVAO;
@@ -642,24 +645,32 @@ namespace Turso3D
 				glBindVertexArray(vao->vao);
 				State.boundVAO = vao;
 
-				for (unsigned i = 0; i < MAX_VERTEX_BINDING_POINTS; ++i) {
-					if (i < numBuffers) {
-						VertexBuffer* buffer = buffers[i];
-						for (size_t e = 0; e < buffer->NumElements(); ++e) {
-							const VertexElement& element = buffer->GetElement(e);
-
-							glEnableVertexAttribArray(element.index);
-							glVertexAttribFormat(
-								element.index,
-								glVertexElementSizes[element.type],
-								glVertexElementTypes[element.type],
-								(GLboolean)element.normalized,
-								buffer->GetElementOffset(e)
-							);
-							glVertexAttribBinding(element.index, i);
-						}
-						glVertexBindingDivisor(i, divisors[i]);
+				// Vertex binding index
+				unsigned index = 0;
+				for (size_t i = 0; i < numBindings; ++i) {
+					const VertexBufferBinding& binding = bindings[i];
+					if (!binding.enabled) {
+						continue;
 					}
+
+					for (size_t e = 0; e < binding.buffer->NumElements(); ++e) {
+						const VertexElement& element = binding.buffer->GetElement(e);
+						glEnableVertexAttribArray(element.index);
+						glVertexAttribFormat(
+							element.index,
+							glVertexElementSizes[element.type],
+							glVertexElementTypes[element.type],
+							(GLboolean)element.normalized,
+							binding.buffer->GetElementOffset(e)
+						);
+						glVertexAttribBinding(element.index, index);
+					}
+					glVertexBindingDivisor(index, binding.divisor);
+
+					++index;
+				}
+
+				for (unsigned i = 0; i < MAX_VERTEX_BINDING_POINTS; ++i) {
 					vao->vertexBuffer[i] = nullptr;
 					vao->vertexStart[i] = 0;
 				}
@@ -670,24 +681,26 @@ namespace Turso3D
 			}
 		}
 
-		for (unsigned i = 0; i < numBuffers; ++i) {
-			VertexBuffer* buffer = buffers[i];
-			size_t offset = offsets[i];
-
-			if (buffer != vao->vertexBuffer[i] || offset != vao->vertexStart[i]) {
-				glBindVertexBuffer(i, buffer->GLBuffer(), offset * buffer->VertexSize(), buffer->VertexSize());
-				vao->vertexBuffer[i] = buffer;
-				vao->vertexStart[i] = offset;
+		unsigned index = 0;
+		for (size_t i = 0; i < numBindings; ++i) {
+			const VertexBufferBinding& binding = bindings[i];
+			if (!binding.enabled) {
+				continue;
 			}
+			if (binding.buffer != vao->vertexBuffer[index] || binding.start != vao->vertexStart[index]) {
+				glBindVertexBuffer(index, binding.buffer->GLBuffer(), binding.start * binding.buffer->VertexSize(), binding.buffer->VertexSize());
+				vao->vertexBuffer[index] = binding.buffer;
+				vao->vertexStart[index] = binding.start;
+			}
+			++index;
 		}
 	}
 
 	void Graphics::BindVertexBuffers(VertexBuffer* buffer)
 	{
 		assert(buffer);
-		const size_t offset = 0;
-		const unsigned divisor = 0;
-		BindVertexBuffers(&buffer, &offset, &divisor, 1);
+		VertexBufferBinding binding {buffer};
+		BindVertexBuffers(&binding, 1);
 	}
 
 	void Graphics::UnbindVertexBuffers()

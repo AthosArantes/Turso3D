@@ -903,20 +903,13 @@ namespace Turso3D
 			bool instanced = (batch.type == BATCH_TYPE_INSTANCED);
 
 			// Bind vertex buffers
-			VertexBuffer* buffers[] = {
-				geometry->vertexBuffer.get(),
-				instanceVertexBuffer.get()
+			const VertexBufferBinding bindings[] = {
+				{geometry->vertexBuffer.get()},
+				{instanceVertexBuffer.get(), batch.instanceStart, 1, instanced}
 			};
-			const size_t bufferStart[] = {
-				0,
-				batch.instanceStart
-			};
-			const unsigned divisors[] = {
-				0,
-				1
-			};
-			Graphics::BindVertexBuffers(buffers, bufferStart, divisors, instanced ? 2 : 1);
+			Graphics::BindVertexBuffers(bindings, 2);
 
+			// Bind index buffer
 			IndexBuffer* ib = geometry->indexBuffer.get();
 			if (ib) {
 				Graphics::BindIndexBuffer(ib);
