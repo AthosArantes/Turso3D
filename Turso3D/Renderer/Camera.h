@@ -42,8 +42,8 @@ namespace Turso3D
 		// Set LOD bias.
 		// Values higher than 1 uses higher quality LOD (acts if distance is smaller.)
 		void SetLodBias(float bias) { lodBias = std::max(bias, M_EPSILON); }
-		// Set view layer mask.
-		// Will be checked against scene objects' layers to see what to render.
+		// Set view mask.
+		// Will be checked against scene objects' view mask to see what to render.
 		void SetViewMask(unsigned mask) { viewMask = mask; }
 		// Set orthographic projection mode.
 		void SetOrthographic(bool enable) { orthographic = enable; }
@@ -72,7 +72,7 @@ namespace Turso3D
 		float Zoom() const { return zoom; }
 		// Return LOD bias.
 		float LodBias() const { return lodBias; }
-		// Return view layer mask.
+		// Return view mask.
 		unsigned ViewMask() const { return viewMask; }
 		// Return whether is orthographic.
 		bool IsOrthographic() const { return orthographic; }
@@ -155,7 +155,7 @@ namespace Turso3D
 		float zoom;
 		// LOD bias.
 		float lodBias;
-		// View layer mask.
+		// View mask.
 		unsigned viewMask;
 		// Reflection plane.
 		Plane reflectionPlane;

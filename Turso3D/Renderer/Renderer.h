@@ -142,10 +142,6 @@ namespace Turso3D
 		Vector4 cameraPosition;
 		// Current scene's ambient color.
 		Color ambientColor;
-		// Current scene's fog color.
-		Color fogColor;
-		// Current scene's fog start and end parameters.
-		Vector4 fogParameters;
 		// IBL parameters.
 		Vector4 iblParameters;
 		// Directional light direction.

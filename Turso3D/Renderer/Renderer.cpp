@@ -795,13 +795,6 @@ namespace Turso3D
 			// Set global lighting settings if is the main view
 			if (camera_ == camera) {
 				perViewData.ambientColor = lightEnvironment->AmbientColor();
-				perViewData.fogColor = lightEnvironment->FogColor();
-
-				float fogStart = lightEnvironment->FogStart();
-				float fogEnd = lightEnvironment->FogEnd();
-				float fogRange = std::max(fogEnd - fogStart, M_EPSILON);
-				perViewData.fogParameters = Vector4(fogEnd / farClip, farClip / fogRange, 0.0f, 0.0f);
-
 				if (Texture* tex = lightEnvironment->GetPMREMTexture(); tex && tex->NumLevels()) {
 					float maxMip = std::max(static_cast<float>(tex->NumLevels()) - 1.0f, 0.0f);
 					perViewData.iblParameters = Vector4 {maxMip, 0.0f, 0.0f, 0.0f};

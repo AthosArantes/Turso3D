@@ -72,7 +72,7 @@ vec3 CalcLight(const uint index, const in vec4 worldPos, const in vec3 normal, c
 	}
 #endif
 
-	vec3 V = normalize(cameraPosition - worldPos.xyz);
+	vec3 V = normalize(cameraPosition.xyz - worldPos.xyz);
 	vec3 D = light.position.xyz - worldPos.xyz;
 	vec3 L = normalize(D);
 
@@ -94,7 +94,7 @@ vec3 CalcLight(const uint index, const in vec4 worldPos, const in vec3 normal, c
 
 vec3 CalculateLighting(const in vec4 worldPos, const in vec2 screenPos, const in vec3 normal, const in vec3 albedo, const in float metallic, const in float roughness)
 {
-	vec3 V = normalize(cameraPosition - worldPos.xyz);
+	vec3 V = normalize(cameraPosition.xyz - worldPos.xyz);
 
 	// Calculate color at normal incidence
 	vec3 f0 = vec3(abs((1.0 - IOR) / (1.0 + IOR)));
@@ -121,7 +121,7 @@ vec3 CalculateLighting(const in vec4 worldPos, const in vec2 screenPos, const in
 	}
 
 	// Directional light
-	vec3 color = CookTorrance(V, normal, normalize(dirLightDirection), dirLightColor.rgb, albedo, f0, metallic, roughness) * SampleShadowDirectional(worldPos);
+	vec3 color = CookTorrance(V, normal, normalize(dirLightDirection.xyz), dirLightColor.rgb, albedo, f0, metallic, roughness) * SampleShadowDirectional(worldPos);
 
 	// Point/Spot lights
 	uvec4 cluster = GetLightClusterData(screenPos, worldPos);

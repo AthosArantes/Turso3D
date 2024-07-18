@@ -102,9 +102,6 @@ void main()
 	color += sEmissive.rgb * EmissiveParams.rgb * sEmissive.a * EmissiveParams.a;
 #endif
 
-	// Add environment fog
-	color = mix(fogColor, color, GetFogFactor(vWorldPos.w));
-
 	fragColor = vec4(color, alpha);
 	fragNormal = vec4(vec4(normal, 0.0) * viewMatrix * 0.5 + 0.5, 0.0);
 }

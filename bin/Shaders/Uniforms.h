@@ -4,12 +4,10 @@ layout(std140) uniform PerViewData0
 	mat4x4 projectionMatrix;
 	mat4x4 viewProjMatrix;
 	vec4 depthParameters;
-	vec3 cameraPosition;
+	vec4 cameraPosition;
 	vec4 ambientColor;
-	vec3 fogColor;
-	vec2 fogParameters;
 	vec4 iblParameters; // x = max lod level of PMREM texture
-	vec3 dirLightDirection;
+	vec4 dirLightDirection;
 	vec4 dirLightColor;
 	vec4 dirLightShadowSplits;
 	vec4 dirLightShadowParameters;
@@ -42,9 +40,3 @@ layout(std140) uniform LightData1
 // Preset uniforms
 uniform mat3x4 worldMatrix;
 uniform uint lightMask;
-
-//===============================================================================
-float GetFogFactor(float depth)
-{
-	return clamp((fogParameters.x - depth) * fogParameters.y, 0.0, 1.0);
-}
