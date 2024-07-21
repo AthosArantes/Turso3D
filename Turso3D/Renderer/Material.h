@@ -17,7 +17,7 @@ namespace Turso3D
 
 	enum PassType
 	{
-		PASS_SHADOW = 0,
+		PASS_SHADOW,
 		PASS_OPAQUE,
 		PASS_ALPHA,
 		MAX_PASS_TYPES
@@ -109,7 +109,8 @@ namespace Turso3D
 		std::shared_ptr<ShaderProgram> CreateShaderProgram(GeometryPermutation geometry, LightMaskPermutation lightmask);
 
 	public:
-		// Last sort key for combined distance and state sorting. Used by Renderer.
+		// Last sort key for combined distance and state sorting.
+		// Used by Renderer.
 		std::pair<unsigned, unsigned> lastSortKey;
 
 	private:

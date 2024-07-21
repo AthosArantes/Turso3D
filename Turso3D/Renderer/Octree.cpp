@@ -2,7 +2,6 @@
 #include <Turso3D/Core/WorkQueue.h>
 #include <Turso3D/Graphics/Graphics.h>
 #include <Turso3D/IO/Log.h>
-#include <Turso3D/Math/Random.h>
 #include <Turso3D/Math/Ray.h>
 #include <Turso3D/Renderer/DebugRenderer.h>
 #include <cassert>
@@ -61,12 +60,13 @@ namespace Turso3D
 		parent(nullptr),
 		visibility(VIS_VISIBLE_UNKNOWN),
 		occlusionQueryId(0),
-		occlusionQueryTimer(Random()* OCCLUSION_QUERY_INTERVAL),
 		numChildren(0)
 	{
 		for (size_t i = 0; i < NUM_OCTANTS; ++i) {
 			children[i] = nullptr;
 		}
+		float r = static_cast<float>(std::rand()) / RAND_MAX;
+		occlusionQueryTimer = OCCLUSION_QUERY_INTERVAL * r;
 	}
 
 	Octant::~Octant()

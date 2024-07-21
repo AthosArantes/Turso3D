@@ -11,7 +11,7 @@ void main()
 }
 
 #pragma shader:FS //===============================================================================
-#include <Uniforms.h>
+#include <uniforms.h>
 
 in vec2 texCoord;
 

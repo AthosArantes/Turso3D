@@ -88,7 +88,7 @@ namespace Turso3D
 		return true;
 	}
 
-	void SkinnedModelDrawable::OnRender(ShaderProgram*, size_t)
+	void SkinnedModelDrawable::OnRender(ShaderProgram* program, size_t geomIndex)
 	{
 		const std::vector<Bone*>& bones = Bones();
 		if (!skinMatrixBuffer || bones.empty()) {

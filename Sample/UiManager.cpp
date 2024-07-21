@@ -9,6 +9,7 @@
 #include <Turso3D/Math/IntVector2.h>
 #include <Turso3D/IO/Log.h>
 #include <RmlUi/Core.h>
+#include <GLFW/glfw3.h>
 #include <utility>
 
 using namespace Turso3D;
@@ -16,22 +17,22 @@ using namespace Turso3D;
 namespace
 {
 	constexpr const char* DefaultFonts[] = {
-		"ui/fonts/FiraGO-Bold.ttf",
-		"ui/fonts/FiraGO-BoldItalic.ttf",
-		"ui/fonts/FiraGO-Book.ttf",
-		"ui/fonts/FiraGO-BookItalic.ttf",
-		"ui/fonts/FiraGO-ExtraBold.ttf",
-		"ui/fonts/FiraGO-ExtraBoldItalic.ttf",
-		"ui/fonts/FiraGO-Heavy.ttf",
-		"ui/fonts/FiraGO-HeavyItalic.ttf",
-		"ui/fonts/FiraGO-Italic.ttf",
-		"ui/fonts/FiraGO-Light.ttf",
-		"ui/fonts/FiraGO-LightItalic.ttf",
-		"ui/fonts/FiraGO-Medium.ttf",
-		"ui/fonts/FiraGO-MediumItalic.ttf",
-		"ui/fonts/FiraGO-Regular.ttf",
-		"ui/fonts/FiraGO-SemiBold.ttf",
-		"ui/fonts/FiraGO-SemiBoldItalic.ttf"
+		"ui/fonts/firago-bold.ttf",
+		"ui/fonts/firago-bolditalic.ttf",
+		"ui/fonts/firago-book.ttf",
+		"ui/fonts/firago-bookitalic.ttf",
+		"ui/fonts/firago-extrabold.ttf",
+		"ui/fonts/firago-extrabolditalic.ttf",
+		"ui/fonts/firago-heavy.ttf",
+		"ui/fonts/firago-heavyitalic.ttf",
+		"ui/fonts/firago-italic.ttf",
+		"ui/fonts/firago-light.ttf",
+		"ui/fonts/firago-lightitalic.ttf",
+		"ui/fonts/firago-medium.ttf",
+		"ui/fonts/firago-mediumitalic.ttf",
+		"ui/fonts/firago-regular.ttf",
+		"ui/fonts/firago-semibold.ttf",
+		"ui/fonts/firago-semibolditalic.ttf"
 	};
 
 	struct FrameStats
@@ -77,7 +78,7 @@ void UiManager::Initialize()
 {
 	Log::Scope logScope {"UiManager::Initialize"};
 
-	composeProgram = Graphics::CreateProgram("PostProcess/GuiCompose.glsl", "", "");
+	composeProgram = Graphics::CreateProgram("post_process/gui_compose.glsl", "", "");
 
 	impl->rmlFile = std::make_unique<RmlFile>();
 	impl->rmlSystem = std::make_unique<RmlSystem>();
@@ -115,9 +116,9 @@ void UiManager::Initialize()
 
 void UiManager::UpdateBuffers(const IntVector2& size)
 {
-	impl->rmlRenderer->UpdateBuffers(size, 1);
+	impl->rmlRenderer->UpdateBuffers(size, 4);
 
-	impl->frameStatsContext->SetDimensions(Rml::Vector2i(size.x, size.y));
+	impl->frameStatsContext->SetDimensions(Rml::Vector2i {size.x, size.y});
 	impl->frameStatsContext->Update();
 }
 
@@ -128,7 +129,12 @@ void UiManager::Update(double dt)
 	impl->frameStats.previousFrameTime = dt;
 	impl->frameStats.fps = static_cast<int>(1.0 / dt);
 	impl->frameStatsModel.DirtyAllVariables();
+
 	impl->frameStatsContext->Update();
+
+	double x, y;
+	glfwGetCursorPos((GLFWwindow*)Graphics::Window(), &x, &y);
+	impl->frameStatsContext->ProcessMouseMove(static_cast<int>(std::floor(x)), static_cast<int>(std::floor(y)), 0);
 
 	// Render
 	impl->rmlRenderer->BeginRender();

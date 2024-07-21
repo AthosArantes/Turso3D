@@ -1,9 +1,9 @@
 #version 330 core
 
-#include <Uniforms.h>
+#include <uniforms.h>
 
 #pragma shader:VS //===============================================================================
-#include <Transform.h>
+#include <transform.h>
 
 in vec3 position;
 in vec3 normal;
@@ -35,8 +35,8 @@ void main()
 }
 
 #pragma shader:FS //===============================================================================
-#include <PBR.h>
-#include <Utils.h>
+#include <pbr.h>
+#include <utils.h>
 
 uniform sampler2D albedoTex0;
 uniform sampler2D aoRoughMetalTex1;

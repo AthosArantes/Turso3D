@@ -69,11 +69,11 @@ namespace Turso3D
 		float BoneWeight(const std::string& name) const;
 		// Return per-bone blending weight by name.
 		float BoneWeight(StringHash nameHash) const;
-		// Return track index with matching bone node, or M_MAX_UNSIGNED if not found.
+		// Return track index with matching bone node, or UINT_MAX if not found.
 		size_t FindTrackIndex(SpatialNode* node) const;
-		// Return track index by bone name, or M_MAX_UNSIGNED if not found.
+		// Return track index by bone name, or UINT_MAX if not found.
 		size_t FindTrackIndex(const std::string& name) const;
-		// Return track index by bone name hash, or M_MAX_UNSIGNED if not found.
+		// Return track index by bone name hash, or UINT_MAX if not found.
 		size_t FindTrackIndex(StringHash nameHash) const;
 		// Return whether weight is nonzero.
 		bool Enabled() const { return weight > 0.0f; }

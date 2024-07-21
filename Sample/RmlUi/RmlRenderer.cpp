@@ -57,7 +57,7 @@ RmlRenderer::RmlRenderer()
 	constexpr StringHash uniformTransformHash {"transform"};
 
 	for (unsigned i = 0; i < 2; ++i) {
-		programs[i].program = Graphics::CreateProgram("RmlUi.glsl", defines[i], defines[i]);
+		programs[i].program = Graphics::CreateProgram("rml_ui.glsl", defines[i], defines[i]);
 		programs[i].translateIndex = programs[i].program->Uniform(uniformTranslateHash);
 		programs[i].transformIndex = programs[i].program->Uniform(uniformTransformHash);
 	}
@@ -119,8 +119,8 @@ void RmlRenderer::RenderCompiledGeometry(Rml::CompiledGeometryHandle handle, con
 	ShaderProgramGroup& program_group = programs[(cg->texture != nullptr) ? TEXTURED_PROGRAM : COLOR_PROGRAM];
 	Graphics::BindProgram(program_group.program.get());
 
-	glUniform2f(program_group.translateIndex, translation.x, translation.y);
-	glUniformMatrix4fv(program_group.transformIndex, 1, GL_FALSE, transform.data());
+	Graphics::SetUniform(program_group.translateIndex, Vector2 {translation.x, translation.y});
+	Graphics::SetUniform(program_group.transformIndex, Matrix4 {transform.data()});
 
 	if (cg->texture) {
 		Graphics::BindTexture(0, cg->texture);
@@ -243,7 +243,7 @@ bool RmlRenderer::GenerateTexture(Rml::TextureHandle& texture_handle, const Rml:
 		IntVector3 sz {source_dimensions.x, source_dimensions.y, 1};
 		ImageLevel il {source, 0, IntBox {0, 0, 0, sz.x, sz.y, 0}, 0, 0};
 
-		bool defined = tex->Define(TARGET_2D, sz, FORMAT_RGBA8_SRGB_PACK32, 1, 1);
+		bool defined = tex->Define(TARGET_2D, sz, FORMAT_RGBA8_UNORM_PACK32, 1, 1);
 		if (!defined) {
 			LOG_ERROR("Failed to define texture.");
 			return false;
@@ -318,7 +318,8 @@ void RmlRenderer::BeginRender()
 	glClearColor(0, 0, 0, 0);
 	glClear(GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
-	Graphics::SetRenderState(BLEND_ADDALPHA, CULL_FRONT, CMP_ALWAYS, true, false);
+	Graphics::SetRenderState(BLEND_ALPHA, CULL_FRONT, CMP_ALWAYS, true, false);
+	//glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_SRC_ALPHA, GL_ONE);
 
 	glEnable(GL_STENCIL_TEST);
 	glStencilFunc(GL_ALWAYS, 0, GLuint(-1));

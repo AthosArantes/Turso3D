@@ -4,7 +4,6 @@
 #include <Turso3D/Graphics/FrameBuffer.h>
 #include <Turso3D/Graphics/Texture.h>
 #include <Turso3D/Graphics/UniformBuffer.h>
-#include <Turso3D/Math/Random.h>
 #include <Turso3D/Renderer/Camera.h>
 #include <Turso3D/IO/Log.h>
 
@@ -25,9 +24,9 @@ SSAORenderer::~SSAORenderer()
 void SSAORenderer::Initialize()
 {
 	constexpr StringHash blurInvSizeHash {"blurInvSize"};
-	ssaoProgram = Graphics::CreateProgram("PostProcess/SSAO.glsl", "", "");
+	ssaoProgram = Graphics::CreateProgram("post_process/ssao.glsl", "", "");
 
-	blurProgram = Graphics::CreateProgram("PostProcess/SSAOBlur.glsl", "", "");
+	blurProgram = Graphics::CreateProgram("post_process/ssao_blur.glsl", "", "");
 	uBlurInvSize = blurProgram->Uniform(blurInvSizeHash);
 
 	ssaoUniformBuffer->Define(USAGE_DEFAULT, sizeof(UniformDataBlock), &uniformData);
@@ -115,14 +114,19 @@ void SSAORenderer::Render(Camera* camera, Texture* normal, Texture* depth, Frame
 void SSAORenderer::GenerateNoiseTexture()
 {
 	// Random noise texture for SSAO
-	unsigned char noiseData[4 * 4 * 4];
+	uint8_t noiseData[4 * 4 * 4];
 	for (int i = 0; i < 4 * 4; ++i) {
-		Vector3 noiseVec(Random() * 2.0f - 1.0f, Random() * 2.0f - 1.0f, Random() * 2.0f - 1.0f);
-		noiseVec.Normalize();
+		Vector3 random {
+			static_cast<float>(std::rand()) / RAND_MAX,
+			static_cast<float>(std::rand()) / RAND_MAX,
+			static_cast<float>(std::rand()) / RAND_MAX
+		};
+		Vector3 noise = random * 2.0f - Vector3::ONE();
+		noise.Normalize();
 
-		noiseData[i * 4 + 0] = (unsigned char)(noiseVec.x * 127.0f + 128.0f);
-		noiseData[i * 4 + 1] = (unsigned char)(noiseVec.y * 127.0f + 128.0f);
-		noiseData[i * 4 + 2] = (unsigned char)(noiseVec.z * 127.0f + 128.0f);
+		noiseData[i * 4 + 0] = (uint8_t)(noise.x * 127.0f + 128.0f);
+		noiseData[i * 4 + 1] = (uint8_t)(noise.y * 127.0f + 128.0f);
+		noiseData[i * 4 + 2] = (uint8_t)(noise.z * 127.0f + 128.0f);
 		noiseData[i * 4 + 3] = 0;
 	}
 	ImageLevel noiseDataLevel {&noiseData[0], 0, IntBox {0, 0, 0, 4, 4, 0}, 0, 0};

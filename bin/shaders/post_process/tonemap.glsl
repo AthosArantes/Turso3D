@@ -12,7 +12,7 @@ void main()
 }
 
 #pragma shader:FS //===============================================================================
-#include <Tonemap.h>
+#include <tonemap.h>
 
 in vec2 texCoord;
 

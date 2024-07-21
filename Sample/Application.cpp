@@ -12,7 +12,6 @@
 #include <Turso3D/Graphics/Texture.h>
 #include <Turso3D/IO/Log.h>
 #include <Turso3D/Math/Math.h>
-#include <Turso3D/Math/Random.h>
 #include <Turso3D/Renderer/AnimatedModel.h>
 #include <Turso3D/Renderer/Animation.h>
 #include <Turso3D/Renderer/AnimationState.h>
@@ -226,16 +225,16 @@ void Application::SetupEnvironmentLighting()
 	{
 		constexpr TextureAddressMode clamp = ADDRESS_CLAMP;
 
+		std::shared_ptr<Texture> brdfTex = cache->LoadResource<Texture>("ibl/brdf.dds");
+		brdfTex->DefineSampler(FILTER_BILINEAR, clamp, clamp, clamp);
+
 		std::shared_ptr<Texture> iemTex = cache->LoadResource<Texture>("ibl/daysky_iem.dds");
 		iemTex->DefineSampler(FILTER_BILINEAR, clamp, clamp, clamp);
 
 		std::shared_ptr<Texture> pmremTex = cache->LoadResource<Texture>("ibl/daysky_pmrem.dds");
 		pmremTex->DefineSampler(FILTER_TRILINEAR, clamp, clamp, clamp);
 
-		std::shared_ptr<Texture> brdfTex = cache->LoadResource<Texture>("ibl/brdf.dds");
-		brdfTex->DefineSampler(FILTER_BILINEAR, clamp, clamp, clamp);
-
-		lightEnvironment->SetIBLMaps(iemTex, pmremTex, brdfTex);
+		lightEnvironment->SetIBLMaps(brdfTex, iemTex, pmremTex);
 	}
 
 	camera->SetFarClip(1000.0f);
@@ -366,9 +365,11 @@ void Application::CreateThousandMushroomScene()
 
 			for (int cx = -1; cx <= 1; ++cx) {
 				for (int cy = -1; cy <= 1; ++cy) {
+					float r = static_cast<float>(rand()) / RAND_MAX;
+
 					StaticModel* mushroom = root->CreateChild<StaticModel>();
 					mushroom->SetPosition(Vector3(10.5f * x + cx * 2, 0.0f, 10.5f * y + cy * 2));
-					mushroom->SetRotation(Quaternion(0, Random() * 360, 0));
+					mushroom->SetRotation(Quaternion(0, r * 360, 0));
 					mushroom->SetStatic(true);
 					mushroom->SetScale(0.5f);
 					mushroom->SetModel(mushroomModel);
@@ -624,7 +625,7 @@ void Application::Render(double dt)
 #if 1
 		Octree* octree = scene->GetOctree();
 		Ray cameraRay {camera->WorldPosition(), camera->WorldDirection()};
-		RaycastResult res = octree->RaycastSingle(cameraRay, Drawable::FLAG_GEOMETRY, M_MAX_UNSIGNED);
+		RaycastResult res = octree->RaycastSingle(cameraRay, Drawable::FLAG_GEOMETRY, UINT_MAX);
 		if (res.drawable) {
 			// Draw hull meshes
 			StaticModel* model = static_cast<StaticModel*>(res.drawable->Owner());

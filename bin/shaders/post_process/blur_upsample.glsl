@@ -57,8 +57,8 @@ void main()
 	//  1   | 1 2 1 |
 	// -- * | 2 4 2 |
 	// 16   | 1 2 1 |
-	upsample = e*4.0;
-	upsample += (b+d+f+h)*2.0;
+	upsample = e * 4.0;
+	upsample += (b+d+f+h) * 2.0;
 	upsample += (a+c+g+i);
 	upsample *= WeightMul;
 }

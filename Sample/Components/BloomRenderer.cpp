@@ -25,7 +25,7 @@ void BloomRenderer::Initialize()
 
 	constexpr StringHash intensityHash {"intensity"};
 
-	bloomProgram = Graphics::CreateProgram("PostProcess/BloomCompose.glsl", "", "");
+	bloomProgram = Graphics::CreateProgram("post_process/bloom_compose.glsl", "", "");
 	uIntensity = bloomProgram->Uniform(intensityHash);
 }
 

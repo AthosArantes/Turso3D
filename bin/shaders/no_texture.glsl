@@ -1,9 +1,9 @@
 #version 330 core
 
-#include <Uniforms.h>
+#include <uniforms.h>
 
 #pragma shader:VS //===============================================================================
-#include <Transform.h>
+#include <transform.h>
 
 in vec3 position;
 in vec3 normal;
@@ -27,7 +27,7 @@ void main()
 }
 
 #pragma shader:FS //===============================================================================
-#include <PBR.h>
+#include <pbr.h>
 
 in vec4 vWorldPos;
 in vec3 vNormal;
@@ -49,7 +49,7 @@ layout (location = 1) out vec4 fragNormal;
 void main()
 {
 	//float ao = AoRoughMetal.r;
-	float roughness = AoRoughMetal.g;
+	float roughness = clamp(AoRoughMetal.g, 0.1, 0.9);
 	float metallic = AoRoughMetal.b;
 
 	vec3 normal = normalize(vNormal);

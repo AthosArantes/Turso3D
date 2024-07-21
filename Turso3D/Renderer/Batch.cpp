@@ -15,6 +15,7 @@ namespace Turso3D
 		return lhs.distance > rhs.distance;
 	}
 
+	// ==========================================================================================
 	void BatchQueue::Clear()
 	{
 		batches.clear();
@@ -23,7 +24,7 @@ namespace Turso3D
 	void BatchQueue::Sort(std::vector<Matrix3x4>& instanceTransforms, BatchSortMode sortMode, bool convertToInstanced)
 	{
 		switch (sortMode) {
-			case BATCH_SORT_STATE:
+			case BatchSortMode::State:
 				for (size_t i = 0; i < batches.size() - 1; ++i) {
 					Batch& batch = batches[i];
 					unsigned materialId = (unsigned)((size_t)batch.pass / sizeof(Pass));
@@ -33,7 +34,7 @@ namespace Turso3D
 				std::sort(batches.begin(), batches.end(), CompareBatchKeys);
 				break;
 
-			case BATCH_SORT_STATE_DISTANCE:
+			case BatchSortMode::StateDistance:
 				for (size_t i = 0; i < batches.size() - 1; ++i) {
 					Batch& batch = batches[i];
 					unsigned materialId = batch.pass->lastSortKey.second;
@@ -43,7 +44,7 @@ namespace Turso3D
 				std::sort(batches.begin(), batches.end(), CompareBatchKeys);
 				break;
 
-			case BATCH_SORT_DISTANCE:
+			case BatchSortMode::Distance:
 				std::sort(batches.begin(), batches.end(), CompareBatchDistance);
 				break;
 
@@ -57,7 +58,7 @@ namespace Turso3D
 			Batch& batch = batches[i];
 
 			// Check if batch is static geometry and can be converted to instanced
-			if (batch.type != BATCH_TYPE_STATIC) {
+			if (batch.type != BatchType::Static) {
 				continue;
 			}
 
@@ -68,7 +69,7 @@ namespace Turso3D
 				if (next.pass != batch.pass ||
 					next.geometry != batch.geometry ||
 					next.lightMask != batch.lightMask ||
-					next.type != BATCH_TYPE_STATIC
+					next.type != BatchType::Static
 				) {
 					break;
 				}
@@ -84,7 +85,7 @@ namespace Turso3D
 
 			// Finalize the conversion by changing type and writing offsets.
 			if (instanceCount) {
-				batch.type = BATCH_TYPE_INSTANCED;
+				batch.type = BatchType::Instanced;
 				batch.instanceStart = instanceStart;
 				batch.instanceCount = instanceCount;
 				i += instanceCount - 1;

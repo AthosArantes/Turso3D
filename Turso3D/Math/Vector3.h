@@ -80,6 +80,7 @@ namespace Turso3D
 		{
 			return !(*this == rhs);
 		}
+
 		// Add a vector.
 		Vector3 operator + (const Vector3& rhs) const
 		{
@@ -232,7 +233,7 @@ namespace Turso3D
 		// Return the angle between this vector and another vector in degrees.
 		float Angle(const Vector3& rhs) const
 		{
-			return Turso3D::Acos(DotProduct(rhs) / (Length() * rhs.Length()));
+			return acosf(Clamp(DotProduct(rhs) / (Length() * rhs.Length()), -1.0f, 1.0f)) * M_RADTODEG;
 		}
 		// Return whether is NaN.
 		bool IsNaN() const
@@ -290,43 +291,12 @@ namespace Turso3D
 		return rhs * lhs;
 	}
 
-	inline Vector3 Vector3::ZERO()
-	{
-		return Vector3 {0.0f, 0.0f, 0.0f};
-	}
-
-	inline Vector3 Vector3::LEFT()
-	{
-		return Vector3 {-1.0f, 0.0f, 0.0f};
-	}
-
-	inline Vector3 Vector3::RIGHT()
-	{
-		return Vector3 {1.0f, 0.0f, 0.0f};
-	}
-
-	inline Vector3 Vector3::UP()
-	{
-		return Vector3 {0.0f, 1.0f, 0.0f};
-	}
-
-	inline Vector3 Vector3::DOWN()
-	{
-		return Vector3 {0.0f, -1.0f, 0.0f};
-	}
-
-	inline Vector3 Vector3::FORWARD()
-	{
-		return Vector3 {0.0f, 0.0f, 1.0f};
-	}
-
-	inline Vector3 Vector3::BACK()
-	{
-		return Vector3 {0.0f, 0.0f, -1.0f};
-	}
-
-	inline Vector3 Vector3::ONE()
-	{
-		return Vector3 {1.0f, 1.0f, 1.0f};
-	}
+	inline Vector3 Vector3::ZERO() { return Vector3 {0.0f, 0.0f, 0.0f}; }
+	inline Vector3 Vector3::LEFT() { return Vector3 {-1.0f, 0.0f, 0.0f}; }
+	inline Vector3 Vector3::RIGHT() { return Vector3 {1.0f, 0.0f, 0.0f}; }
+	inline Vector3 Vector3::UP() { return Vector3 {0.0f, 1.0f, 0.0f}; }
+	inline Vector3 Vector3::DOWN() { return Vector3 {0.0f, -1.0f, 0.0f}; }
+	inline Vector3 Vector3::FORWARD() { return Vector3 {0.0f, 0.0f, 1.0f}; }
+	inline Vector3 Vector3::BACK() { return Vector3 {0.0f, 0.0f, -1.0f}; }
+	inline Vector3 Vector3::ONE() { return Vector3 {1.0f, 1.0f, 1.0f}; }
 }

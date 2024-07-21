@@ -101,8 +101,5 @@ namespace Turso3D
 	};
 
 	// ==========================================================================================
-	inline IntBox IntBox::ZERO()
-	{
-		return IntBox {0, 0, 0, 0, 0, 0};
-	}
+	inline IntBox IntBox::ZERO() { return IntBox {0, 0, 0, 0, 0, 0}; }
 }

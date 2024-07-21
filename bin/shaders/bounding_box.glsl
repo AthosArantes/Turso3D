@@ -1,9 +1,9 @@
 #version 330 core
 
-#include <Uniforms.h>
+#include <uniforms.h>
 
 #pragma shader:VS //===============================================================================
-#include <Transform.h>
+#include <transform.h>
 
 in vec3 position;
 

@@ -12,21 +12,21 @@ namespace Turso3D
 	struct Geometry;
 
 	// Sorting modes for batches.
-	enum BatchSortMode
+	enum class BatchSortMode
 	{
-		BATCH_SORT_STATE,
-		BATCH_SORT_STATE_DISTANCE,
-		BATCH_SORT_DISTANCE
+		State,
+		StateDistance,
+		Distance
 	};
 
-	enum BatchType
+	enum class BatchType
 	{
 		// Simple static geometry rendering, the batch contains a worldTransform.
-		BATCH_TYPE_STATIC,
+		Static,
 		// Complex geometry rendering, the batch contains a drawable.
-		BATCH_TYPE_COMPLEX,
+		Complex,
 		// The batch was converted from Static to instance, the batch contains instance count.
-		BATCH_TYPE_INSTANCED
+		Instanced
 	};
 
 	// Stored draw call.

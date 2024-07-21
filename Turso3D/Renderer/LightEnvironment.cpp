@@ -14,11 +14,11 @@ namespace Turso3D
 	{
 	}
 
-	void LightEnvironment::SetIBLMaps(std::shared_ptr<Texture> iem, std::shared_ptr<Texture> pmrem, std::shared_ptr<Texture> brdf)
+	void LightEnvironment::SetIBLMaps(std::shared_ptr<Texture> brdf, std::shared_ptr<Texture> iem, std::shared_ptr<Texture> pmrem)
 	{
+		brdfTex = brdf;
 		iemTex = iem;
 		pmremTex = pmrem;
-		brdfTex = brdf;
 	}
 
 	void LightEnvironment::SetAmbientColor(const Color& color)

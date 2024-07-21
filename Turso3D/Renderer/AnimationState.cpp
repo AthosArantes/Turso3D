@@ -235,7 +235,7 @@ namespace Turso3D
 				return i;
 			}
 		}
-		return M_MAX_UNSIGNED;
+		return UINT_MAX;
 	}
 
 	size_t AnimationState::FindTrackIndex(const std::string& name) const
@@ -246,7 +246,7 @@ namespace Turso3D
 				return i;
 			}
 		}
-		return M_MAX_UNSIGNED;
+		return UINT_MAX;
 	}
 
 	size_t AnimationState::FindTrackIndex(StringHash nameHash) const
@@ -257,7 +257,7 @@ namespace Turso3D
 				return i;
 			}
 		}
-		return M_MAX_UNSIGNED;
+		return UINT_MAX;
 	}
 
 	float AnimationState::Length() const

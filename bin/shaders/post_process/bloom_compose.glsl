@@ -2,6 +2,7 @@
 
 #pragma shader:VS //===============================================================================
 in vec3 position;
+
 out vec2 texCoord;
 
 void main()
@@ -12,15 +13,16 @@ void main()
 
 #pragma shader:FS //===============================================================================
 in vec2 texCoord;
-out vec3 fragColor;
 
 uniform sampler2D srcTex0;
 uniform sampler2D bloomTex1;
 uniform float intensity;
 
+out vec3 fragColor;
+
 void main()
 {
 	vec3 color = texture(srcTex0, texCoord).rgb;
 	vec3 bloomColor = texture(bloomTex1, texCoord).rgb;
-	fragColor = mix(color, bloomColor, intensity);
+	fragColor = mix(color, min(bloomColor, 64000.0), intensity);
 }

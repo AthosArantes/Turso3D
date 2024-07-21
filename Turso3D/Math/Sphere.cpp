@@ -109,10 +109,12 @@ namespace Turso3D
 
 	Vector3 Sphere::LocalPoint(float theta, float phi) const
 	{
-		return Vector3(
-			radius * Sin(theta) * Sin(phi),
-			radius * Cos(phi),
-			radius * Cos(theta) * Sin(phi)
-		);
+		theta *= M_DEGTORAD;
+		phi *= M_DEGTORAD;
+		return Vector3 {
+			radius * sinf(theta) * sinf(phi),
+			radius * cosf(phi),
+			radius * cosf(theta) * sinf(phi)
+		};
 	}
 }

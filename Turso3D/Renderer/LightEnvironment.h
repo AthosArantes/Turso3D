@@ -17,7 +17,7 @@ namespace Turso3D
 		~LightEnvironment();
 
 		// Set the textures for IBL lighting.
-		void SetIBLMaps(std::shared_ptr<Texture> iem, std::shared_ptr<Texture> pmrem, std::shared_ptr<Texture> brdf);
+		void SetIBLMaps(std::shared_ptr<Texture> brdf, std::shared_ptr<Texture> iem, std::shared_ptr<Texture> pmrem);
 
 		// Set ambient light color.
 		void SetAmbientColor(const Color& color);
@@ -51,11 +51,11 @@ namespace Turso3D
 		// Fog end distance.
 		float fogEnd;
 
+		// BRDF LUT map
+		std::shared_ptr<Texture> brdfTex;
 		// Irradiance Environment Map
 		std::shared_ptr<Texture> iemTex;
 		// Prefiltered Mipmaped Radiance Environment Map
 		std::shared_ptr<Texture> pmremTex;
-		// BRDF LUT map
-		std::shared_ptr<Texture> brdfTex;
 	};
 }

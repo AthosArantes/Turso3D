@@ -31,11 +31,11 @@ void BlurRenderer::Initialize()
 
 	constexpr const char* downsampleDefines[] = {"FIRST_PASS", ""};
 	for (int i = 0; i < 2; ++i) {
-		downsampleProgram[i] = Graphics::CreateProgram("PostProcess/BlurDownsample.glsl", downsampleDefines[i], downsampleDefines[i]);
+		downsampleProgram[i] = Graphics::CreateProgram("post_process/blur_downsample.glsl", downsampleDefines[i], downsampleDefines[i]);
 		uInvSrcSize[i] = downsampleProgram[i]->Uniform(invSrcSizeHash);
 	}
 
-	upsampleProgram = Graphics::CreateProgram("PostProcess/BlurUpsample.glsl", "", "");
+	upsampleProgram = Graphics::CreateProgram("post_process/blur_upsample.glsl", "", "");
 	uFilterRadius = upsampleProgram->Uniform(filterRadiusHash);
 	uAspectRatio = upsampleProgram->Uniform(aspectRatioHash);
 }

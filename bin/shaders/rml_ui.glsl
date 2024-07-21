@@ -14,7 +14,7 @@ uniform mat4 transform;
 void main()
 {
 	vTexCoord = texCoord;
-	vColor = color;
+	vColor = vec4(pow(color.rgb, vec3(2.2)), color.a); // convert sRGB to linear
 
 	vec2 translatedPos = position + translate.xy;
 	vec4 outPos = transform * vec4(translatedPos, 0.0, 1.0);

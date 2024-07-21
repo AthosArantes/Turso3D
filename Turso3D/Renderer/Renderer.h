@@ -371,8 +371,6 @@ namespace Turso3D
 		std::unique_ptr<UniformBuffer> perViewDataBuffer;
 		// Light data uniform buffer.
 		std::unique_ptr<UniformBuffer> lightDataBuffer;
-		// Instancing vertex buffer.
-		std::unique_ptr<VertexBuffer> instanceVertexBuffer;
 		// Bounding box vertex buffer.
 		std::unique_ptr<VertexBuffer> boundingBoxVertexBuffer;
 		// Bounding box index buffer.
@@ -384,5 +382,10 @@ namespace Turso3D
 		std::unique_ptr<RenderBuffer> staticObjectShadowBuffer;
 		// Cached static object shadow framebuffer.
 		std::unique_ptr<FrameBuffer> staticObjectShadowFbo;
+
+		// Instancing vertex buffer.
+		std::unique_ptr<VertexBuffer> instanceVertexBuffer;
+		// Instancing vertex buffer offset.
+		size_t instanceVertexBufferOffset;
 	};
 }

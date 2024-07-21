@@ -89,6 +89,7 @@ namespace Turso3D
 			return INTERSECTS;
 		}
 
+		// Return a zero rect;
 		static IntRect ZERO();
 
 	public:
@@ -99,8 +100,5 @@ namespace Turso3D
 	};
 
 	// ==========================================================================================
-	inline IntRect IntRect::ZERO()
-	{
-		return IntRect {0, 0, 0, 0};
-	}
+	inline IntRect IntRect::ZERO() { return IntRect {0, 0, 0, 0}; }
 }

@@ -101,8 +101,5 @@ namespace Turso3D
 		return rhs * lhs;
 	}
 
-	inline IntVector2 IntVector2::ZERO()
-	{
-		return IntVector2 {0, 0};
-	}
+	inline IntVector2 IntVector2::ZERO() { return IntVector2 {0, 0}; }
 }

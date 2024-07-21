@@ -459,8 +459,5 @@ namespace Turso3D
 	};
 
 	// ==========================================================================================
-	inline Quaternion Quaternion::IDENTITY()
-	{
-		return Quaternion {1.0f, 0.0f, 0.0f, 0.0f};
-	}
+	inline Quaternion Quaternion::IDENTITY() { return Quaternion {1.0f, 0.0f, 0.0f, 0.0f}; }
 }

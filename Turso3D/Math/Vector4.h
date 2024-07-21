@@ -226,12 +226,6 @@ namespace Turso3D
 		return rhs * lhs;
 	}
 
-	inline Vector4 Vector4::ZERO()
-	{
-		return Vector4 {0.0f, 0.0f, 0.0f, 0.0f};
-	}
-	inline Vector4 Vector4::ONE()
-	{
-		return Vector4 {1.0f, 1.0f, 1.0f, 1.0f};
-	}
+	inline Vector4 Vector4::ZERO() { return Vector4 {0.0f, 0.0f, 0.0f, 0.0f}; }
+	inline Vector4 Vector4::ONE() { return Vector4 {1.0f, 1.0f, 1.0f, 1.0f}; }
 }

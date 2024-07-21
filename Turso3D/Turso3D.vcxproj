@@ -118,7 +118,6 @@
 		<ClInclude Include="Math\Plane.h" />
 		<ClInclude Include="Math\Polyhedron.h" />
 		<ClInclude Include="Math\Quaternion.h" />
-		<ClInclude Include="Math\Random.h" />
 		<ClInclude Include="Math\Ray.h" />
 		<ClInclude Include="Math\Rect.h" />
 		<ClInclude Include="Math\Sphere.h" />
@@ -170,8 +169,6 @@
 		<ClCompile Include="Math\Frustum.cpp" />
 		<ClCompile Include="Math\Matrix4.cpp" />
 		<ClCompile Include="Math\Polyhedron.cpp" />
-		<ClCompile Include="Math\Random.cpp" />
-		<ClCompile Include="Math\Ray.cpp" />
 		<ClCompile Include="Math\Sphere.cpp" />
 		<ClCompile Include="Renderer\AnimatedModel.cpp" />
 		<ClCompile Include="Renderer\Animation.cpp" />

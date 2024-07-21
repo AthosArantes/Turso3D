@@ -1,4 +1,4 @@
-#include <Shadow.h>
+#include <shadow.h>
 
 uniform samplerCube iemTex12; // Irradiance Environment Map
 uniform samplerCube pmremTex13; // Prefiltered Mipmaped Radiance Environment Map

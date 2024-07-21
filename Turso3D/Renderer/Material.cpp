@@ -495,11 +495,11 @@ namespace Turso3D
 			mtl->DefineUniforms(defaultUniforms);
 
 			Pass* pass = mtl->CreatePass(PASS_SHADOW);
-			pass->SetShader(cache->LoadResource<Shader>("Shadow.glsl"), "", "");
+			pass->SetShader(cache->LoadResource<Shader>("shadow.glsl"), "", "");
 			pass->SetRenderState(BLEND_REPLACE, CMP_LESS_EQUAL, false, true);
 
 			pass = mtl->CreatePass(PASS_OPAQUE);
-			pass->SetShader(cache->LoadResource<Shader>("NoTexture.glsl"), "", "");
+			pass->SetShader(cache->LoadResource<Shader>("no_texture.glsl"), "", "");
 			pass->SetRenderState(BLEND_REPLACE, CMP_LESS_EQUAL, true, true);
 
 			cache->StoreResource(mtl);

@@ -234,28 +234,10 @@ namespace Turso3D
 		return rhs * lhs;
 	}
 
-	inline Vector2 Vector2::ZERO()
-	{
-		return Vector2 {0.0f, 0.0f};
-	}
-	inline Vector2 Vector2::LEFT()
-	{
-		return Vector2 {-1.0f, 0.0f};
-	}
-	inline Vector2 Vector2::RIGHT()
-	{
-		return Vector2 {1.0f, 0.0f};
-	}
-	inline Vector2 Vector2::UP()
-	{
-		return Vector2 {0.0f, 1.0f};
-	}
-	inline Vector2 Vector2::DOWN()
-	{
-		return Vector2 {0.0f, -1.0f};
-	}
-	inline Vector2 Vector2::ONE()
-	{
-		return Vector2 {1.0f, 1.0f};
-	}
+	inline Vector2 Vector2::ZERO() { return Vector2 {0.0f, 0.0f}; }
+	inline Vector2 Vector2::LEFT() { return Vector2 {-1.0f, 0.0f}; }
+	inline Vector2 Vector2::RIGHT() { return Vector2 {1.0f, 0.0f}; }
+	inline Vector2 Vector2::UP() { return Vector2 {0.0f, 1.0f}; }
+	inline Vector2 Vector2::DOWN() { return Vector2 {0.0f, -1.0f}; }
+	inline Vector2 Vector2::ONE() { return Vector2 {1.0f, 1.0f}; }
 }

@@ -20,7 +20,7 @@ void TonemapRenderer::Initialize()
 {
 	constexpr StringHash exposureHash {"exposure"};
 
-	program = Graphics::CreateProgram("PostProcess/Tonemap.glsl", "", "");
+	program = Graphics::CreateProgram("post_process/tonemap.glsl", "", "");
 	uExposure = program->Uniform(exposureHash);
 }
 
@@ -29,7 +29,7 @@ void TonemapRenderer::Render(Texture* hdrColor)
 	Graphics::BindProgram(program.get());
 
 	// TODO: exposure based on eye-adaptation formula
-	Graphics::SetUniform(uExposure, 0.1f);
+	Graphics::SetUniform(uExposure, 1.0f);
 	Graphics::BindTexture(0, hdrColor);
 
 	Graphics::DrawQuad();
