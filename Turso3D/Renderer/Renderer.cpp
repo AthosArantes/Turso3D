@@ -1098,7 +1098,7 @@ namespace Turso3D
 		boundingBoxIndexBuffer = std::make_unique<IndexBuffer>();
 		boundingBoxIndexBuffer->Define(USAGE_DEFAULT, NUM_BOX_INDICES, sizeof(unsigned short), boxIndexData);
 
-		boundingBoxShaderProgram = Graphics::CreateProgram("BoundingBox.glsl", "", "");
+		boundingBoxShaderProgram = Graphics::CreateProgram("bounding_box.glsl", "", "");
 	}
 
 	void Renderer::DefineClusterFrustums()
