@@ -362,6 +362,7 @@ namespace Turso3D
 		std::vector<std::unique_ptr<CollectShadowBatchesTask>> collectShadowBatchesTasks;
 		// Tasks for light grid culling.
 		std::unique_ptr<CullLightsTask> cullLightsTasks[NUM_CLUSTER_Z];
+
 		// Face selection UV indirection texture array.
 		std::unique_ptr<Texture> faceSelectionTexture;
 		// Cluster lookup 3D texture.

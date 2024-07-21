@@ -110,7 +110,7 @@ namespace Turso3D
 
 	public:
 		// Last sort key for combined distance and state sorting. Used by Renderer.
-		std::pair<unsigned short, unsigned short> lastSortKey;
+		std::pair<unsigned, unsigned> lastSortKey;
 
 	private:
 		// Parent material.

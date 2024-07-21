@@ -21,7 +21,7 @@ namespace Turso3D
 	{
 		// Last sort key for combined distance and state sorting.
 		// Used by Renderer.
-		std::pair<unsigned short, unsigned short> lastSortKey;
+		std::pair<unsigned, unsigned> lastSortKey;
 
 		// Geometry vertex buffer.
 		std::shared_ptr<VertexBuffer> vertexBuffer;

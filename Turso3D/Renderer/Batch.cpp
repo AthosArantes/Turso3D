@@ -24,21 +24,21 @@ namespace Turso3D
 	{
 		switch (sortMode) {
 			case BATCH_SORT_STATE:
-				for (auto it = batches.begin(); it < batches.end(); ++it) {
-					unsigned short materialId = (unsigned short)((size_t)it->pass / sizeof(Pass));
-					unsigned short geomId = (unsigned short)((size_t)it->geometry / sizeof(Geometry));
-
-					it->sortKey = (((unsigned)materialId) << 16) | geomId;
+				for (size_t i = 0; i < batches.size() - 1; ++i) {
+					Batch& batch = batches[i];
+					unsigned materialId = (unsigned)((size_t)batch.pass / sizeof(Pass));
+					unsigned geomId = (unsigned)((size_t)batch.geometry / sizeof(Geometry));
+					batch.sortKey = (((uint64_t)materialId) << 32) | geomId ^ batch.lightMask;
 				}
 				std::sort(batches.begin(), batches.end(), CompareBatchKeys);
 				break;
 
 			case BATCH_SORT_STATE_DISTANCE:
-				for (auto it = batches.begin(); it < batches.end(); ++it) {
-					unsigned short materialId = it->pass->lastSortKey.second;
-					unsigned short geomId = it->geometry->lastSortKey.second;
-
-					it->sortKey = (((unsigned)materialId) << 16) | geomId;
+				for (size_t i = 0; i < batches.size() - 1; ++i) {
+					Batch& batch = batches[i];
+					unsigned materialId = batch.pass->lastSortKey.second;
+					unsigned geomId = batch.geometry->lastSortKey.second;
+					batch.sortKey = (((uint64_t)materialId) << 32) | geomId ^ batch.lightMask;
 				}
 				std::sort(batches.begin(), batches.end(), CompareBatchKeys);
 				break;
@@ -53,35 +53,41 @@ namespace Turso3D
 			return;
 		}
 
-		for (auto it = batches.begin(); it < batches.end() - 1; ++it) {
+		for (size_t i = 0; i < batches.size() - 1; ++i) {
+			Batch& batch = batches[i];
+
 			// Check if batch is static geometry and can be converted to instanced
-			if (it->type != BATCH_TYPE_STATIC) {
+			if (batch.type != BATCH_TYPE_STATIC) {
 				continue;
 			}
 
-			size_t start = instanceTransforms.size();
-			auto next = it + 1;
-
-			if (next->pass == it->pass && next->geometry == it->geometry && next->type == BATCH_TYPE_STATIC) {
-				// Convert to instances if at least one batch with same state found, then loop for more of the same
-				it->instanceStart = (unsigned)start;
-				it->type = BATCH_TYPE_INSTANCED;
-				instanceTransforms.push_back(*it->worldTransform);
-				instanceTransforms.push_back(*next->worldTransform);
-				++next;
-
-				for (; next < batches.end(); ++next) {
-					if (next->pass == it->pass && next->geometry == it->geometry && next->type == BATCH_TYPE_STATIC) {
-						instanceTransforms.push_back(*next->worldTransform);
-					} else {
-						break;
-					}
+			size_t instanceStart = instanceTransforms.size();
+			size_t instanceCount = 0;
+			for (size_t j = i + 1; j < batches.size(); ++j) {
+				const Batch& next = batches[j];
+				if (next.pass != batch.pass ||
+					next.geometry != batch.geometry ||
+					next.lightMask != batch.lightMask ||
+					next.type != BATCH_TYPE_STATIC
+				) {
+					break;
 				}
 
-				// Finalize the conversion by writing instance count
-				size_t count = instanceTransforms.size() - start;
-				it->instanceCount = (unsigned)count;
-				it += count - 1;
+				if (instanceCount == 0) {
+					instanceTransforms.push_back(*batch.worldTransform);
+					instanceCount = 1u;
+				}
+
+				instanceTransforms.push_back(*next.worldTransform);
+				++instanceCount;
+			}
+
+			// Finalize the conversion by changing type and writing offsets.
+			if (instanceCount) {
+				batch.type = BATCH_TYPE_INSTANCED;
+				batch.instanceStart = instanceStart;
+				batch.instanceCount = instanceCount;
+				i += instanceCount - 1;
 			}
 		}
 	}

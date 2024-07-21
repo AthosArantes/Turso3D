@@ -1,18 +1,20 @@
 #pragma once
 
-#include <Turso3D/Math/Matrix3x4.h>
+#include <cstdint>
+#include <cstddef>
 #include <vector>
 
 namespace Turso3D
 {
 	class GeometryDrawable;
 	class Pass;
+	class Matrix3x4;
 	struct Geometry;
 
 	// Sorting modes for batches.
 	enum BatchSortMode
 	{
-		BATCH_SORT_STATE = 0,
+		BATCH_SORT_STATE,
 		BATCH_SORT_STATE_DISTANCE,
 		BATCH_SORT_DISTANCE
 	};
@@ -33,11 +35,11 @@ namespace Turso3D
 		union
 		{
 			// State sorting key.
-			unsigned sortKey;
+			uint64_t sortKey;
 			// Distance for alpha batches.
 			float distance;
 			// Start position in the instance vertex buffer if instanced.
-			unsigned instanceStart;
+			size_t instanceStart;
 		};
 
 		// Material pass.
@@ -62,7 +64,7 @@ namespace Turso3D
 			// Called into for complex rendering like skinning.
 			GeometryDrawable* drawable;
 			// Instance count if instanced.
-			unsigned instanceCount;
+			size_t instanceCount;
 		};
 	};
 

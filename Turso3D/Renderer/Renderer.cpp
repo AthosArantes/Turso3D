@@ -10,7 +10,6 @@
 #include <Turso3D/Graphics/UniformBuffer.h>
 #include <Turso3D/Graphics/VertexBuffer.h>
 #include <Turso3D/IO/Log.h>
-#include <Turso3D/Math/Random.h>
 #include <Turso3D/Renderer/AnimatedModel.h>
 #include <Turso3D/Renderer/Animation.h>
 #include <Turso3D/Renderer/Batch.h>
@@ -918,7 +917,7 @@ namespace Turso3D
 				} else {
 					Graphics::DrawInstanced(PT_TRIANGLE_LIST, geometry->drawStart, geometry->drawCount, batch.instanceCount);
 				}
-				i += static_cast<size_t>(batch.instanceCount) - 1;
+				i += batch.instanceCount - 1;
 
 			} else {
 				if (batch.type == BATCH_TYPE_STATIC) {
@@ -1362,7 +1361,7 @@ namespace Turso3D
 
 						Batch newBatch;
 
-						unsigned short distance = (unsigned short)(drawable->Distance() * farClipMul);
+						unsigned distance = static_cast<unsigned>(drawable->Distance() * farClipMul);
 						const SourceBatches& batches = static_cast<GeometryDrawable*>(drawable)->Batches();
 						size_t numGeometries = batches.NumGeometries();
 
@@ -1373,7 +1372,6 @@ namespace Turso3D
 							newBatch.pass = material->GetPass(PASS_OPAQUE);
 							newBatch.geometry = batches.GetGeometry(j);
 							newBatch.geomIndex = j;
-
 							newBatch.type = drawable->IsGeometryStatic() ? BATCH_TYPE_STATIC : BATCH_TYPE_COMPLEX;
 							newBatch.drawableFlags = drawable->Flags();
 							newBatch.lightMask = drawable->LightMask();
@@ -1390,11 +1388,10 @@ namespace Turso3D
 									newBatch.pass->lastSortKey.first = frameNumber;
 									newBatch.pass->lastSortKey.second = distance;
 								}
-								if (newBatch.geometry->lastSortKey.first != frameNumber || newBatch.geometry->lastSortKey.second > distance + (unsigned short)j) {
+								if (newBatch.geometry->lastSortKey.first != frameNumber || newBatch.geometry->lastSortKey.second > distance + static_cast<unsigned>(j)) {
 									newBatch.geometry->lastSortKey.first = frameNumber;
-									newBatch.geometry->lastSortKey.second = distance + (unsigned short)j;
+									newBatch.geometry->lastSortKey.second = distance + static_cast<unsigned>(j);
 								}
-
 								opaqueQueue.push_back(newBatch);
 							} else {
 								// If not opaque, try transparent
@@ -1402,7 +1399,6 @@ namespace Turso3D
 								if (!newBatch.pass) {
 									continue;
 								}
-
 								newBatch.distance = drawable->Distance();
 								alphaQueue.push_back(newBatch);
 							}
@@ -1650,7 +1646,6 @@ namespace Turso3D
 
 						newBatch.geometry = batches.GetGeometry(j);
 						newBatch.geomIndex = j;
-
 						newBatch.type = drawable->IsGeometryStatic() ? BATCH_TYPE_STATIC : BATCH_TYPE_COMPLEX;
 						newBatch.drawableFlags = drawable->Flags();
 						newBatch.lightMask = 0;

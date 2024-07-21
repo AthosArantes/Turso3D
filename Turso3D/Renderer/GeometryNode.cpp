@@ -39,7 +39,7 @@ namespace Turso3D
 		return true;
 	}
 
-	void GeometryDrawable::OnRender(ShaderProgram*, size_t)
+	void GeometryDrawable::OnRender(ShaderProgram* program, size_t geomIndex)
 	{
 	}
 
