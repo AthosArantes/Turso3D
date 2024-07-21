@@ -25,7 +25,7 @@ namespace Turso3D
 	{
 		switch (sortMode) {
 			case BatchSortMode::State:
-				for (size_t i = 0; i < batches.size() - 1; ++i) {
+				for (size_t i = 0; i < batches.size(); ++i) {
 					Batch& batch = batches[i];
 					unsigned materialId = (unsigned)((size_t)batch.pass / sizeof(Pass));
 					unsigned geomId = (unsigned)((size_t)batch.geometry / sizeof(Geometry));
@@ -35,7 +35,7 @@ namespace Turso3D
 				break;
 
 			case BatchSortMode::StateDistance:
-				for (size_t i = 0; i < batches.size() - 1; ++i) {
+				for (size_t i = 0; i < batches.size(); ++i) {
 					Batch& batch = batches[i];
 					unsigned materialId = batch.pass->lastSortKey.second;
 					unsigned geomId = batch.geometry->lastSortKey.second;
