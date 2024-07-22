@@ -15,6 +15,51 @@ namespace
 {
 	using namespace Turso3D;
 
+	static const char* BlendModeName(BlendMode value)
+	{
+		constexpr const char* data[] = {
+			"replace",
+			"add",
+			"multiply",
+			"alpha",
+			"add_alpha",
+			"pre_mul_alpha",
+			"inv_dest_alpha",
+			"subtract",
+			"subtract_alpha",
+			nullptr
+		};
+		return data[value];
+	}
+
+	static const char* CullModeName(CullMode value)
+	{
+		const char* data[] =
+		{
+			"none",
+			"front",
+			"back",
+			nullptr
+		};
+		return data[value];
+	}
+
+	static const char* CompareModeName(CompareMode value)
+	{
+		constexpr const char* data[] = {
+			"never",
+			"less",
+			"equal",
+			"less_equal",
+			"greater",
+			"not_equal",
+			"greater_equal",
+			"always",
+			nullptr
+		};
+		return data[value];
+	}
+
 	static std::set<Material*> AllMaterials;
 	static std::string GlobalDefines[MAX_SHADER_TYPES];
 }

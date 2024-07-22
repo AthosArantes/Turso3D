@@ -116,6 +116,22 @@ namespace
 		return format;
 	}
 
+	static const char* TextureTargetName(TextureTarget value)
+	{
+		constexpr const char* data[] = {
+			"Texture1D",
+			"Texture1DArray",
+			"Texture2D",
+			"Texture2DArray",
+			"Texture3D",
+			"TextureRect",
+			"TextureRectArray",
+			"TextureCube",
+			"TextureCubeArray"
+		};
+		return data[value];
+	}
+
 	static gli::gl GLIProfile {gli::gl::PROFILE_GL33};
 }
 
@@ -284,7 +300,7 @@ namespace Turso3D
 		}
 
 		bool success = false;
-		if (Define(type, loadBuffer->size, format, 1, texture.levels())) {
+		if (Define(type, loadBuffer->size, format, 1, static_cast<int>(texture.levels()))) {
 			gli::gl::format glFormat = GLIProfile.translate(texture.format(), texture.swizzles());
 			glTexParameteri(target, GL_TEXTURE_SWIZZLE_R, glFormat.Swizzles[0]);
 			glTexParameteri(target, GL_TEXTURE_SWIZZLE_G, glFormat.Swizzles[1]);

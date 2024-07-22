@@ -620,7 +620,7 @@ namespace Turso3D
 			const VertexBufferBinding& binding = bindings[i];
 			if (binding.enabled) {
 				assert(binding.buffer);
-				hash = (hash << 24 | hash >> 40 & 0xFFFFFFFFFFu) ^ binding.buffer->ElementsHash();
+				hash = (hash << 24 | hash >> 40 & 0xFFFFFFFFFFu) ^ binding.buffer->ElementsHash() * (size_t(1) << binding.divisor);
 			}
 		}
 

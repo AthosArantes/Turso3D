@@ -28,6 +28,16 @@ namespace
 		{"instanceData1", ATTR_INSTANCE_DATA1}
 	};
 
+	static const char* PresetUniformName(PresetUniform value)
+	{
+		constexpr const char* data[] = {
+			"worldMatrix",
+			"lightMask",
+			nullptr
+		};
+		return data[value];
+	}
+
 	static int NumberPostfix(const std::string& string)
 	{
 		for (size_t i = 0; i < string.length(); ++i) {

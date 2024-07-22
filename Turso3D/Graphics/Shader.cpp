@@ -16,6 +16,16 @@ namespace
 {
 	using namespace Turso3D;
 
+	static const char* ShaderTypeName(ShaderType value)
+	{
+		constexpr const char* data[] = {
+			"VS",
+			"FS",
+			nullptr
+		};
+		return data[value];
+	}
+
 	static std::string_view ReadLine(std::string_view str)
 	{
 		std::string_view::const_iterator eit = str.end();

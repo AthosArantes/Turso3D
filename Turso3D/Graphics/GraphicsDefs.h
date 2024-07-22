@@ -533,21 +533,6 @@ namespace Turso3D
 		MAX_ELEMENT_TYPES
 	};
 
-	// Vertex element sizes by element type.
-	constexpr unsigned ElementTypeSize(ElementType value)
-	{
-		constexpr const unsigned data[] = {
-			sizeof(int),
-			sizeof(float),
-			sizeof(Vector2),
-			sizeof(Vector3),
-			sizeof(Vector4),
-			sizeof(unsigned),
-			0
-		};
-		return data[value];
-	}
-
 	// Built-in vertex attribute indices.
 	enum VertexAttributeIndex
 	{
@@ -582,23 +567,6 @@ namespace Turso3D
 		MAX_BLEND_MODES
 	};
 
-	constexpr const char* BlendModeName(BlendMode value)
-	{
-		constexpr const char* data[] = {
-			"replace",
-			"add",
-			"multiply",
-			"alpha",
-			"add_alpha",
-			"pre_mul_alpha",
-			"inv_dest_alpha",
-			"subtract",
-			"subtract_alpha",
-			nullptr
-		};
-		return data[value];
-	}
-
 	// Triangle culling modes.
 	enum CullMode
 	{
@@ -607,18 +575,6 @@ namespace Turso3D
 		CULL_BACK,
 		MAX_CULL_MODES
 	};
-
-	inline static const char* CullModeName(CullMode value)
-	{
-		const char* data[] =
-		{
-			"none",
-			"front",
-			"back",
-			nullptr
-		};
-		return data[value];
-	}
 
 	// Depth or stencil compare modes.
 	enum CompareMode
@@ -634,22 +590,6 @@ namespace Turso3D
 		MAX_COMPARE_MODES
 	};
 
-	constexpr const char* CompareModeName(CompareMode value)
-	{
-		constexpr const char* data[] = {
-			"never",
-			"less",
-			"equal",
-			"less_equal",
-			"greater",
-			"not_equal",
-			"greater_equal",
-			"always",
-			nullptr
-		};
-		return data[value];
-	}
-
 	// Texture types.
 	enum TextureTarget
 	{
@@ -663,22 +603,6 @@ namespace Turso3D
 		TARGET_CUBE,
 		TARGET_CUBE_ARRAY
 	};
-
-	constexpr const char* TextureTargetName(TextureTarget value)
-	{
-		constexpr const char* data[] = {
-			"Texture1D",
-			"Texture1DArray",
-			"Texture2D",
-			"Texture2DArray",
-			"Texture3D",
-			"TextureRect",
-			"TextureRectArray",
-			"TextureCube",
-			"TextureCubeArray"
-		};
-		return data[value];
-	}
 
 	// Resource usage modes for buffers.
 	enum ResourceUsage
@@ -718,16 +642,6 @@ namespace Turso3D
 		MAX_PRESET_UNIFORMS
 	};
 
-	constexpr const char* PresetUniformName(PresetUniform value)
-	{
-		constexpr const char* data[] = {
-			"worldMatrix",
-			"lightMask",
-			nullptr
-		};
-		return data[value];
-	}
-
 	// Uniform buffer binding points.
 	enum UniformBufferBindings
 	{
@@ -745,16 +659,6 @@ namespace Turso3D
 		SHADER_FS,
 		MAX_SHADER_TYPES
 	};
-
-	constexpr const char* ShaderTypeName(ShaderType value)
-	{
-		constexpr const char* data[] = {
-			"VS",
-			"FS",
-			nullptr
-		};
-		return data[value];
-	}
 
 	// Description of an element in a vertex declaration.
 	struct VertexElement

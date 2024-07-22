@@ -4,6 +4,26 @@
 #include <glew/glew.h>
 #include <cassert>
 
+namespace
+{
+	using namespace Turso3D;
+
+	// Vertex element sizes by element type.
+	static unsigned ElementTypeSize(ElementType value)
+	{
+		constexpr const unsigned data[] = {
+			sizeof(int),
+			sizeof(float),
+			sizeof(Vector2),
+			sizeof(Vector3),
+			sizeof(Vector4),
+			sizeof(unsigned),
+			0
+		};
+		return data[value];
+	}
+}
+
 namespace Turso3D
 {
 	VertexBuffer::VertexBuffer() :
