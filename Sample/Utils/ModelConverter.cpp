@@ -13,6 +13,20 @@ namespace Turso3DUtils
 {
 	constexpr float BONE_SIZE_THRESHOLD = 0.05f;
 
+	static unsigned ElementTypeSize(ElementType value)
+	{
+		constexpr const unsigned data[] = {
+			sizeof(int),
+			sizeof(float),
+			sizeof(Vector2),
+			sizeof(Vector3),
+			sizeof(Vector4),
+			sizeof(unsigned),
+			0
+		};
+		return data[value];
+	}
+
 	// ==========================================================================================
 	// Load-time description of a vertex buffer, to be uploaded on the GPU later.
 	struct VertexBufferDesc
