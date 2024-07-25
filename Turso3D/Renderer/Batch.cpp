@@ -21,7 +21,7 @@ namespace Turso3D
 		batches.clear();
 	}
 
-	void BatchQueue::Sort(std::vector<Matrix3x4>& instanceTransforms, BatchSortMode sortMode, bool convertToInstanced)
+	void BatchQueue::Sort(BatchSortMode sortMode, bool convertToInstanced)
 	{
 		switch (sortMode) {
 			case BatchSortMode::State:
@@ -29,7 +29,7 @@ namespace Turso3D
 					Batch& batch = batches[i];
 					unsigned materialId = (unsigned)((size_t)batch.pass / sizeof(Pass));
 					unsigned geomId = (unsigned)((size_t)batch.geometry / sizeof(Geometry));
-					batch.sortKey = (((uint64_t)materialId) << 32) | geomId ^ batch.lightMask;
+					batch.sortKey = (((uint64_t)materialId) << 32) | geomId ^ batch.drawable->LightMask();
 				}
 				std::sort(batches.begin(), batches.end(), CompareBatchKeys);
 				break;
@@ -39,7 +39,7 @@ namespace Turso3D
 					Batch& batch = batches[i];
 					unsigned materialId = batch.pass->lastSortKey.second;
 					unsigned geomId = batch.geometry->lastSortKey.second;
-					batch.sortKey = (((uint64_t)materialId) << 32) | geomId ^ batch.lightMask;
+					batch.sortKey = (((uint64_t)materialId) << 32) | geomId ^ batch.drawable->LightMask();
 				}
 				std::sort(batches.begin(), batches.end(), CompareBatchKeys);
 				break;
@@ -62,31 +62,26 @@ namespace Turso3D
 				continue;
 			}
 
-			size_t instanceStart = instanceTransforms.size();
 			size_t instanceCount = 0;
 			for (size_t j = i + 1; j < batches.size(); ++j) {
 				const Batch& next = batches[j];
 				if (next.pass != batch.pass ||
 					next.geometry != batch.geometry ||
-					next.lightMask != batch.lightMask ||
+					next.drawable->LightMask() != batch.drawable->LightMask() ||
 					next.type != BatchType::Static
 				) {
 					break;
 				}
 
 				if (instanceCount == 0) {
-					instanceTransforms.push_back(*batch.worldTransform);
 					instanceCount = 1u;
 				}
-
-				instanceTransforms.push_back(*next.worldTransform);
 				++instanceCount;
 			}
 
 			// Finalize the conversion by changing type and writing offsets.
 			if (instanceCount) {
 				batch.type = BatchType::Instanced;
-				batch.instanceStart = instanceStart;
 				batch.instanceCount = instanceCount;
 				i += instanceCount - 1;
 			}

@@ -123,8 +123,6 @@ namespace Turso3D
 		std::vector<BatchQueue> shadowBatches;
 		// Intermediate shadowcaster lists for processing.
 		std::vector<std::vector<Drawable*>> shadowCasters;
-		// Instancing transforms for shadowcasters.
-		std::vector<Matrix3x4> instanceTransforms;
 	};
 
 	// Per-view uniform buffer data.
@@ -229,8 +227,6 @@ namespace Turso3D
 		void SortMainBatches();
 		// Sort all batch queues of a shadowmap.
 		void SortShadowBatches(ShadowMap& shadowMap);
-		// Upload instance transforms before rendering.
-		void UpdateInstanceTransforms(const std::vector<Matrix3x4>& transforms);
 		// Upload light uniform buffer and cluster texture data.
 		void UpdateLightData();
 		// Render a batch queue.
@@ -324,8 +320,6 @@ namespace Turso3D
 		BatchQueue opaqueBatches;
 		// Transparent batches.
 		BatchQueue alphaBatches;
-		// Instance transforms for opaque and alpha batches.
-		std::vector<Matrix3x4> instanceTransforms;
 		// Last camera used for rendering.
 		Camera* lastCamera;
 		// Last material pass used for rendering.
@@ -385,7 +379,7 @@ namespace Turso3D
 
 		// Instancing vertex buffer.
 		std::unique_ptr<VertexBuffer> instanceVertexBuffer;
-		// Instancing vertex buffer offset.
-		size_t instanceVertexBufferOffset;
+		// Instance transforms for opaque and alpha batches.
+		std::vector<Matrix3x4> instanceTransforms;
 	};
 }

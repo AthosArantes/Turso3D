@@ -39,30 +39,26 @@ namespace Turso3D
 			// Distance for alpha batches.
 			float distance;
 			// Start position in the instance vertex buffer if instanced.
-			size_t instanceStart;
+			mutable size_t instanceStart;
 		};
 
 		// Material pass.
 		Pass* pass;
 		// Geometry.
 		Geometry* geometry;
+		// Associated drawable.
+		// Called into for complex rendering like skinning.
+		GeometryDrawable* drawable;
+
 		// Geometry index.
 		unsigned geomIndex;
-
 		// The content type of this batch.
 		BatchType type;
-		// Drawable flags.
-		unsigned drawableFlags;
-		// Drawable light contribution mask.
-		unsigned lightMask;
 
 		union
 		{
 			// Pointer to world transform matrix for static geometry rendering.
 			const Matrix3x4* worldTransform;
-			// Associated drawable.
-			// Called into for complex rendering like skinning.
-			GeometryDrawable* drawable;
 			// Instance count if instanced.
 			size_t instanceCount;
 		};
@@ -74,7 +70,7 @@ namespace Turso3D
 		// Clear for the next frame.
 		void Clear();
 		// Sort batches and setup instancing groups.
-		void Sort(std::vector<Matrix3x4>& instanceTransforms, BatchSortMode sortMode, bool convertToInstanced);
+		void Sort(BatchSortMode sortMode, bool convertToInstanced);
 		// Return whether has batches added.
 		bool HasBatches() const { return batches.size(); }
 

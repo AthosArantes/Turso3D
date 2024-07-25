@@ -30,11 +30,16 @@ namespace
 {
 	using namespace Turso3D;
 
-	constexpr size_t INSTANCE_BUFFER_CAPACITY = 64000;
-	constexpr size_t INITIAL_INSTANCE_CAPACITY = 2000;
+	constexpr size_t INITIAL_INSTANCE_CAPACITY = 1000;
 	constexpr size_t DRAWABLES_PER_BATCH_TASK = 128;
 	constexpr size_t NUM_BOX_INDICES = 36;
 	constexpr float OCCLUSION_MARGIN = 0.1f;
+
+	const VertexElement InstanceVertexElements[] = {
+		{ELEM_VECTOR4, ATTR_WORLDINSTANCE_M0},
+		{ELEM_VECTOR4, ATTR_WORLDINSTANCE_M1},
+		{ELEM_VECTOR4, ATTR_WORLDINSTANCE_M2}
+	};
 
 	static inline bool CompareDrawableDistances(Drawable* lhs, Drawable* rhs)
 	{
@@ -151,7 +156,6 @@ namespace Turso3D
 		const IntVector3& tex_size = texture->Size();
 		allocator.Reset(tex_size.x, tex_size.y, 0, 0, false);
 		shadowViews.clear();
-		instanceTransforms.clear();
 
 		for (size_t i = 0; i < shadowBatches.size(); ++i) {
 			shadowBatches[i].Clear();
@@ -171,15 +175,9 @@ namespace Turso3D
 	{
 		assert(Graphics::IsInitialized());
 
-		instanceVertexBuffer = std::make_unique<VertexBuffer>();
-		const VertexElement elements[] = {
-			{ELEM_VECTOR4, ATTR_WORLDINSTANCE_M0},
-			{ELEM_VECTOR4, ATTR_WORLDINSTANCE_M1},
-			{ELEM_VECTOR4, ATTR_WORLDINSTANCE_M2}
-		};
-		instanceVertexBuffer->Define(USAGE_DYNAMIC, INSTANCE_BUFFER_CAPACITY, elements, 3);
-		instanceVertexBufferOffset = 0;
 		instanceTransforms.reserve(INITIAL_INSTANCE_CAPACITY);
+		instanceVertexBuffer = std::make_unique<VertexBuffer>();
+		instanceVertexBuffer->Define(USAGE_DYNAMIC, INITIAL_INSTANCE_CAPACITY, InstanceVertexElements, 3);
 
 		clusterTexture = std::make_unique<Texture>();
 		clusterTexture->Define(TARGET_3D, IntVector3 {NUM_CLUSTER_X, NUM_CLUSTER_Y, NUM_CLUSTER_Z}, FORMAT_RGBA32_UINT_PACK32);
@@ -290,9 +288,6 @@ namespace Turso3D
 		alphaBatches.Clear();
 		lights.clear();
 
-		instanceVertexBufferOffset += instanceTransforms.size();
-		instanceTransforms.clear();
-
 		minZ = M_MAX_FLOAT;
 		maxZ = 0.0f;
 		geometryBounds.Undefine();
@@ -393,8 +388,6 @@ namespace Turso3D
 				continue;
 			}
 
-			UpdateInstanceTransforms(shadowMap.instanceTransforms);
-
 			Graphics::BindFramebuffer(shadowMap.fbo.get(), nullptr);
 
 			// First render static objects for those shadowmaps that need to store static objects. Do all of them to avoid FBO changes
@@ -459,7 +452,6 @@ namespace Turso3D
 	void Renderer::RenderOpaque(bool clear)
 	{
 		// Update main batches' instance transforms & light data
-		UpdateInstanceTransforms(instanceTransforms);
 		UpdateLightData();
 
 		if (shadowMaps) {
@@ -727,8 +719,8 @@ namespace Turso3D
 			}
 		}
 
-		opaqueBatches.Sort(instanceTransforms, BatchSortMode::StateDistance, true);
-		alphaBatches.Sort(instanceTransforms, BatchSortMode::Distance, true);
+		opaqueBatches.Sort(BatchSortMode::StateDistance, true);
+		alphaBatches.Sort(BatchSortMode::Distance, true);
 	}
 
 	void Renderer::SortShadowBatches(ShadowMap& shadowMap)
@@ -746,23 +738,11 @@ namespace Turso3D
 			BatchQueue* destDynamic = &shadowMap.shadowBatches[view.dynamicQueueIdx];
 
 			if (destStatic && destStatic->HasBatches()) {
-				destStatic->Sort(shadowMap.instanceTransforms, BatchSortMode::State, true);
+				destStatic->Sort(BatchSortMode::State, true);
 			}
 
 			if (destDynamic->HasBatches()) {
-				destDynamic->Sort(shadowMap.instanceTransforms, BatchSortMode::State, true);
-			}
-		}
-	}
-
-	void Renderer::UpdateInstanceTransforms(const std::vector<Matrix3x4>& transforms)
-	{
-		if (transforms.size()) {
-			bool discard = instanceVertexBufferOffset + transforms.size() > instanceVertexBuffer->NumVertices();
-			size_t offset = discard ? 0 : instanceVertexBufferOffset;
-			instanceVertexBuffer->SetData(offset, transforms.size(), transforms.data(), discard);
-			if (discard) {
-				instanceVertexBufferOffset = 0;
+				destDynamic->Sort(BatchSortMode::State, true);
 			}
 		}
 	}
@@ -834,15 +814,39 @@ namespace Turso3D
 			}
 
 			perViewDataBuffer->SetData(0, dataSize, &perViewData);
-
 			lastCamera = camera_;
 		}
-
 		Graphics::BindUniformBuffer(UB_PERVIEWDATA, perViewDataBuffer.get());
 
 		const std::vector<Batch>& batches = queue.batches;
+
+		// Update batch instance transforms
+		instanceTransforms.clear();
 		for (size_t i = 0; i < batches.size(); ++i) {
 			const Batch& batch = batches[i];
+			if (batch.type != BatchType::Instanced) {
+				continue;
+			}
+			batch.instanceStart = instanceTransforms.size();
+
+			instanceTransforms.push_back(batch.drawable->WorldTransform());
+			for (size_t j = 1; j < batch.instanceCount; ++j) {
+				instanceTransforms.push_back(*batches[i + j].worldTransform);
+			}
+
+			i += batch.instanceCount - 1;
+		}
+		if (instanceTransforms.size() > instanceVertexBuffer->NumVertices()) {
+			instanceVertexBuffer->Define(USAGE_DYNAMIC, instanceTransforms.size(), InstanceVertexElements, 3, instanceTransforms.data());
+		} else {
+			instanceVertexBuffer->SetData(0, instanceTransforms.size(), instanceTransforms.data());
+		}
+
+		// Render batches
+		for (size_t i = 0; i < batches.size(); ++i) {
+			const Batch& batch = batches[i];
+
+			unsigned light_mask = batch.drawable->LightMask();
 
 			// Select permutation for pass program
 			ShaderProgram* program;
@@ -850,12 +854,12 @@ namespace Turso3D
 				Pass::GeometryPermutation gp = Pass::GeometryPermutation::None;
 				if (batch.type == BatchType::Instanced) {
 					gp = Pass::GeometryPermutation::Instanced;
-				} else if (batch.drawableFlags & Drawable::FLAG_SKINNED_GEOMETRY) {
+				} else if (batch.drawable->Flags() & Drawable::FLAG_SKINNED_GEOMETRY) {
 					gp = Pass::GeometryPermutation::Skinned;
 				}
 
 				Pass::LightMaskPermutation lmp = Pass::LightMaskPermutation::Disabled;
-				if (batch.lightMask) {
+				if (light_mask) {
 					lmp = Pass::LightMaskPermutation::Enabled;
 				}
 
@@ -903,7 +907,7 @@ namespace Turso3D
 			// Bind vertex buffers
 			const VertexBufferBinding bindings[] = {
 				{geometry->vertexBuffer.get()},
-				{instanceVertexBuffer.get(), instanceVertexBufferOffset + batch.instanceStart, 1, instanced}
+				{instanceVertexBuffer.get(), batch.instanceStart, 1, instanced}
 			};
 			Graphics::BindVertexBuffers(bindings, 2);
 
@@ -913,8 +917,8 @@ namespace Turso3D
 				Graphics::BindIndexBuffer(ib);
 			}
 
-			if (batch.lightMask) {
-				program->SetUniform(U_LIGHTMASK, batch.lightMask);
+			if (light_mask) {
+				program->SetUniform(U_LIGHTMASK, light_mask);
 			}
 
 			if (instanced) {
@@ -1377,15 +1381,12 @@ namespace Turso3D
 							// Assume opaque first
 							newBatch.pass = material->GetPass(PASS_OPAQUE);
 							newBatch.geometry = batches.GetGeometry(j);
+							newBatch.drawable = static_cast<GeometryDrawable*>(drawable);
 							newBatch.geomIndex = j;
-							newBatch.type = drawable->IsGeometryStatic() ? BatchType::Static : BatchType::Complex;
-							newBatch.drawableFlags = drawable->Flags();
-							newBatch.lightMask = drawable->LightMask();
 
+							newBatch.type = drawable->IsGeometryStatic() ? BatchType::Static : BatchType::Complex;
 							if (newBatch.type == BatchType::Static) {
 								newBatch.worldTransform = &drawable->WorldTransform();
-							} else {
-								newBatch.drawable = static_cast<GeometryDrawable*>(drawable);
 							}
 
 							if (newBatch.pass) {
@@ -1652,14 +1653,11 @@ namespace Turso3D
 
 						newBatch.geometry = batches.GetGeometry(j);
 						newBatch.geomIndex = j;
-						newBatch.type = drawable->IsGeometryStatic() ? BatchType::Static : BatchType::Complex;
-						newBatch.drawableFlags = drawable->Flags();
-						newBatch.lightMask = 0;
+						newBatch.drawable = static_cast<GeometryDrawable*>(drawable);
 
+						newBatch.type = drawable->IsGeometryStatic() ? BatchType::Static : BatchType::Complex;
 						if (newBatch.type == BatchType::Static) {
 							newBatch.worldTransform = &drawable->WorldTransform();
-						} else {
-							newBatch.drawable = static_cast<GeometryDrawable*>(drawable);
 						}
 
 						dest.batches.push_back(newBatch);
