@@ -2,8 +2,7 @@
 
 #include <Turso3D/Graphics/GraphicsDefs.h>
 #include <Turso3D/Renderer/OctreeNode.h>
-#include <cassert>
-#include <vector>
+#include <array>
 #include <memory>
 #include <utility>
 
@@ -41,43 +40,51 @@ namespace Turso3D
 	// Draw call source data with optimal memory storage.
 	class SourceBatches
 	{
+		static constexpr size_t MaxOptimalGeometryCount = 2;
+
+		struct Data
+		{
+			std::shared_ptr<Material> material;
+			Geometry* geometry;
+		};
+
 	public:
-		void SetNumGeometries(size_t num);
+		void SetNumGeometries(size_t count);
+
 		// Set geometry at index.
 		// Geometry pointers are raw pointers for safe LOD level changes on OnPrepareRender() in worker threads;
 		// a strong ref to the geometry should be held elsewhere.
 		void SetGeometry(size_t index, Geometry* geometry)
 		{
-			assert(index < data.size() && "Index out of bounds");
 			data[index].geometry = geometry;
 		}
 		Geometry* GetGeometry(size_t index) const
 		{
-			assert(index < data.size() && "Index out of bounds");
 			return data[index].geometry;
 		}
-		size_t NumGeometries() const noexcept { return data.size(); }
+		size_t NumGeometries() const noexcept { return geometryCount; }
 
 		// Set material at index.
 		// Materials hold strong refs and should not be changed from worker threads in OnPrepareRender().
 		void SetMaterial(size_t index, const std::shared_ptr<Material>& material)
 		{
-			assert(index < data.size() && "Index out of bounds");
 			data[index].material = material;
 		}
 		const std::shared_ptr<Material>& GetMaterial(size_t index) const
 		{
-			assert(index < data.size() && "Index out of bounds");
 			return data[index].material;
 		}
 
 	private:
-		struct GeomMat
-		{
-			std::shared_ptr<Material> material;
-			Geometry* geometry;
-		};
-		std::vector<GeomMat> data;
+		// The pointer to geometry data
+		Data* data;
+		// The current number of geometries.
+		size_t geometryCount;
+
+		// Optimal storage for draw call data.
+		std::array<Data, MaxOptimalGeometryCount> arrayData;
+		// Container used when geometries exceed the optimal count.
+		std::unique_ptr<Data[]> heapData;
 	};
 
 	// Base class for drawables that contain geometry to be rendered.

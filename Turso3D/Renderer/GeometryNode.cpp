@@ -9,18 +9,30 @@
 
 namespace Turso3D
 {
-	void SourceBatches::SetNumGeometries(size_t num)
+	void SourceBatches::SetNumGeometries(size_t count)
 	{
-		if (num == 0) {
-			std::vector<GeomMat>().swap(data);
+		if (count == geometryCount) {
 			return;
 		}
 
-		data.resize(num);
-		for (size_t i = 0; i < num; ++i) {
+		if (count <= MaxOptimalGeometryCount) {
+			data = &arrayData[0];
+			heapData.reset();
+		} else {
+			for (size_t i = 0; i < arrayData.size(); ++i) {
+				arrayData[i].material.reset();
+				arrayData[i].geometry = nullptr;
+			}
+
+			heapData = std::make_unique<Data[]>(count);
+			data = heapData.get();
+		}
+
+		for (size_t i = 0; i < count; ++i) {
 			data[i].material = Material::GetDefault();
 			data[i].geometry = nullptr;
 		}
+		geometryCount = count;
 	}
 
 	// ==========================================================================================
